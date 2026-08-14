@@ -1,0 +1,9 @@
+Fecha_Ingreso,ID_Empleado,Nombre_Empleado,Departamento,Horas_Mes,Productividad_Pct,Salario_Mes,Absentismo_Dias,Evaluacion_Desempeno
+2021-03-15,EMP-101,Laura Sánchez,Operaciones,160, 88.5 %, 1850.00 €,0,Excelente
+2021-03-15,EMP-101,Laura Sánchez,Operaciones,160, 88.5 %, 1850.00 €,0,Excelente
+14/05/2020,EMP-102, CARLOS MENDOZA ,Ventas,N/D,94.0%,$2100.00,-3,Bueno
+2019/11/01,EMP-103,Beatriz Lopez,Tecnologia, 150 ,72.0 %,2400.00 €,2,Regular
+02-02-2022,EMP-104,Javier Ruiz,Operaciones,165,112.0%,1900.00 €,1,Excelente
+invalid_date,EMP-105,Elena Nito,RRHH,140,85.0%,1750.00 €,0,Bueno
+2023-06-10,EMP-106,SOPORTE RRHH SL,RRHH,160,90.0%,2000.00 €,0,Excelente
+,,,,,,,,

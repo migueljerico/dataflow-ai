@@ -1,0 +1,11 @@
+Fecha,ID_Cliente,Nombre_Cliente,Producto,Cantidad,Precio_Unidad,Canal,Comercial
+2026-01-05,CLI-001, Juan Pérez ,Laptop Pro 15,2, 1200.50 €,Web, Carlos Ruiz 
+2026-01-05,CLI-001, Juan Pérez ,Laptop Pro 15,2, 1200.50 €,Web, Carlos Ruiz 
+06/01/2026,CLI-002,María Gómez,Monitor 4K,1,$350.00,Tienda,Ana Belén
+07-01-2026,CLI-003,Pedro Picapiedra,Teclado Mecanico,3,45.00,WEB,Carlos Ruiz
+2026/01/08,CLI-004, Ana Belén ,Silla Ergonomica,-1, 250.00 €,Tienda,Ana Belén
+2026-01-09,CLI-005,LUIS MARTINEZ,Laptop Pro 15,N/A,1200.50,Web,Carlos Ruiz
+invalid_date,CLI-006,  Elena Nito  , Auriculares Wireless ,5,75.99 €,TIENDA,Carlos Ruiz
+2026-01-11,CLI-007, Juan Pérez ,Mouse Gamer,2,25.50,Web,Carlos Ruiz
+2026-01-12,CLI-008,SOPORTE SA,Laptop Pro 15,10,1200.50,Directo,Ana Belén
+,,,,,

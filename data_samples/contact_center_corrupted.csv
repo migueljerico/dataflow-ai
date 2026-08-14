@@ -1,0 +1,8 @@
+Fecha,Campana,ID_Agente,Nombre_Agente,Llamadas_Atendidas,Ventas_Conseguidas,Conversion_Pct,AHT_Segundos,Score_Calidad,Absentismo
+2026-02-01, Retencion ,AGT-101, Laura Fernandez ,85,12,14.1%,420,95.5%,No
+2026-02-01, Retencion ,AGT-101, Laura Fernandez ,85,12,14.1%,420,95.5%,No
+2026-02-01,Ventas Outbound,AGT-102,MARCOS REYES,110,8,7.2%,310,88.0%,No
+02/02/2026,retencion,AGT-103,Sofia Loren,70,15,21.4%, 510 ,72.0 %,Si
+2026-02-03,VENTAS OUTBOUND,AGT-104,  David Garcia  ,N/D,0,0.0%,0,0.0%,SI
+2026-02-04,Soporte Tecnico,AGT-105, Lucia Blanco ,95,5,5.2%, 600 ,105.0%,NO
+2026-02-05,Soporte Tecnico,AGT-106,Ramon Sampedro,100,2,2.0%,-50,82.5%,No
