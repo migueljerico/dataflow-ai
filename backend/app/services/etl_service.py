@@ -1,14 +1,12 @@
 import uuid
 import hashlib
-import os
-import re
 import pandas as pd
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional
+from datetime import datetime, timezone
+from typing import Dict, List
 
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
+from app.core.number_parsing import to_numeric_series
 from app.models.dataset import ProcessingStateEnum, FileTypeEnum
 from app.models.etl import TransformationPlan, TransformationStep, StepStatusEnum, ExecutionResult
 from app.transformations.registry import TransformationRegistry
@@ -18,6 +16,14 @@ from app.services.script_generator import ScriptGeneratorService
 
 PLANS_CACHE: Dict[str, TransformationPlan] = {}
 RUNS_CACHE: Dict[str, ExecutionResult] = {}
+
+
+def _count_modified_cells(series_orig: pd.Series, series_curr: pd.Series) -> int:
+    """Conteo de celdas modificadas seguro ante missing values (NaN != NaN es True)."""
+    a = series_orig.astype(str)
+    b = series_curr.astype(str)
+    both_missing = a.isna() & b.isna()
+    return int(((a != b) & ~both_missing).sum())
 
 class ETLService:
     @staticmethod
@@ -187,7 +193,7 @@ class ETLService:
 
             # Valores numéricos fuera de rango (excluyendo IDs)
             if not is_id:
-                clean_nums = pd.to_numeric(series_raw.str.replace(r"[^\d.-]", "", regex=True), errors="coerce").dropna()
+                clean_nums = to_numeric_series(series_raw).dropna()
                 if len(clean_nums) > 0:
                     is_pct = any(k in col_lower for k in ["_pct", "pct", "productividad", "calidad", "conversion", "score", "tasa", "ratio", "%"])
                     
@@ -226,7 +232,7 @@ class ETLService:
             summary=f"Plan de transformaciones determinista sugerido por el Data Quality Engine ({len(steps)} pasos).",
             steps=steps,
             source="rules_engine",
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
 
         metadata = DatasetService.get_dataset_metadata(dataset_id)
@@ -236,20 +242,17 @@ class ETLService:
 
     @staticmethod
     def get_plan(plan_id: str) -> TransformationPlan:
-        if plan_id in PLANS_CACHE:
-            return PLANS_CACHE[plan_id]
-        return TransformationPlan(
-            plan_id=plan_id,
-            dataset_id="",
-            summary="Plan de transformaciones en ejecución",
-            steps=[],
-            source="resilient_cache",
-            created_at=datetime.utcnow()
-        )
+        if plan_id not in PLANS_CACHE:
+            raise FunctionalException(
+                message=f"El plan de transformaciones '{plan_id}' no fue encontrado o ha caducado. Por favor, vuelve a generarlo antes de ejecutarlo.",
+                code="PLAN_NOT_FOUND",
+                status_code=404
+            )
+        return PLANS_CACHE[plan_id]
 
     @staticmethod
     def execute_plan(dataset_id: str, plan_id: str, steps: List[TransformationStep]) -> ExecutionResult:
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         metadata = DatasetService.get_dataset_metadata(dataset_id)
         df_raw = DatasetService.load_dataframe(dataset_id)
         raw_filepath = DatasetService.get_saved_filepath(dataset_id)
@@ -313,34 +316,32 @@ class ETLService:
                     range_str = f"[{min_val if min_val is not None else '-inf'}, {max_val if max_val is not None else 'inf'}]"
                     
                     if series_orig is not None:
-                        orig_clean = pd.to_numeric(series_orig.astype(str).str.replace(r"[^\d.-]", "", regex=True), errors="coerce")
+                        orig_clean = to_numeric_series(series_orig)
                         curr_clean = pd.to_numeric(df_current[target_col], errors="coerce")
                         # Evitar bug IEEE 754 (NaN != NaN)
                         modified = int(((orig_clean != curr_clean) & ~(orig_clean.isna() & curr_clean.isna())).sum())
                     else:
                         modified = len(df_current)
-                    
+
                     audit_logs.append(f"[VALIDACIÓN OK] Operación 'clamp_range' en '{target_col}': {modified} valor(es) acotados al rango de negocio {range_str}.")
 
                 elif step.operation == "convert_numeric" and target_col:
                     if series_orig is not None:
-                        orig_clean = pd.to_numeric(series_orig.astype(str).str.replace(r"[^\d.-]", "", regex=True), errors="coerce")
-                        curr_clean = pd.to_numeric(df_current[target_col], errors="coerce")
-                        modified = int(((orig_clean != curr_clean) & ~(orig_clean.isna() & curr_clean.isna())).sum())
+                        modified = _count_modified_cells(series_orig, df_current[target_col])
                     else:
                         modified = len(df_current)
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'convert_numeric' en '{target_col}': {modified} celda(s) convertidas a float64 (símbolos y marcadores N/D asignados a NaN).")
+                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'convert_numeric' en '{target_col}': {modified} celda(s) convertidas a float64 (símbolos, separadores europeos/americanos y marcadores N/D asignados a NaN).")
 
                 elif step.operation == "normalize_case" and target_col:
                     if series_orig is not None:
-                        modified = int((series_orig.astype(str) != df_current[target_col].astype(str)).sum())
+                        modified = _count_modified_cells(series_orig, df_current[target_col])
                     else:
                         modified = len(df_current)
                     audit_logs.append(f"[VALIDACIÓN OK] Operación 'normalize_case' en '{target_col}': {modified} registro(s) normalizados a formato homogéneo (preservando siglas de negocio).")
 
                 elif step.operation == "trim_text" and target_col:
                     if series_orig is not None:
-                        modified = int((series_orig.astype(str) != df_current[target_col].astype(str)).sum())
+                        modified = _count_modified_cells(series_orig, df_current[target_col])
                     else:
                         modified = len(df_current)
                     audit_logs.append(f"[VALIDACIÓN OK] Operación 'trim_text' en '{target_col}': {modified} celda(s) limpiadas de espacios sobrantes.")
@@ -376,7 +377,7 @@ class ETLService:
         with open(script_filepath, "w", encoding="utf-8") as f:
             f.write(script_content)
 
-        finished_at = datetime.utcnow()
+        finished_at = datetime.now(timezone.utc)
         rows_after, cols_after = df_current.shape
 
         result = ExecutionResult(

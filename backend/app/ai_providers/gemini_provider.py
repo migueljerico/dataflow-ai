@@ -1,15 +1,18 @@
 import os
 import json
 import httpx
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.ai_providers.base import LLMProvider, AISuggestionResponse, AIOperationSuggestion
 from app.core.exceptions import FunctionalException
 
 class GeminiProvider(LLMProvider):
     provider_name = "gemini"
+    DEFAULT_MODEL = "gemini-2.5-flash"
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
+        # El modelo es configurable vía GEMINI_MODEL para adaptarse a versiones futuras
+        self.model = model or os.getenv("GEMINI_MODEL", self.DEFAULT_MODEL)
 
     async def suggest_transformations(
         self,
@@ -35,7 +38,8 @@ Muestra anonimizada (3 filas): {json.dumps(sample_rows[:3])}
 Reglas estrictas:
 1. SOLO puedes utilizar operaciones del catálogo permitido:
    - trim_text, normalize_case, normalize_category, convert_datetime, convert_numeric, round_numeric, clamp_range, fill_missing, remove_duplicates, rename_column, drop_column.
-2. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
+2. Los importes pueden usar separadores europeos (1.234,56 €) o americanos ($1,234.56); ambas notaciones deben convertirse a float64.
+3. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
 {{
   "dataset_summary": "Explicación breve del dataset y su propósito operativo",
   "suggestions": [
@@ -52,8 +56,12 @@ Reglas estrictas:
 }}
 """
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
-        headers = {"Content-Type": "application/json"}
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+        # La API Key viaja en cabecera (no en la URL) para evitar su exposición en logs y proxies
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.api_key,
+        }
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"response_mime_type": "application/json"}
@@ -65,11 +73,36 @@ Reglas estrictas:
                 raise FunctionalException(
                     message="Error de comunicación con el servicio de IA de Gemini.",
                     code="AI_PROVIDER_ERROR",
-                    details={"status_code": res.status_code, "response": res.text}
+                    details={"model": self.model, "status_code": res.status_code, "response": res.text[:500]}
                 )
 
             data = res.json()
-            raw_json_str = data["candidates"][0]["content"]["parts"][0]["text"]
-            parsed_dict = json.loads(raw_json_str)
 
-            return AISuggestionResponse(**parsed_dict)
+        # Respuestas bloqueadas por filtros de seguridad o sin contenido procesable
+        candidates = data.get("candidates") or []
+        raw_json_str = ""
+        if candidates:
+            parts = (candidates[0].get("content") or {}).get("parts") or []
+            raw_json_str = "".join(p.get("text", "") for p in parts).strip()
+
+        if not raw_json_str:
+            raise FunctionalException(
+                message="El Copiloto de IA no devolvió contenido procesable (respuesta vacía o bloqueada por filtros de seguridad).",
+                code="AI_EMPTY_RESPONSE",
+                details={
+                    "model": self.model,
+                    "block_reason": (data.get("promptFeedback") or {}).get("blockReason"),
+                    "finish_reason": candidates[0].get("finishReason") if candidates else None
+                }
+            )
+
+        try:
+            parsed_dict = json.loads(raw_json_str)
+        except json.JSONDecodeError as exc:
+            raise FunctionalException(
+                message="La respuesta del Copiloto de IA no es un JSON válido.",
+                code="AI_INVALID_RESPONSE",
+                details={"model": self.model, "parse_error": str(exc), "raw_prefix": raw_json_str[:300]}
+            )
+
+        return AISuggestionResponse(**parsed_dict)

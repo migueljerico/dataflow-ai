@@ -2,7 +2,7 @@ import uuid
 import re
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Tuple, Any
 
 from app.models.dataset import ProcessingStateEnum
@@ -10,6 +10,7 @@ from app.models.quality import (
     QualityReport, QualityScore, QualityIssue, QualityDimensionEnum, SeverityEnum, DimensionBreakdown
 )
 from app.models.profiling import ColumnTypeEnum, SemanticHintEnum
+from app.core.number_parsing import to_numeric_series
 from app.services.dataset_service import DatasetService
 from app.services.profiler_service import ProfilerService
 
@@ -217,18 +218,9 @@ class QualityService:
         for col_prof in profiling.columns:
             col_name = col_prof.column_name
             col_lower = col_name.lower()
-            
-            # Limpiar serie para extraer valores numéricos
-            series_num = pd.to_numeric(
-                df[col_name].astype(str)
-                .str.replace("€", "", regex=False)
-                .str.replace("$", "", regex=False)
-                .str.replace("%", "", regex=False)
-                .str.replace("USD", "", regex=False)
-                .str.replace("EUR", "", regex=False)
-                .str.strip(),
-                errors="coerce"
-            ).dropna()
+
+            # Parseo centralizado: soporta símbolos y separadores europeos/americanos
+            series_num = to_numeric_series(df[col_name]).dropna()
 
             if not len(series_num):
                 continue
@@ -331,7 +323,7 @@ class QualityService:
             quality_score=score_obj,
             issues=issues,
             issues_count=len(issues),
-            generated_at=datetime.utcnow()
+            generated_at=datetime.now(timezone.utc)
         )
 
         metadata.status = ProcessingStateEnum.QUALITY_ANALYZED

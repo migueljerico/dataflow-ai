@@ -1,5 +1,5 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -32,7 +32,7 @@ class DatasetMetadata(BaseModel):
     row_count: int = Field(..., description="Número total de filas detectadas")
     column_count: int = Field(..., description="Número total de columnas detectadas")
     columns: List[str] = Field(default_factory=list, description="Lista de nombres de columnas")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Fecha de carga")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Fecha de carga")
     status: ProcessingStateEnum = Field(default=ProcessingStateEnum.UPLOADED, description="Estado actual del pipeline")
     warnings: List[str] = Field(default_factory=list, description="Advertencias durante la validación")
 

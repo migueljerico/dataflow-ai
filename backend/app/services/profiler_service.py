@@ -1,13 +1,14 @@
 import re
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Tuple, Any
 
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import (
     ProfilingReport, ColumnProfile, ColumnTypeEnum, SemanticHintEnum
 )
+from app.core.number_parsing import to_numeric_series, MISSING_MARKERS
 from app.services.dataset_service import DatasetService
 
 PROFILING_CACHE: Dict[str, ProfilingReport] = {}
@@ -100,20 +101,11 @@ class ProfilerService:
 
         # Check if text contains convertible numeric values or symbols
         try:
-            cleaned_num = (
-                non_null_series.astype(str)
-                .str.replace("€", "", regex=False)
-                .str.replace("$", "", regex=False)
-                .str.replace("%", "", regex=False)
-                .str.replace("USD", "", regex=False)
-                .str.replace("EUR", "", regex=False)
-                .str.strip()
-            )
-            # Excluir marcadores de texto típicos
-            placeholders = ["n/d", "n/a", "nd", "na", "-", "null", "none", "nan", ""]
-            cleaned_filtered = cleaned_num[~cleaned_num.str.lower().isin(placeholders)]
-            if len(cleaned_filtered) > 0:
-                pd.to_numeric(cleaned_filtered)
+            # Parseo centralizado con soporte de separadores europeos/americanos
+            as_str = non_null_series.astype(str).str.strip()
+            is_marker = as_str.str.lower().isin(MISSING_MARKERS)
+            converted = to_numeric_series(non_null_series)
+            if (~is_marker).any() and converted[~is_marker].notna().all():
                 return ColumnTypeEnum.NUMERIC
         except (ValueError, TypeError):
             pass
@@ -182,16 +174,7 @@ class ProfilerService:
 
             min_val, max_val, mean_val, median_val, std_val = None, None, None, None, None
             if inferred_type == ColumnTypeEnum.NUMERIC:
-                num_series = pd.to_numeric(
-                    clean_series.astype(str)
-                    .str.replace("€", "", regex=False)
-                    .str.replace("$", "", regex=False)
-                    .str.replace("%", "", regex=False)
-                    .str.replace("USD", "", regex=False)
-                    .str.replace("EUR", "", regex=False)
-                    .str.strip(),
-                    errors="coerce"
-                ).dropna()
+                num_series = to_numeric_series(clean_series).dropna()
 
                 if len(num_series) > 0:
                     min_val = _safe_float(num_series.min())
@@ -226,7 +209,7 @@ class ProfilerService:
             memory_estimate_bytes=memory_bytes,
             columns=column_profiles,
             global_warnings=global_warnings,
-            generated_at=datetime.utcnow()
+            generated_at=datetime.now(timezone.utc)
         )
 
         metadata.status = ProcessingStateEnum.PROFILED

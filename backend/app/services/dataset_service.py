@@ -3,7 +3,7 @@ import uuid
 import csv
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Tuple, List
 from fastapi import UploadFile
@@ -35,20 +35,21 @@ class DatasetService:
     @staticmethod
     def _clean_empty_rows(df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
         """
-        Elimina filas donde todas las columnas sean nulas, vacías o contengan solo espacios.
+        Elimina de forma vectorizada filas donde todas las columnas sean nulas,
+        vacías o contengan solo espacios/marcadores de ausencia.
         """
         if df.empty:
             return df, 0
         initial_count = len(df)
-        
-        def is_row_valid(row):
-            return any(
-                pd.notna(cell) and str(cell).strip() not in ["", "nan", "None", "null", "undefined"]
-                for cell in row
-            )
-            
-        valid_mask = df.apply(is_row_valid, axis=1)
-        cleaned_df = df[valid_mask].reset_index(drop=True)
+
+        # En pandas >= 3 astype(str) conserva los NaN como missing (no como "nan"),
+        # por lo que hay que tratarlos explícitamente junto a los tokens inválidos
+        stripped = df.astype(str).apply(lambda col: col.str.strip())
+        invalid_tokens = {"", "nan", "None", "null", "undefined"}
+        token_invalid = ~stripped.isna() & stripped.isin(invalid_tokens)
+        row_all_invalid = (stripped.isna() | token_invalid).all(axis=1)
+
+        cleaned_df = df[~row_all_invalid].reset_index(drop=True)
         dropped_count = initial_count - len(cleaned_df)
         return cleaned_df, dropped_count
 
@@ -156,7 +157,7 @@ class DatasetService:
             row_count=row_count,
             column_count=col_count,
             columns=columns,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             status=ProcessingStateEnum.VALIDATED,
             warnings=warnings
         )
@@ -193,7 +194,7 @@ class DatasetService:
                     row_count=row_count,
                     column_count=col_count,
                     columns=[str(c) for c in df.columns],
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                     status=ProcessingStateEnum.VALIDATED,
                     warnings=[]
                 )

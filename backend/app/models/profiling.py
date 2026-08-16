@@ -1,5 +1,5 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -49,4 +49,4 @@ class ProfilingReport(BaseModel):
     memory_estimate_bytes: int = Field(..., description="Estimación de uso de memoria RAM")
     columns: List[ColumnProfile] = Field(default_factory=list, description="Perfil detallado de cada columna")
     global_warnings: List[str] = Field(default_factory=list, description="Advertencias globales del dataset")
-    generated_at: datetime = Field(default_factory=datetime.utcnow, description="Fecha de generación")
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Fecha de generación")

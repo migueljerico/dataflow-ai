@@ -12,10 +12,11 @@ app = FastAPI(
     description="DataFlow AI — Intelligent Data Preparation & Business Analytics API"
 )
 
-# Configuración de CORS permitiendo orígenes de desarrollo
+# Configuración de CORS: orígenes permitidos configurables por entorno
+# (ver BACKEND_CORS_ORIGINS en app.core.config). Nunca comodín en producción.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

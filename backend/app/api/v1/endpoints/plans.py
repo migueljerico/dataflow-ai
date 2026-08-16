@@ -1,8 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Header, status
 from pydantic import BaseModel
-from app.core.config import settings
-from app.core.exceptions import FunctionalException
 from app.models.etl import TransformationPlan, TransformationStep, ExecutionResult
 from app.services.etl_service import ETLService
 from app.services.ai_service import AIService
@@ -56,19 +54,10 @@ async def approve_and_execute_plan(plan_id: str, req: ApprovePlanRequest):
     """
     Aprobar las transformaciones revisadas por el usuario y desencadenar
     la ejecución determinista del motor ETL en Python/pandas.
+
+    Si el plan no existe (p. ej. el backend se reinició y se perdió la sesión),
+    se devuelve 404 en lugar de ejecutar contra un dataset arbitrario: nunca
+    se transforma un archivo sin trazabilidad completa de su plan asociado.
     """
-    dataset_id = ""
-    try:
-        plan = ETLService.get_plan(plan_id)
-        dataset_id = plan.dataset_id
-    except Exception:
-        pass
-
-    if not dataset_id:
-        uploaded_files = [f for f in settings.UPLOAD_DIR.glob("*_*") if not f.name.startswith("clean_") and not f.name.startswith("script_")]
-        if uploaded_files:
-            dataset_id = uploaded_files[0].name.split("_")[0]
-        else:
-            raise FunctionalException(message="No hay ningún dataset activo para ejecutar el plan. Por favor, vuelve a subir el archivo.", code="DATASET_NOT_FOUND")
-
-    return ETLService.execute_plan(dataset_id, plan_id, req.steps)
+    plan = ETLService.get_plan(plan_id)
+    return ETLService.execute_plan(plan.dataset_id, plan_id, req.steps)

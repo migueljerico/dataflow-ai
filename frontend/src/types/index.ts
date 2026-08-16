@@ -120,6 +120,7 @@ export interface TransformationPlan {
   steps: TransformationStep[];
   source: string;
   created_at: string;
+  warnings?: string[];
 }
 
 export interface ExecutionResult {

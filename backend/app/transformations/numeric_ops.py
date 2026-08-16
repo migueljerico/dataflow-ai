@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, Any, Tuple
 from app.transformations.base import BaseTransformation
 from app.core.exceptions import FunctionalException
+from app.core.number_parsing import to_numeric_series
 
 class ConvertNumericTransformation(BaseTransformation):
     operation_name = "convert_numeric"
@@ -20,24 +21,12 @@ class ConvertNumericTransformation(BaseTransformation):
         df_copy = df.copy()
 
         original_series = df_copy[col].astype(str)
-        cleaned = (
-            original_series
-            .str.replace("€", "", regex=False)
-            .str.replace("$", "", regex=False)
-            .str.replace("%", "", regex=False)
-            .str.replace("USD", "", regex=False)
-            .str.replace("EUR", "", regex=False)
-            .str.strip()
-        )
-        
-        # Reemplazar marcadores de texto N/D, N/A, -, null por NaN explícito
-        placeholders = ["n/d", "n/a", "nd", "na", "-", "null", "none", "nan", "undefined", ""]
-        cleaned = cleaned.apply(lambda x: np.nan if str(x).lower().strip() in placeholders else x)
+        converted = to_numeric_series(original_series)
 
-        converted = pd.to_numeric(cleaned, errors="coerce")
-        
-        # Conteo preciso evitando el falso positivo de NaN != NaN
-        changed = (original_series != converted.astype(str)) & ~(original_series.isin(["nan", "None", ""]) & converted.isna())
+        # Conteo preciso evitando el falso positivo de NaN != NaN.
+        # En pandas >= 3 astype(str) conserva los NaN como missing values.
+        orig_missing = original_series.isna() | original_series.isin(["nan", "None", ""])
+        changed = (original_series != converted.astype(str)) & ~(orig_missing & converted.isna())
         affected = int(changed.sum())
         df_copy[col] = converted
         return df_copy, affected

@@ -1,5 +1,5 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -47,4 +47,4 @@ class QualityReport(BaseModel):
     quality_score: QualityScore = Field(..., description="Puntuación de calidad explicable")
     issues: List[QualityIssue] = Field(default_factory=list, description="Lista de problemas detectados")
     issues_count: int = Field(..., description="Total de problemas detectados")
-    generated_at: datetime = Field(default_factory=datetime.utcnow, description="Fecha de análisis")
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Fecha de análisis")

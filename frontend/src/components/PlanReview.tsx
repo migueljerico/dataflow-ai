@@ -39,6 +39,29 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
         </button>
       </div>
 
+      {plan.warnings && plan.warnings.length > 0 && (
+        <div
+          style={{
+            backgroundColor: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          }}
+        >
+          {plan.warnings.map((warning, index) => (
+            <p
+              key={index}
+              style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <ShieldAlert size={15} style={{ color: '#f59e0b', flexShrink: 0 }} /> {warning}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {steps.map((step) => {
           const isApproved = step.status !== 'rejected';

@@ -1,7 +1,12 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+
+
+def utc_now() -> datetime:
+    """Datetime UTC consciente de zona (datetime.utcnow está deprecado)."""
+    return datetime.now(timezone.utc)
 
 class StepStatusEnum(str, Enum):
     PROPOSED = "proposed"
@@ -26,7 +31,8 @@ class TransformationPlan(BaseModel):
     summary: str = Field(..., description="Resumen descriptivo del plan")
     steps: List[TransformationStep] = Field(default_factory=list, description="Lista de pasos ordenados")
     source: str = Field(default="rules_engine", description="Origen del plan: rules_engine o ai_assistant")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Fecha de creación")
+    created_at: datetime = Field(default_factory=utc_now, description="Fecha de creación")
+    warnings: List[str] = Field(default_factory=list, description="Advertencias del plan (p. ej. operaciones IA descartadas por guardrails)")
 
 class ExecutionResult(BaseModel):
     run_id: str = Field(..., description="ID de la ejecución")
