@@ -327,26 +327,30 @@ dataflow-ai/
 │   │   │   ├── base.py                # Contratos del LLMProvider y modelos de respuesta
 │   │   │   ├── gemini_provider.py     # Integración con Google Gemini (BYOK, cabecera x-goog-api-key)
 │   │   │   └── mock_provider.py       # Motor heurístico gratuito (sin API Key)
-│   │   ├── api/v1/
-│   │   │   ├── endpoints/
-│   │   │   │   ├── analytics.py       # Endpoint de Business Analytics
-│   │   │   │   ├── datasets.py        # Carga, listado y muestras demo
-│   │   │   │   ├── plans.py           # Propuesta, revisión y ejecución de planes ETL
-│   │   │   │   ├── profiling.py       # Data Profiling automático
-│   │   │   │   ├── quality.py         # Data Quality Score explicable
-│   │   │   │   └── runs.py            # Resultados, comparativas, descargas y scripts
-│   │   │   └── router.py              # Router principal /api/v1
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       ├── endpoints/
+│   │   │       │   ├── analytics.py   # Endpoint de Business Analytics
+│   │   │       │   ├── datasets.py    # Carga, listado y muestras demo
+│   │   │       │   ├── plans.py       # Propuesta, revisión y ejecución de planes ETL
+│   │   │       │   ├── profiling.py   # Data Profiling automático
+│   │   │       │   ├── quality.py     # Data Quality Score explicable
+│   │   │       │   └── runs.py        # Resultados, comparativas, descargas y scripts
+│   │   │       └── router.py          # Router principal /api/v1
 │   │   ├── core/
+│   │   │   ├── __init__.py
 │   │   │   ├── config.py              # Settings, CORS, límites de archivo
 │   │   │   ├── exceptions.py          # Excepciones funcionales y handler global
 │   │   │   └── number_parsing.py      # Parseo numérico europeo/americano centralizado
 │   │   ├── models/
+│   │   │   ├── __init__.py
 │   │   │   ├── analytics.py           # Modelos Pydantic de KPIs y reporte ejecutivo
 │   │   │   ├── dataset.py             # DatasetMetadata, estados, file types
 │   │   │   ├── etl.py                 # TransformationPlan, Steps, ExecutionResult
 │   │   │   ├── profiling.py           # ColumnProfile, SemanticHints
 │   │   │   └── quality.py             # QualityReport, QualityScore, Issues
 │   │   ├── services/
+│   │   │   ├── __init__.py
 │   │   │   ├── ai_service.py          # Servicio IA, guardrails y anonimización PII
 │   │   │   ├── analytics_service.py   # KPIs ejecutivos por dominio con pandas
 │   │   │   ├── dataset_service.py     # Validación, limpieza y caché de datasets
@@ -361,6 +365,7 @@ dataflow-ai/
 │   │   │   ├── numeric_ops.py         # convert_numeric, round, clamp
 │   │   │   ├── registry.py            # Registro estricto de transformaciones
 │   │   │   └── text_ops.py            # trim_text, normalize_case, normalize_category
+│   │   ├── __init__.py
 │   │   └── main.py                    # FastAPI app, CORS, SPA, healthcheck
 │   ├── tests/
 │   │   ├── conftest.py                # Aislamiento de tests (dir temporal + cachés limpias)
@@ -368,8 +373,51 @@ dataflow-ai/
 │   │   ├── test_ai_provider.py        # Generación de planes IA
 │   │   ├── test_analytics.py          # Business Analytics end-to-end
 │   │   ├── test_dataset_upload.py     # Carga y validación de archivos
-│   │   ├
+│   │   ├── test_etl.py                # Motor ETL: pipeline completo y auditoría
+│   │   ├── test_european_numbers.py   # Parseo de números europeos/americanos
+│   │   ├── test_plan_governance.py    # Gobierno del plan y aprobación por pasos
+│   │   ├── test_profiler.py           # Profiling y detección semántica
+│   │   └── test_quality.py            # Data Quality y dimensiones del score
+│   ├── Dockerfile                     # Imagen backend
+│   ├── pytest.ini                     # Configuración de pytest
+│   ├── requirements.txt               # Dependencias Python
+│   └── uploads/
+│       └── .gitkeep                   # Directorio de subida de datasets
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ApiKeyModal.tsx         # Modal para API Key
+│   │   │   ├── BusinessInsights.tsx    # Vista de insights ejecutivos
+│   │   │   ├── ExecutionReport.tsx     # Reporte de ejecución ETL
+│   │   │   ├── FileUpload.tsx          # Componente de subida de archivos
+│   │   │   ├── Header.tsx              # Cabecera de la aplicación
+│   │   │   ├── PlanReview.tsx          # Revisión y edición del plan ETL
+│   │   │   └── ProfilingDashboard.tsx  # Panel de profiling y calidad
+│   │   ├── services/
+│   │   │   └── api.ts                  # Cliente HTTP hacia el backend
+│   │   ├── types/
+│   │   │   └── index.ts                # Tipos TypeScript
+│   │   ├── App.tsx                     # Componente raíz
+│   │   ├── main.tsx                    # Punto de entrada React
+│   │   └── index.css                   # Estilos globales
+│   ├── Dockerfile                     # Imagen frontend
+│   ├── index.html                     # Plantilla HTML
+│   ├── nginx.conf                     # Configuración de nginx
+│   ├── package.json                   # Dependencias npm
+│   ├── package-lock.json              # Lockfile npm
+│   ├── tsconfig.json                  # Configuración TypeScript
+│   └── vite.config.ts                 # Configuración Vite
+├── data_samples/
+│   ├── contact_center_corrupted.csv   # Muestra demo Contact Center
+│   ├── people_analytics_corrupted.csv # Muestra demo People Analytics
+│   └── sales_sample_corrupted.csv     # Muestra demo Ventas
+├── .gitignore
+├── docker-compose.yml                 # Orquestación multi-servicio
+├── Dockerfile                         # Dockerfile raíz
+├── LICENSE
+└── README.md
+```
+```
 
----
 
 <p align="center">Creado por <a href="https://github.com/migueljerico">@migueljerico</a> y documentado por QwenCloud (deepseek-v4-pro-0813) desde la App Asistente de IA · 2026</p>
