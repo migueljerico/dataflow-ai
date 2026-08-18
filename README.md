@@ -16,6 +16,7 @@
 *From raw business data to clean, trusted and actionable insights.*  
 *Un copiloto inteligente y gobernado para preparación, calidad, transformación y análisis de datos empresariales.*
 
+> 🌐 **Despliegue en Producción (Google Cloud Run):** [https://dataflow-ai-748914382449.us-central1.run.app](https://dataflow-ai-748914382449.us-central1.run.app)  
 > ⚠️ **Versión Piloto / MVP (En desarrollo activo)**  
 > *Diseñado para equipos de Business Intelligence, Analytics y Operaciones que necesitan datos fiables antes de construir reportes en Power BI.*
 
