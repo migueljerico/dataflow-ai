@@ -1,3 +1,4 @@
+import re
 import uuid
 import hashlib
 import pandas as pd
@@ -6,7 +7,7 @@ from typing import Dict, List
 
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
-from app.core.number_parsing import to_numeric_series
+from app.core.number_parsing import to_numeric_series, MISSING_MARKERS
 from app.models.dataset import ProcessingStateEnum, FileTypeEnum
 from app.models.etl import TransformationPlan, TransformationStep, StepStatusEnum, ExecutionResult
 from app.transformations.registry import TransformationRegistry
@@ -140,11 +141,25 @@ class ETLService:
             series_raw = df[col_name].dropna().astype(str)
             col_lower = col_name.lower()
 
-            is_id = col_lower.startswith("id") or col_lower.endswith("_id") or "codigo" in col_lower or "code" in col_lower
+            is_id = (
+                col_lower.startswith("id") or
+                col_lower.endswith("_id") or
+                col_lower.startswith("cod") or
+                col_lower.endswith("_cod") or
+                "codigo" in col_lower or
+                "code" in col_lower or
+                "pedido" in col_lower or
+                "cif" in col_lower or
+                "dni" in col_lower or
+                "nif" in col_lower or
+                "sku" in col_lower or
+                "ref" in col_lower or
+                "referencia" in col_lower
+            )
             is_quant_or_date = (
                 pd.api.types.is_numeric_dtype(df[col_name]) or
                 pd.api.types.is_datetime64_any_dtype(df[col_name]) or
-                any(k in col_lower for k in ["fecha", "date", "horas", "dias", "precio", "salario", "sueldo", "monto", "cantidad", "unidades", "llamadas", "aht", "segundos", "minutos"])
+                any(k in col_lower for k in ["fecha", "date", "horas", "dias", "precio", "salario", "sueldo", "monto", "cantidad", "unidades", "llamadas", "aht", "segundos", "minutos", "stock", "descuento", "importe"])
             )
 
             # Nombres / Entidades / Categorías en mayúsculas (excluyendo IDs y numéricas)
@@ -175,17 +190,21 @@ class ETLService:
                         affected_rows_estimate=len(df)
                     ))
 
-            # Marcadores N/D / N/A o símbolos en series convertibles a numérico
+            # Marcadores N/D / N/A / -- o símbolos en series convertibles a numérico
             if not is_id and not any(s.column == col_name and s.operation == "convert_numeric" for s in steps):
-                placeholders = ["n/d", "n/a", "nd", "na", "-", "null", "none"]
-                has_dirty = any(v.lower().strip() in placeholders or any(sym in v for sym in ["€", "$", "%", "usd", "eur"]) for v in series_raw)
+                has_dirty = any(
+                    v.lower().strip() in MISSING_MARKERS or
+                    bool(re.match(r"^[-_—–\s]+$", str(v))) or
+                    any(sym in v for sym in ["€", "$", "%", "usd", "eur"])
+                    for v in series_raw
+                )
                 if has_dirty:
                     steps.append(TransformationStep(
                         step_id=f"STEP-{len(steps)+1:03d}",
                         operation="convert_numeric",
                         column=col_name,
                         parameters={"column": col_name},
-                        reason=f"Convertir '{col_name}' a numérico puro float64 asignando marcadores de texto N/A / N/D a nulos para Power BI.",
+                        reason=f"Convertir '{col_name}' a numérico puro float64 asignando marcadores de ausencia (N/A, N/D, --, -) a nulos (NaN) para Power BI.",
                         confidence=0.95,
                         risk="medium",
                         affected_rows_estimate=len(df)

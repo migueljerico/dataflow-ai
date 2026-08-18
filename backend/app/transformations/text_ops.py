@@ -57,10 +57,11 @@ class NormalizeCaseTransformation(BaseTransformation):
             return s
         words = s.split(" ")
         formatted_words = []
+        code_token_re = re.compile(r"^[A-Za-z0-9]{2,6}[-_][A-Za-z0-9]{1,}$")
         for w in words:
             clean_w = w.strip()
             upper_w = clean_w.upper()
-            if upper_w in BUSINESS_ACRONYMS:
+            if upper_w in BUSINESS_ACRONYMS or code_token_re.match(clean_w):
                 formatted_words.append(upper_w)
             else:
                 formatted_words.append(clean_w.capitalize())

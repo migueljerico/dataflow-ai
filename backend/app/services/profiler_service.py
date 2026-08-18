@@ -70,9 +70,26 @@ class ProfilerService:
             return SemanticHintEnum.DATE
 
         # 5. ID / Code
-        if col_lower.startswith("id") or col_lower.endswith("_id") or "codigo" in col_lower or "code" in col_lower or "cif" in col_lower or "dni" in col_lower:
+        if (
+            col_lower.startswith("id") or
+            col_lower.endswith("_id") or
+            col_lower.startswith("cod") or
+            col_lower.endswith("_cod") or
+            "codigo" in col_lower or
+            "code" in col_lower or
+            "cif" in col_lower or
+            "dni" in col_lower or
+            "nif" in col_lower or
+            "sku" in col_lower or
+            "ref" in col_lower or
+            "referencia" in col_lower or
+            "pedido" in col_lower or
+            "factura" in col_lower or
+            "ticket" in col_lower or
+            "albaran" in col_lower
+        ):
             return SemanticHintEnum.ID
-        if any(re.match(r"^[A-Z]{2,4}-\d{2,}$", val) for val in non_null_str.head(20)):
+        if any(re.match(r"^[A-Za-z0-9]{2,6}[-_][A-Za-z0-9]{1,}$", val.strip()) for val in non_null_str.head(20)):
             return SemanticHintEnum.ID
 
         # 6. Phone
@@ -101,12 +118,21 @@ class ProfilerService:
 
         # Check if text contains convertible numeric values or symbols
         try:
-            # Parseo centralizado con soporte de separadores europeos/americanos
+            # Parseo centralizado con soporte de separadores europeos/americanos y marcadores ampliados
             as_str = non_null_series.astype(str).str.strip()
-            is_marker = as_str.str.lower().isin(MISSING_MARKERS)
+            is_marker = as_str.str.lower().isin(MISSING_MARKERS) | as_str.str.match(r"^[-_—–\s]+$")
             converted = to_numeric_series(non_null_series)
-            if (~is_marker).any() and converted[~is_marker].notna().all():
-                return ColumnTypeEnum.NUMERIC
+            valid_numeric_count = int(converted.notna().sum())
+            total_non_null = len(non_null_series)
+
+            if total_non_null > 0:
+                non_marker_count = int((~is_marker).sum())
+                # Si todos los elementos que no son marcadores se convierten a número
+                if non_marker_count > 0 and converted[~is_marker].notna().all():
+                    return ColumnTypeEnum.NUMERIC
+                # Si al menos un 50% de los valores se parsean exitosamente a número
+                if valid_numeric_count > 0 and (valid_numeric_count / total_non_null) >= 0.5:
+                    return ColumnTypeEnum.NUMERIC
         except (ValueError, TypeError):
             pass
 
@@ -115,7 +141,7 @@ class ProfilerService:
             return ColumnTypeEnum.DATETIME
         try:
             sample = non_null_series.astype(str).head(20)
-            sample_filtered = sample[~sample.str.lower().isin(["invalid_date", "error", "n/d", "n/a"])]
+            sample_filtered = sample[~sample.str.lower().isin(["invalid_date", "error", "n/d", "n/a", "--", "-"])]
             if len(sample_filtered) > 0:
                 parsed = pd.to_datetime(sample_filtered, errors="coerce")
                 if parsed.notna().sum() / len(sample_filtered) > 0.6:

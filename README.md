@@ -11,7 +11,7 @@
 ![Estado](https://img.shields.io/badge/Estado-Desplegado%20en%20Producci%C3%B3n-brightgreen?style=for-the-badge)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-23%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-27%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 *From raw business data to clean, trusted and actionable insights.*  
@@ -427,6 +427,7 @@ dataflow-ai/
 │   ├── people_analytics_corrupted.csv # Muestra demo People Analytics
 │   └── sales_sample_corrupted.csv     # Muestra demo Ventas
 ├── .gitignore
+├── CHANGELOG.md                       # Historial de cambios y versiones (Keep a Changelog)
 ├── docker-compose.yml                 # Orquestación multi-servicio
 ├── Dockerfile                         # Dockerfile raíz unificado para Google Cloud Run
 ├── LICENSE                            # Licencia MIT

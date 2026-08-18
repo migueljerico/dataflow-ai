@@ -35,11 +35,12 @@ Columnas y tipos: {json.dumps(columns_schema)}
 Problemas de calidad detectados: {json.dumps(quality_issues)}
 Muestra anonimizada (3 filas): {json.dumps(sample_rows[:3])}
 
-Reglas estrictas:
+Reglas estrictas de negocio y gobernanza:
 1. SOLO puedes utilizar operaciones del catálogo permitido:
    - trim_text, normalize_case, normalize_category, convert_datetime, convert_numeric, round_numeric, clamp_range, fill_missing, remove_duplicates, rename_column, drop_column.
-2. Los importes pueden usar separadores europeos (1.234,56 €) o americanos ($1,234.56); ambas notaciones deben convertirse a float64.
-3. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
+2. Los importes y números cuantitativos pueden usar separadores europeos (1.234,56 €) o americanos ($1,234.56), y marcadores de ausencia ('--', 'N/D', 'N/A', '-'); SIEMPRE deben convertirse a float64 mediante 'convert_numeric'.
+3. NUNCA propongas 'normalize_case' sobre columnas identificadoras o códigos (ej. ID_Pedido, Cod_Cliente, SKU, CIF, DNI, o patrones como PED-123, EMP-001) para no degradar claves primarias ni romper JOINs.
+4. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
 {{
   "dataset_summary": "Explicación breve del dataset y su propósito operativo",
   "suggestions": [

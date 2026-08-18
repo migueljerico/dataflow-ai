@@ -10,7 +10,7 @@ from app.models.quality import (
     QualityReport, QualityScore, QualityIssue, QualityDimensionEnum, SeverityEnum, DimensionBreakdown
 )
 from app.models.profiling import ColumnTypeEnum, SemanticHintEnum
-from app.core.number_parsing import to_numeric_series
+from app.core.number_parsing import to_numeric_series, MISSING_MARKERS
 from app.services.dataset_service import DatasetService
 from app.services.profiler_service import ProfilerService
 
@@ -125,7 +125,24 @@ class QualityService:
                     suggested_action=f"Limpiar espacios en blanco en '{col_prof.column_name}' ('trim_text')."
                 ))
 
-            if col_prof.inferred_type in [ColumnTypeEnum.TEXT, ColumnTypeEnum.CATEGORICAL] or col_prof.semantic_hint == SemanticHintEnum.NAME:
+            # Excluir identificadores y códigos de la normalización de mayúsculas/minúsculas
+            is_identifier = (
+                col_prof.semantic_hint == SemanticHintEnum.ID or
+                col_prof.column_name.lower().startswith("id") or
+                col_prof.column_name.lower().endswith("_id") or
+                col_prof.column_name.lower().startswith("cod") or
+                col_prof.column_name.lower().endswith("_cod") or
+                "codigo" in col_prof.column_name.lower() or
+                "code" in col_prof.column_name.lower() or
+                "cif" in col_prof.column_name.lower() or
+                "dni" in col_prof.column_name.lower() or
+                "nif" in col_prof.column_name.lower() or
+                "sku" in col_prof.column_name.lower() or
+                "ref" in col_prof.column_name.lower() or
+                "pedido" in col_prof.column_name.lower()
+            )
+
+            if not is_identifier and (col_prof.inferred_type in [ColumnTypeEnum.TEXT, ColumnTypeEnum.CATEGORICAL] or col_prof.semantic_hint == SemanticHintEnum.NAME):
                 cleaned_str = series.str.strip().str.lower()
                 unique_original = series.str.strip().nunique()
                 unique_lower = cleaned_str.nunique()
@@ -184,15 +201,18 @@ class QualityService:
             is_quant_column = (
                 col_prof.inferred_type == ColumnTypeEnum.NUMERIC or
                 col_prof.semantic_hint in [SemanticHintEnum.CURRENCY, SemanticHintEnum.PERCENTAGE] or
-                any(k in col_prof.column_name.lower() for k in ["precio", "salario", "sueldo", "horas", "dias", "cantidad", "unidades", "llamadas", "aht", "segundos", "minutos", "importe", "monto"])
+                any(k in col_prof.column_name.lower() for k in ["precio", "salario", "sueldo", "horas", "dias", "cantidad", "unidades", "llamadas", "aht", "segundos", "minutos", "importe", "monto", "descuento", "stock"])
             )
 
             if is_quant_column:
-                # Detectar símbolos monetarios/porcentuales o marcadores de texto N/D, N/A, -
-                placeholders = ["n/d", "n/a", "nd", "na", "-", "null", "none", "nan"]
-                has_placeholders = series.apply(lambda x: x.lower().strip() in placeholders)
-                has_symbols = series.apply(lambda x: any(sym in x for sym in ["€", "$", "%", "USD", "EUR"]))
-                dirty_mask = has_placeholders | has_symbols
+                # Detectar símbolos monetarios/porcentuales o marcadores de texto
+                has_placeholders = series.apply(
+                    lambda x: str(x).lower().strip() in MISSING_MARKERS or bool(re.match(r"^[-_—–\s]+$", str(x)))
+                )
+                has_symbols = series.apply(lambda x: any(sym in str(x) for sym in ["€", "$", "%", "USD", "EUR"]))
+                converted_check = to_numeric_series(series)
+                has_non_numeric = converted_check.isna() & series.notna()
+                dirty_mask = has_placeholders | has_symbols | has_non_numeric
                 dirty_count = int(dirty_mask.sum())
 
                 if dirty_count > 0:
@@ -202,7 +222,7 @@ class QualityService:
                         dimension=QualityDimensionEnum.VALIDITY,
                         severity=SeverityEnum.MEDIUM,
                         column=col_prof.column_name,
-                        description=f"La columna cuantitativa '{col_prof.column_name}' contiene {dirty_count} celdas con símbolos o marcadores de texto (N/D, N/A, €/$).",
+                        description=f"La columna cuantitativa '{col_prof.column_name}' contiene {dirty_count} celdas con símbolos, texto o marcadores de ausencia (N/D, N/A, --, €/$).",
                         affected_rows=dirty_count,
                         affected_percentage=round((dirty_count / row_count) * 100, 2),
                         evidence_sample=_safe_evidence_sample(series[dirty_mask].head(3)),
