@@ -442,6 +442,116 @@ Base URL: `/api/v1`
 | `SAMPLE_NOT_FOUND` | Dataset demo inexistente. | 404 |
 | `SAMPLE_FILE_MISSING` | Archivo demo no disponible en servidor. | 404 |
 | `CLEAN_FILE_NOT_FOUND` | Archivo limpio no disponible. | 404 |
-| `FILE_NOT_FOUND
+| `FILE_NOT_FOUND` | Fichero subido no encontrado en disco. | 404 |
+
+---
+
+## 10. Variables de Entorno
+
+| Variable | Requerida | Valor por defecto | Descripción |
+| :--- | :---: | :--- | :--- |
+| `PORT` | Cloud Run lo inyecta | `8080` | Puerto HTTP en el que escucha Uvicorn. |
+| `PROJECT_NAME` | No | `DataFlow AI` | Nombre de la aplicación en FastAPI y metadatos. |
+| `VERSION` | No | `0.2.0` | Versión semántica actual del backend. |
+| `API_V1_STR` | No | `/api/v1` | Prefijo base para la API REST. |
+| `MAX_UPLOAD_SIZE_MB` | No | `10` | Límite máximo de tamaño para datasets subidos. |
+| `BACKEND_CORS_ORIGINS` | No | `["http://localhost:3000", "http://127.0.0.1:3000"]` | Lista JSON de orígenes autorizados para CORS en desarrollo. |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Modelo de Google Gemini utilizado para sugerencias IA. |
+| `GEMINI_API_KEY` | Opcional | `None` | Clave API global de Gemini. En producción se prioriza el modo **BYOK** (cabecera HTTP enviada por el usuario). |
+
+---
+
+## 11. Guía de Despliegue
+
+### 11.1 Despliegue en Google Cloud Run (Producción)
+
+DataFlow AI está desplegado en **Google Cloud Run** en la región **`us-central1`** (Iowa) para mitigar restricciones geográficas europeas de la API de Gemini y garantizar acceso público de baja latencia.
+
+* **URL de Producción**: [https://dataflow-ai-748914382449.us-central1.run.app](https://dataflow-ai-748914382449.us-central1.run.app)
+* **Arquitectura de Contenedor Único**: El `Dockerfile` multi-stage construye la SPA de React en el Stage 1 (`node:20-alpine`) y la copia a `/app/static` en el Stage 2 (`python:3.11-slim`), donde FastAPI sirve tanto la API `/api/v1` como la interfaz estática.
+* **Escalado a Cero (Coste 0 € en reposo)**: `min_instances=0` apaga los contenedores cuando no hay tráfico activo.
+* **Despliegue Continuo (CD)**: Conectado mediante un **Activador de Cloud Build** que compila y publica una nueva revisión en cada `push` a la rama `main`.
+
+### 11.2 Despliegue Manual con Google Cloud SDK
+
+```bash
+gcloud run deploy dataflow-ai \
+  --source . \
+  --project proyecto-app-antigravity \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated
+```
+
+### 11.3 Ejecución con Docker Compose (Local)
+
+```bash
+docker compose up --build
+```
+
+Levanta el servicio backend en el puerto `8000` y el frontend en Nginx en el puerto `3000` con proxy inverso hacia `/api`.
+
+---
+
+## 12. Pipeline de Integración Continua (CI)
+
+El archivo `.github/workflows/ci.yml` ejecuta en cada `push` y `pull_request` a `main`:
+
+1. **Job `test-backend`**:
+   - Entorno: Ubuntu Latest + Python 3.11
+   - Instalación de dependencias: `pip install -r requirements.txt`
+   - Ejecución de suite completa: `pytest --tb=short -q` (23 tests).
+2. **Job `build-frontend`**:
+   - Entorno: Ubuntu Latest + Node.js 20
+   - Chequeo estático de tipos: `npx tsc --noEmit`
+   - Compilación del bundle de producción: `npm run build`
+
+---
+
+## 13. Suite de Pruebas
+
+Ubicación: `backend/tests/`
+
+| Fichero | Tests | Objetivo |
+| :--- | :---: | :--- |
+| `test_dataset_upload.py` | 7 | Validación de formatos (`.csv`, `.xlsx`), límites de tamaño, detección de delimitador y dataset vacío. |
+| `test_profiler.py` | 1 | Inferencia de tipos y sugerencias semánticas automáticas. |
+| `test_quality.py` | 1 | Cálculo del Data Quality Score (0-100) en sus 5 dimensiones. |
+| `test_european_numbers.py` | 3 | Parseo unificado de importes con coma decimal, moneda (`€`, `$`) y porcentajes. |
+| `test_ai_privacy.py` | 3 | Enmascaramiento estricto de PII (`[NOMBRE]`, `[EMAIL]`, `[TELÉFONO]`) en muestras enviadas a la IA. |
+| `test_plan_governance.py` | 2 | Gobierno estricto: rechazo de planes inexistentes (`404`) y ejecución únicamente de pasos aprobados. |
+| `test_ai_provider.py` | 1 | Generación de sugerencias IA y guardrails de catálogo. |
+| `test_etl.py` | 3 | Ejecución del motor determinista sobre transformaciones individuales y pipelines combinados. |
+| `test_analytics.py` | 2 | Cálculo de KPIs ejecutivos de negocio y reporte para Dirección. |
+
+**Total:** 23 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
+
+---
+
+## 14. Consideraciones de Seguridad y Privacidad
+
+1. **BYOK (Bring Your Own Key)**: Las claves de API de Google Gemini se almacenan exclusivamente en el `localStorage` del navegador del cliente y se envían por cabecera HTTP efímera `x-goog-api-key`.
+2. **Privacidad RGPD**: Nunca se envía el dataset completo a modelos externos. Únicamente se transfieren resúmenes estadísticos y 3 filas de muestra con datos sensibles enmascarados.
+3. **Guardrails de Ejecución**: La IA no tiene capacidad de ejecución de código; sus propuestas se validan contra un catálogo cerrado de operaciones (`TransformationRegistry`).
+4. **CORS Restrictivo**: En producción no se utilizan comodines (`*`) con credenciales activas.
+
+---
+
+## 15. Limitaciones Conocidas
+
+- **Almacenamiento Volátil en Cloud Run**: Los datasets temporales subidos se almacenan en el sistema de archivos efímero del contenedor; si la instancia escala a cero, los archivos antiguos expiran (comportamiento esperado por privacidad).
+- **Límite de Tamaño**: Tamaño máximo fijado en 10 MB por archivo en la versión piloto.
+- **Concurrencia de Planes**: Los planes en memoria se gestionan efímeramente por sesión.
+
+---
+
+## 16. Mejoras Futuras
+
+- [ ] Exportación directa a modelos semánticos de Power BI (Power BI REST API / `.pbix`).
+- [ ] Conectores directos a bases de datos SQL (PostgreSQL, Snowflake, BigQuery).
+- [ ] Persistencia de pipelines en base de datos PostgreSQL con autenticación de usuarios.
+- [ ] Programación periódica de pipelines ETL (Cron Jobs / Webhooks).
+
+---
 
 <p align="center">Creado por <a href="https://github.com/migueljerico">@migueljerico</a> y documentado por QwenCloud (deepseek-v4-pro-0813) desde la App Asistente de IA · 2026</p>

@@ -6,8 +6,9 @@
 ![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Estado](https://img.shields.io/badge/Estado-En%20desarrollo-orange?style=for-the-badge)
+![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-us--central1-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
+![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
+![Estado](https://img.shields.io/badge/Estado-Desplegado%20en%20Producci%C3%B3n-brightgreen?style=for-the-badge)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-23%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
@@ -24,7 +25,20 @@
 
 ## 🔗 Acceso / Demo
 
-El proyecto se ejecuta en local. Tras arrancar los servicios, tendrás disponibles:
+### 🌐 Despliegue en Producción (Google Cloud Run)
+
+La aplicación está desplegada y operativa en **Google Cloud Run** en la región **`us-central1`** con arquitectura de contenedor unificado y despliegue continuo (CD) automático en cada push a `main`:
+
+| Recurso | URL |
+| :--- | :--- |
+| **Aplicación Web (Producción)** | [https://dataflow-ai-748914382449.us-central1.run.app](https://dataflow-ai-748914382449.us-central1.run.app) |
+| **API REST / OpenAPI** | [https://dataflow-ai-748914382449.us-central1.run.app/api/v1](https://dataflow-ai-748914382449.us-central1.run.app/api/v1) |
+| **Documentación Interactiva Swagger** | [https://dataflow-ai-748914382449.us-central1.run.app/docs](https://dataflow-ai-748914382449.us-central1.run.app/docs) |
+| **Healthcheck de Servicio** | [https://dataflow-ai-748914382449.us-central1.run.app/health](https://dataflow-ai-748914382449.us-central1.run.app/health) |
+
+### 💻 Ejecución en Local
+
+Para desarrollo y pruebas locales:
 
 | Recurso | URL |
 | :--- | :--- |
@@ -33,14 +47,14 @@ El proyecto se ejecuta en local. Tras arrancar los servicios, tendrás disponibl
 | Documentación interactiva Swagger | `http://localhost:8000/docs` |
 | Healthcheck | `http://localhost:8000/health` |
 
-También puedes levantar el stack completo con Docker Compose:
+### 🐳 Ejecución con Docker Compose
+
+Stack completo frontend (Nginx) + backend (FastAPI):
 
 | Recurso | URL |
 | :--- | :--- |
 | Frontend (Nginx) | `http://localhost:3000` |
 | Backend (FastAPI, vía proxy `/api`) | `http://localhost:3000/api/v1` |
-
-No existe despliegue público actual; el roadmap contempla Google Cloud Run.
 
 ---
 
@@ -414,8 +428,9 @@ dataflow-ai/
 │   └── sales_sample_corrupted.csv     # Muestra demo Ventas
 ├── .gitignore
 ├── docker-compose.yml                 # Orquestación multi-servicio
-├── Dockerfile                         # Dockerfile raíz
-├── LICENSE
+├── Dockerfile                         # Dockerfile raíz unificado para Google Cloud Run
+├── LICENSE                            # Licencia MIT
+├── MANUAL_TECNICO.md                  # Manual técnico exhaustivo de arquitectura y gobernanza
 └── README.md
 ```
 
