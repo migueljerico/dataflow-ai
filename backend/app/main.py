@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,29 +38,33 @@ def health():
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Montar frontend estático si existe la carpeta 'static' (compilado en Docker para producción)
-STATIC_DIR = (Path(__file__).resolve().parent.parent / "static").resolve()
-if not STATIC_DIR.exists():
-    STATIC_DIR = Path("static").resolve()
+BASE_STATIC_DIR = os.path.abspath(str(Path(__file__).resolve().parent.parent / "static"))
+if not os.path.exists(BASE_STATIC_DIR):
+    BASE_STATIC_DIR = os.path.abspath("static")
 
-if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
-    assets_dir = STATIC_DIR / "assets"
-    if assets_dir.exists():
+INDEX_HTML_PATH = os.path.join(BASE_STATIC_DIR, "index.html")
+
+if os.path.exists(BASE_STATIC_DIR) and os.path.exists(INDEX_HTML_PATH):
+    assets_dir = os.path.join(BASE_STATIC_DIR, "assets")
+    if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
             return {"detail": "Not Found"}
-        
-        # CodeQL CWE-022: Prevenir path traversal asegurando que target_file esté confinado en STATIC_DIR
-        try:
-            target_file = (STATIC_DIR / full_path).resolve()
-            if target_file.is_relative_to(STATIC_DIR) and target_file.is_file():
-                return FileResponse(target_file)
-        except (ValueError, RuntimeError, OSError):
-            pass
 
-        return FileResponse(STATIC_DIR / "index.html")
+        # CodeQL CWE-022 Sanitizer Pattern canónico
+        sanitized_subpath = os.path.normpath(full_path).lstrip(r"\/")
+        full_target_path = os.path.normpath(os.path.join(BASE_STATIC_DIR, sanitized_subpath))
+
+        if not full_target_path.startswith(BASE_STATIC_DIR):
+            return FileResponse(INDEX_HTML_PATH)
+
+        if os.path.isfile(full_target_path):
+            return FileResponse(full_target_path)
+
+        return FileResponse(INDEX_HTML_PATH)
 else:
     @app.get("/")
     def root():
