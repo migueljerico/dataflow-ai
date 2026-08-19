@@ -246,10 +246,7 @@ class QualityService:
                 continue
 
             # A. Regla Porcentual: [0.0, 100.0]
-            is_percentage = (
-                col_prof.semantic_hint == SemanticHintEnum.PERCENTAGE or
-                any(k in col_lower for k in ["_pct", "pct", "porcentaje", "productividad", "conversion", "score", "calidad", "tasa", "ratio", "rate"])
-            )
+            is_percentage = (col_prof.semantic_hint == SemanticHintEnum.PERCENTAGE)
             if is_percentage:
                 out_of_bounds = series_num[(series_num > 100.0) | (series_num < 0.0)]
                 if len(out_of_bounds) > 0:
@@ -270,7 +267,7 @@ class QualityService:
             # B. Regla Conteo / Magnitud Positiva: [0.0, inf]
             is_positive_count_or_time = (
                 col_prof.semantic_hint == SemanticHintEnum.CURRENCY or
-                any(k in col_lower for k in ["cantidad", "unidades", "llamadas", "hours", "horas", "dias", "absentismo", "aht", "segundos", "minutos", "precio", "salario", "sueldo", "monto", "importe"])
+                any(k in col_lower for k in ["cantidad", "unidades", "llamadas", "conversiones", "leads", "clicks", "visitas", "ventas", "stock", "pedidos", "hours", "horas", "dias", "absentismo", "aht", "segundos", "minutos", "precio", "salario", "sueldo", "monto", "importe", "coste", "presupuesto"])
             )
             if is_positive_count_or_time and not is_percentage:
                 negatives = series_num[series_num < 0.0]

@@ -51,10 +51,17 @@ class ProfilerService:
         if "email" in col_lower or any("@" in val for val in non_null_str.head(20)):
             return SemanticHintEnum.EMAIL
 
-        # 2. Percentage / Ratios
-        if any(k in col_lower for k in ["_pct", "pct", "porcentaje", "productividad", "conversion", "score", "rate", "tasa", "ratio", "calidad"]):
+        # 2. Percentage / Ratios (Exige evidencia de % en datos o sufijos explícitos validados contra la distribución)
+        has_percent_symbol = any("%" in val for val in non_null_str.head(50))
+        if has_percent_symbol:
             return SemanticHintEnum.PERCENTAGE
-        if any("%" in val for val in non_null_str.head(20)):
+
+        has_explicit_pct_name = (
+            col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score")) or
+            col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_")) or
+            col_lower in ["%", "pct", "porcentaje", "ctr", "cvr", "roi", "score", "score_calidad", "tasa_conversion", "conversion_rate", "churn_rate", "descuento_pct", "incidencias_pct"]
+        )
+        if has_explicit_pct_name:
             return SemanticHintEnum.PERCENTAGE
 
         # 3. Currency / Dinero

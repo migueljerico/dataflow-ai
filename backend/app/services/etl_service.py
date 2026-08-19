@@ -26,6 +26,24 @@ def _count_modified_cells(series_orig: pd.Series, series_curr: pd.Series) -> int
     both_missing = a.isna() & b.isna()
     return int(((a != b) & ~both_missing).sum())
 
+def _is_percentage_or_score_column(col_name: str, raw_series: pd.Series, numeric_series: pd.Series) -> bool:
+    """
+    Determina si una columna es de tipo porcentaje o score acotado a [0, 100].
+    Evita falsos positivos con conteos absolutos (e.g. Conversiones, Leads, Clicks, Ventas, Horas).
+    """
+    # 1. Si contiene el símbolo '%' en sus datos originales -> Es porcentaje inequívocamente
+    if any("%" in str(x) for x in raw_series.dropna()):
+        return True
+
+    col_lower = col_name.lower().strip()
+    # 2. Nombres con sufijos/prefijos explícitos de porcentaje o score
+    return (
+        col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score")) or
+        col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_")) or
+        col_lower in ["%", "pct", "porcentaje", "ctr", "cvr", "roi", "score", "score_calidad", "tasa_conversion", "conversion_rate", "churn_rate", "descuento_pct", "incidencias_pct"]
+    )
+
+
 class ETLService:
     @staticmethod
     def propose_plan_from_rules(dataset_id: str) -> TransformationPlan:
@@ -76,32 +94,33 @@ class ETLService:
                         affected_rows_estimate=issue.affected_rows
                     ))
 
-            elif dim == "validity":
-                if "fecha" in issue.description.lower() and col and not any(s.column == col and s.operation == "convert_datetime" for s in steps):
+            elif dim == "validity" and col:
+                if ("fecha" in issue.description.lower() or "datetime" in issue.description.lower()) and not any(s.column == col and s.operation == "convert_datetime" for s in steps):
                     steps.append(TransformationStep(
                         step_id=step_id,
                         operation="convert_datetime",
                         column=col,
                         parameters={"column": col, "target_format": "%Y-%m-%d"},
-                        reason=f"Estandarizar formato de fecha ISO 8601 en '{col}' respetando diferencias entre YYYY-MM-DD y DD/MM/AAAA sin inversión de día/mes.",
-                        confidence=0.96,
-                        risk="medium",
+                        reason=f"Estandarizar formato heterogéneo de fechas en '{col}' a ISO 8601 (YYYY-MM-DD).",
+                        confidence=0.95,
+                        risk="low",
                         affected_rows_estimate=issue.affected_rows
                     ))
-                elif ("símbolos" in issue.description.lower() or "cuantitativa" in issue.description.lower() or "marcadores" in issue.description.lower()) and col and not any(s.column == col and s.operation == "convert_numeric" for s in steps):
+                elif ("símbolos" in issue.description.lower() or "marcadores" in issue.description.lower() or "cuantitativa" in issue.description.lower()) and not any(s.column == col and s.operation == "convert_numeric" for s in steps):
                     steps.append(TransformationStep(
                         step_id=step_id,
                         operation="convert_numeric",
                         column=col,
                         parameters={"column": col},
-                        reason=f"Limpiar símbolos (€/$) y asignar nulo (NaN) a marcadores N/D / N/A en '{col}' para permitir tipado float64 en Power BI.",
+                        reason=f"Limpiar símbolos y marcadores de ausencia (N/A, N/D, --, -) en '{col}' convirtiendo a numérico puro float64 para Power BI.",
                         confidence=0.95,
                         risk="medium",
                         affected_rows_estimate=issue.affected_rows
                     ))
 
             elif dim == "integrity" and col:
-                col_is_pct = any(k in col.lower() for k in ["_pct", "pct", "porcentaje", "productividad", "conversion", "score", "calidad", "tasa", "ratio", "rate", "%"])
+                col_nums = to_numeric_series(df[col]).dropna() if col in df.columns else pd.Series()
+                col_is_pct = _is_percentage_or_score_column(col, df[col], col_nums) if col in df.columns else False
                 if col_is_pct and not any(s.column == col and s.operation == "clamp_range" for s in steps):
                     steps.append(TransformationStep(
                         step_id=step_id,
@@ -226,7 +245,7 @@ class ETLService:
             if not is_id:
                 clean_nums = to_numeric_series(series_raw).dropna()
                 if len(clean_nums) > 0:
-                    is_pct = any(k in col_lower for k in ["_pct", "pct", "productividad", "calidad", "conversion", "score", "tasa", "ratio", "%"])
+                    is_pct = _is_percentage_or_score_column(col_name, df[col_name], clean_nums)
                     
                     # Negativos
                     if not is_pct and (clean_nums < 0).sum() > 0 and not any(s.column == col_name and s.operation == "clamp_range" for s in steps):

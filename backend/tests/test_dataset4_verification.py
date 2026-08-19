@@ -173,3 +173,65 @@ def test_percentage_clamp_floor_and_ceiling():
     # Descuento_Pct original: [120.0, -5.0, 50.0, 100.0] -> limpio: [100.0, 0.0, 50.0, 100.0]
     assert clean_df["Descuento_Pct"].tolist() == [100.0, 0.0, 50.0, 100.0]
 
+
+def test_marketing_campaigns_dataset_no_false_percentage_clamp():
+    """
+    Verifica que la columna 'Conversiones' (conteos absolutos: 120, 210, 180...) NO sea clasificada
+    falsamente como porcentaje ni sufra truncamiento por clamp_range [0, 100].
+    """
+    csv_data = """Fecha_Campana,Cod_Campana,Cliente,Canal,Presupuesto,CTR_Pct,Conversiones,Coste_Por_Lead,Estado
+2026-07-01,CAM-401,Publicidad Nova S.L.,Redes Sociales,5000.00,3.2,120,12.50,Activa
+2026-07-02,CAM-402,Agencia Digital S.A.,Email,2500.00,1.8,45,8.30,Activa
+2026-07-03,CAM-403,Ideas Creativas S.L.,Buscadores,7500.00,4.5,210,9.75,Finalizada
+2026-07-04,CAM-404,Grupo Marketing Este,Redes Sociales,3200.00,2.9,88,11.20,Activa
+2026-07-05,CAM-405,Comercial Rápido S.L.,Display,1800.00,0.9,22,15.60,Pausada
+2026-07-06,CAM-406,Publicidad Nova S.L.,Email,4100.00,2.1,67,10.40,Activa
+2026-07-07,CAM-407,Agencia Digital S.A.,Buscadores,6300.00,5.1,180,7.90,Finalizada
+2026-07-08,CAM-408,Distribuciones Vidal S.L.,Display,2900.00,1.4,39,13.10,Activa
+"""
+    upload_res = client.post(
+        "/api/v1/datasets/upload",
+        files={"file": ("campanas_marketing.csv", io.BytesIO(csv_data.encode("utf-8")), "text/csv")}
+    )
+    assert upload_res.status_code == 201
+    dataset_id = upload_res.json()["dataset_id"]
+
+    # 1. Profiling
+    prof_res = client.get(f"/api/v1/datasets/{dataset_id}/profiling")
+    assert prof_res.status_code == 200
+    prof_data = prof_res.json()
+
+    conv_prof = next(c for c in prof_data["columns"] if c["column_name"] == "Conversiones")
+    assert conv_prof["semantic_hint"] != "percentage", f"Conversiones no debe tener hint percentage: {conv_prof['semantic_hint']}"
+
+    ctr_prof = next(c for c in prof_data["columns"] if c["column_name"] == "CTR_Pct")
+    assert ctr_prof["semantic_hint"] == "percentage", "CTR_Pct sí debe tener hint percentage"
+
+    # 2. Plan
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    assert plan_res.status_code == 201
+    plan_data = plan_res.json()
+    steps = plan_data["steps"]
+
+    # Conversiones NO debe tener clamp_range
+    conv_clamp_steps = [s for s in steps if s["column"] == "Conversiones" and s["operation"] == "clamp_range"]
+    assert len(conv_clamp_steps) == 0, "Conversiones NO debe sufrir clamp_range"
+
+    # 3. Ejecución y descarga
+    plan_id = plan_data["plan_id"]
+    exec_res = client.post(f"/api/v1/plans/{plan_id}/approve", json={"steps": steps})
+    assert exec_res.status_code == 200
+    run_id = exec_res.json()["run_id"]
+
+    dl_res = client.get(f"/api/v1/runs/{run_id}/download")
+    clean_df = pd.read_csv(io.StringIO(dl_res.text))
+
+    # Verificar que los valores de conversiones están 100% intactos (210, 180, 120 no truncados a 100)
+    assert clean_df["Conversiones"].tolist() == [120, 45, 210, 88, 22, 67, 180, 39]
+
+    # Verificar códigos de campaña intactos
+    assert clean_df["Cod_Campana"].tolist() == [
+        "CAM-401", "CAM-402", "CAM-403", "CAM-404", "CAM-405", "CAM-406", "CAM-407", "CAM-408"
+    ]
+
+
