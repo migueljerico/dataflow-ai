@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Sparkles, ShieldCheck, Key } from 'lucide-react';
 import { ApiKeyModal } from './ApiKeyModal';
+import { getApiKey } from '../utils/security';
 
 export const Header: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
 
   useEffect(() => {
-    const key = localStorage.getItem('dataflow_gemini_api_key');
+    const key = getApiKey();
     setHasApiKey(!!key);
   }, []);
 

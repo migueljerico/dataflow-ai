@@ -37,9 +37,9 @@ def health():
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Montar frontend estático si existe la carpeta 'static' (compilado en Docker para producción)
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+STATIC_DIR = (Path(__file__).resolve().parent.parent / "static").resolve()
 if not STATIC_DIR.exists():
-    STATIC_DIR = Path("static")
+    STATIC_DIR = Path("static").resolve()
 
 if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
     assets_dir = STATIC_DIR / "assets"
@@ -50,9 +50,15 @@ if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
     async def serve_spa(full_path: str):
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
             return {"detail": "Not Found"}
-        target_file = STATIC_DIR / full_path
-        if target_file.exists() and target_file.is_file():
-            return FileResponse(target_file)
+        
+        # CodeQL CWE-022: Prevenir path traversal asegurando que target_file esté confinado en STATIC_DIR
+        try:
+            target_file = (STATIC_DIR / full_path).resolve()
+            if target_file.is_relative_to(STATIC_DIR) and target_file.is_file():
+                return FileResponse(target_file)
+        except (ValueError, RuntimeError, OSError):
+            pass
+
         return FileResponse(STATIC_DIR / "index.html")
 else:
     @app.get("/")

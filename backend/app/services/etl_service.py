@@ -101,7 +101,19 @@ class ETLService:
                     ))
 
             elif dim == "integrity" and col:
-                if ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(s.column == col and s.operation == "clamp_range" for s in steps):
+                col_is_pct = any(k in col.lower() for k in ["_pct", "pct", "porcentaje", "productividad", "conversion", "score", "calidad", "tasa", "ratio", "rate", "%"])
+                if col_is_pct and not any(s.column == col and s.operation == "clamp_range" for s in steps):
+                    steps.append(TransformationStep(
+                        step_id=step_id,
+                        operation="clamp_range",
+                        column=col,
+                        parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
+                        reason=f"Acotar valores fuera de rango en '{col}' al intervalo de negocio [0.0, 100.0%].",
+                        confidence=0.94,
+                        risk="medium",
+                        affected_rows_estimate=issue.affected_rows
+                    ))
+                elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(s.column == col and s.operation == "clamp_range" for s in steps):
                     steps.append(TransformationStep(
                         step_id=step_id,
                         operation="clamp_range",
@@ -117,8 +129,8 @@ class ETLService:
                         step_id=step_id,
                         operation="clamp_range",
                         column=col,
-                        parameters={"column": col, "min_value": None, "max_value": 100.0},
-                        reason=f"Limitar valores fuera de rango (>100%) en '{col}' al valor máximo de 100.0.",
+                        parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
+                        reason=f"Acotar valores fuera de rango en '{col}' al intervalo de negocio [0.0, 100.0%].",
                         confidence=0.94,
                         risk="medium",
                         affected_rows_estimate=issue.affected_rows
@@ -230,18 +242,18 @@ class ETLService:
                             affected_rows_estimate=neg_count
                         ))
 
-                    # Porcentajes > 100
-                    if is_pct and (clean_nums > 100).sum() > 0 and not any(s.column == col_name and s.operation == "clamp_range" for s in steps):
-                        over_count = int((clean_nums > 100).sum())
+                    # Porcentajes fuera de rango (<0 o >100)
+                    if is_pct and ((clean_nums > 100).sum() > 0 or (clean_nums < 0).sum() > 0) and not any(s.column == col_name and s.operation == "clamp_range" for s in steps):
+                        out_count = int(((clean_nums > 100) | (clean_nums < 0)).sum())
                         steps.append(TransformationStep(
                             step_id=f"STEP-{len(steps)+1:03d}",
                             operation="clamp_range",
                             column=col_name,
-                            parameters={"column": col_name, "min_value": None, "max_value": 100.0},
-                            reason=f"Acotar {over_count} valor(es) fuera de rango (>100%) en '{col_name}' al límite máximo 100.0.",
+                            parameters={"column": col_name, "min_value": 0.0, "max_value": 100.0},
+                            reason=f"Acotar {out_count} valor(es) fuera de rango en '{col_name}' al intervalo porcentual de negocio [0.0, 100.0%].",
                             confidence=0.94,
                             risk="medium",
-                            affected_rows_estimate=over_count
+                            affected_rows_estimate=out_count
                         ))
 
         plan_id = f"PLAN-{uuid.uuid4().hex[:8]}"

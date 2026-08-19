@@ -8,6 +8,7 @@ import {
   SampleDataset,
   ExecutiveAnalyticsReport
 } from '../types';
+import { getApiKey } from '../utils/security';
 
 const API_BASE = '/api/v1';
 
@@ -90,7 +91,7 @@ export const api = {
   },
 
   proposeAIPlan: async (datasetId: string, provider?: string, apiKey?: string): Promise<TransformationPlan> => {
-    const storedKey = apiKey || localStorage.getItem('dataflow_gemini_api_key') || undefined;
+    const storedKey = apiKey || getApiKey() || undefined;
     const effectiveProvider = provider || (storedKey ? 'gemini' : 'mock');
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };

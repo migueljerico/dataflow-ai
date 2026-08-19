@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Shield, ExternalLink, Check, Trash2, X, AlertCircle } from 'lucide-react';
+import { saveApiKey, getApiKey, removeApiKey } from '../utils/security';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const storedKey = localStorage.getItem('dataflow_gemini_api_key') || '';
+    const storedKey = getApiKey() || '';
     setApiKey(storedKey);
   }, [isOpen]);
 
@@ -22,10 +23,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
     e.preventDefault();
     const cleanKey = apiKey.trim();
     if (cleanKey) {
-      localStorage.setItem('dataflow_gemini_api_key', cleanKey);
+      saveApiKey(cleanKey);
       onKeyChange(cleanKey);
     } else {
-      localStorage.removeItem('dataflow_gemini_api_key');
+      removeApiKey();
       onKeyChange(null);
     }
     setSaved(true);
@@ -36,7 +37,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
   };
 
   const handleClear = () => {
-    localStorage.removeItem('dataflow_gemini_api_key');
+    removeApiKey();
     setApiKey('');
     onKeyChange(null);
   };

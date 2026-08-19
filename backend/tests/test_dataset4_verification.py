@@ -129,3 +129,47 @@ def test_pedidos_dataset_end_to_end_clean():
     assert "Talleres Robles SLU" in clean_df["Razon_Social"].values
     assert "Almacenes Pardo S.L.U." in clean_df["Razon_Social"].values
     assert "Distribuciones Marín S.L.U." in clean_df["Razon_Social"].values
+
+
+def test_percentage_clamp_floor_and_ceiling():
+    """Verifica que columnas porcentuales acotan tanto valores negativos (<0 a 0.0) como excesos (>100 a 100.0)."""
+    csv_data = """ID,Cliente,Incidencias_Pct,Descuento_Pct
+1,Empresa Alfa,-2.0%,120.0%
+2,Empresa Beta,15.5%,-5.0%
+3,Empresa Gamma,105.0%,50.0%
+4,Empresa Delta,0.0%,100.0%
+"""
+    upload_res = client.post(
+        "/api/v1/datasets/upload",
+        files={"file": ("test_pct.csv", io.BytesIO(csv_data.encode("utf-8")), "text/csv")}
+    )
+    assert upload_res.status_code == 201
+    dataset_id = upload_res.json()["dataset_id"]
+
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    assert plan_res.status_code == 201
+    plan_data = plan_res.json()
+    steps = plan_data["steps"]
+
+    # Verificar que los pasos de clamp_range para porcentajes tienen min_value: 0.0 y max_value: 100.0
+    clamp_steps = [s for s in steps if s["operation"] == "clamp_range"]
+    for cs in clamp_steps:
+        if cs["column"] in ["Incidencias_Pct", "Descuento_Pct"]:
+            assert cs["parameters"]["min_value"] == 0.0, f"min_value en {cs['column']} debe ser 0.0"
+            assert cs["parameters"]["max_value"] == 100.0, f"max_value en {cs['column']} debe ser 100.0"
+
+    # Ejecutar
+    plan_id = plan_data["plan_id"]
+    exec_res = client.post(f"/api/v1/plans/{plan_id}/approve", json={"steps": steps})
+    assert exec_res.status_code == 200
+    run_id = exec_res.json()["run_id"]
+
+    dl_res = client.get(f"/api/v1/runs/{run_id}/download")
+    clean_df = pd.read_csv(io.StringIO(dl_res.text))
+
+    # Incidencias_Pct original: [-2.0, 15.5, 105.0, 0.0] -> limpio: [0.0, 15.5, 100.0, 0.0]
+    assert clean_df["Incidencias_Pct"].tolist() == [0.0, 15.5, 100.0, 0.0]
+
+    # Descuento_Pct original: [120.0, -5.0, 50.0, 100.0] -> limpio: [100.0, 0.0, 50.0, 100.0]
+    assert clean_df["Descuento_Pct"].tolist() == [100.0, 0.0, 50.0, 100.0]
+
