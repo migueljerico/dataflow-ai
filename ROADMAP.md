@@ -1,7 +1,7 @@
 # 🗺️ DataFlow AI — Roadmap de Evolución Arquitectónica
 
 **Versión del Roadmap:** 1.2  
-**Estado General:** Fases 1, 2 y 3 Completadas · Fase 4 Siguiente Paso  
+**Estado General:** ✅ Todas las Fases Completadas (v1.2.0)  
 **Stack Base:** Python 3.11 · FastAPI · Pandas 2.2 · React 18 · TypeScript · Google Cloud Run  
 **Autor:** [migueljerico](https://github.com/migueljerico)  
 
@@ -40,7 +40,7 @@ flowchart TD
         C2 --> C3["Tarjetas con 1-Click Import"]
     end
 
-    subgraph F4["⏳ FASE 4 (Siguiente Paso)"]
+    subgraph F4["✅ FASE 4 (Completada)"]
         D1["Autodetección de Encoding (charset-normalizer)"] --> D2["Ajuste Fino de Profiler Semántico"]
         D2 --> D3["Protección de IDs y Códigos INE"]
     end
@@ -106,15 +106,15 @@ flowchart TD
 ---
 
 ### 🔹 Fase 4: Guardrails de Ingesta, `charset-normalizer` y Corrección Semántica
-* **Estado:** ⏳ **En Curso / Siguiente Paso**
+* **Estado:** ✅ **Completada (24 de agosto de 2026)**
 * **Objetivo:** Blindar la ingesta contra codificaciones problemáticas y evitar falsos positivos en la clasificación de datos públicos.
-* **Qué se construye:**
-  1. **Detección Estadística de Codificación (`charset-normalizer`):** Reconocimiento automático de `UTF-8`, `UTF-8 con BOM`, `Windows-1252` e `ISO-8859-1/15` en los primeros bloques del archivo, evitando caracteres corruptos (`Ã±`, ``).
-  2. **Ajuste de Inferencia Semántica:** Reforzar reglas para que códigos de INE, códigos postales o identificadores alfanuméricos no se clasifiquen erróneamente como dinero o fechas.
-* **Esfuerzo Relativo:** **Pequeño-Medio** (ajustes defensivos en backend).
-* **Cómo se verifica (sin programar):**
-  1. Cargar un dataset oficial en formato `Windows-1252` y comprobar que las tildes y la `ñ` se visualizan perfectamente.
-  2. Comprobar en el Profiler que columnas como `codigo_postal` o `id_tramo` se etiquetan como texto/código y no como divisa.
+* **Qué se construyó:**
+  1. **Detección Estadística de Codificación (`charset-normalizer`):** Reconocimiento automático de `UTF-8`, `UTF-8 con BOM` (`\xef\xbb\xbf`), `Windows-1252` e `ISO-8859-1/15` en los primeros bloques del archivo, evitando caracteres corruptos (`Ã±`, ``) y limpiando prefijos `\ufeff` en nombres de columnas.
+  2. **Ajuste Fino de Inferencia Semántica:** Reglas reforzadas en `ProfilerService` para que códigos de INE (`08019`), códigos postales (`08001`, `28079`) o identificadores alfanuméricos (`id_precio_tarifa`, `id_alta_empleado`) se clasifiquen como `ID` y se preserven como `TEXT` (sin perder ceros a la izquierda ni sumarse erróneamente en Power BI).
+  3. **Tests:** 6 nuevos tests en `test_phase4_guardrails.py`, elevando la suite completa a **88 tests automatizados (100% pasando en verde)**.
+* **Verificación Manual:**
+  1. Cargar un archivo en formato `Windows-1252` con tildes y comprobar que se normaliza a UTF-8 sin caracteres corruptos.
+  2. Cargar datasets con columnas de códigos postales o referencias y verificar que en el Profiling se etiquetan con `hint: id` y `type: text`.
 
 ---
 
@@ -127,7 +127,7 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
 | **Colas de Tareas (Celery, Redis, RabbitMQ, SQS)** | Añadiría costes y servicios adicionales innecesarios. Con descargas en streaming síncronas de < 20 MB, las peticiones se completan en 1–3 segundos. |
 | **Almacenamiento S3 / Cloud Storage / MinIO** | Complejidad de credenciales IAM y costes recurrentes. El sistema de ficheros efímero (`tmpfs`) de Cloud Run es suficiente para el ciclo de vida de transformación. |
 | **Protocolo TUS / Subida Multipart compleja** | Diseñado para archivos de gigabytes; sobre-ingeniería para datasets de análisis moderado. |
-| **Migración a DuckDB, Polars o Spark** | Rompería la compatibilidad del motor determinista (`TransformationRegistry`) y los 82 tests existentes sin aportar valor perceptible para archivos ≤ 20 MB. |
+| **Migración a DuckDB, Polars o Spark** | Rompería la compatibilidad del motor determinista (`TransformationRegistry`) y los 88 tests existentes sin aportar valor perceptible para archivos ≤ 20 MB. |
 | **Múltiples APIs Open Data simultáneas** | Cada portal tiene esquemas dispares. Implementar el estándar CKAN cubre miles de fuentes públicas con una sola base de código limpia. |
 
 ---
@@ -139,7 +139,7 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
 | **1** | Backend URL Loader + Anti-SSRF + IP Pinning + `tmpfs` | Pequeño-Medio | 77 / 77 | ✅ **Completada (v1.2.0)** |
 | **2** | UI React Carga URL + Feedback en Vivo | Pequeño | — | ✅ **Completada** |
 | **3** | Conector CKAN Open Data + Buscador en UI | Mediano | 82 / 82 | ✅ **Completada** |
-| **4** | `charset-normalizer` + Profiler Semántico Robusto | Pequeño-Medio | ~92 esperados | ⏳ **Siguiente Paso** |
+| **4** | `charset-normalizer` + Profiler Semántico Robusto | Pequeño-Medio | 88 / 88 | ✅ **Completada** |
 
 ---
 

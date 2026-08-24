@@ -13,6 +13,7 @@ from app.core.exceptions import FunctionalException
 from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
 
 import time
+import charset_normalizer
 from app.core.security_url import safe_download_url_to_file
 
 DATASET_CACHE: Dict[str, DatasetMetadata] = {}
@@ -20,10 +21,47 @@ EMPTY_ROWS_PURGED_CACHE: Dict[str, int] = {}
 
 class DatasetService:
     @staticmethod
-    def _detect_csv_delimiter(file_path: Path) -> str:
+    def _detect_csv_encoding(file_path: Path) -> str:
+        """
+        Detecta estadísticamente la codificación de un archivo CSV usando charset-normalizer
+        analizando los primeros 64 KB para identificar UTF-8, UTF-8-SIG (BOM), Windows-1252,
+        ISO-8859-1, etc.
+        """
         try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                sample = f.read(4096)
+            with open(file_path, "rb") as f:
+                raw_data = f.read(65536)
+                if not raw_data:
+                    return "utf-8"
+
+                # Detección inmediata de UTF-8 BOM
+                if raw_data.startswith(b"\xef\xbb\xbf"):
+                    return "utf-8-sig"
+
+                # Comprobación de UTF-8 estricto sin errores
+                try:
+                    raw_data.decode("utf-8")
+                    return "utf-8"
+                except UnicodeDecodeError:
+                    pass
+
+                results = charset_normalizer.from_bytes(raw_data)
+                best_match = results.best()
+                if best_match and best_match.encoding:
+                    enc = best_match.encoding.lower()
+                    if enc in ("utf_8", "utf8", "ascii"):
+                        return "utf-8"
+                    if "1252" in enc or "latin" in enc or "8859" in enc or enc.startswith(("cp", "iso", "windows")):
+                        return "windows-1252"
+                    return best_match.encoding
+        except Exception:
+            pass
+        return "windows-1252"
+
+    @staticmethod
+    def _detect_csv_delimiter(file_path: Path, encoding: str = "utf-8") -> str:
+        try:
+            with open(file_path, "r", encoding=encoding, errors="replace") as f:
+                sample = f.read(8192)
                 if not sample.strip():
                     raise FunctionalException(
                         message="El archivo CSV está vacío.",
@@ -32,6 +70,8 @@ class DatasetService:
                 sniffer = csv.Sniffer()
                 dialect = sniffer.sniff(sample, delimiters=[',', ';', '\t', '|'])
                 return dialect.delimiter
+        except FunctionalException:
+            raise
         except Exception:
             return ','
 
@@ -102,14 +142,42 @@ class DatasetService:
 
         try:
             if file_type == FileTypeEnum.CSV:
-                delimiter = DatasetService._detect_csv_delimiter(saved_path)
-                full_df = pd.read_csv(saved_path, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
+                detected_encoding = DatasetService._detect_csv_encoding(saved_path)
+                delimiter = DatasetService._detect_csv_delimiter(saved_path, encoding=detected_encoding)
+                
+                try:
+                    full_df = pd.read_csv(
+                        saved_path, 
+                        sep=delimiter, 
+                        encoding=detected_encoding, 
+                        on_bad_lines="skip"
+                    )
+                except (UnicodeDecodeError, LookupError):
+                    # Fallback robusto a latin-1/windows-1252 si fallase la decodificación
+                    full_df = pd.read_csv(
+                        saved_path,
+                        sep=delimiter,
+                        encoding="latin-1",
+                        on_bad_lines="skip"
+                    )
+                    detected_encoding = "latin-1"
+
+                # Normalizar nombres de columnas (eliminar BOM y espacios sobrantes)
+                clean_cols = [str(c).strip().replace("\ufeff", "") for c in full_df.columns]
+                full_df.columns = clean_cols
+
+                if detected_encoding not in ("utf-8", "ascii"):
+                    warnings.append(f"Codificación '{detected_encoding}' detectada automáticamente y normalizada a UTF-8.")
+                    # Guardar archivo estandarizado a UTF-8
+                    full_df.to_csv(saved_path, index=False, encoding="utf-8")
             else:
                 excel_file = pd.ExcelFile(saved_path)
                 sheet_names = excel_file.sheet_names
                 if len(sheet_names) > 1:
                     warnings.append(f"El archivo Excel contiene {len(sheet_names)} hojas. Se procesará la primera hoja ('{sheet_names[0]}').")
                 full_df = pd.read_excel(saved_path, sheet_name=0)
+                clean_cols = [str(c).strip() for c in full_df.columns]
+                full_df.columns = clean_cols
 
             # Limpiar filas completamente vacías y registrar el conteo
             full_df, empty_dropped = DatasetService._clean_empty_rows(full_df)

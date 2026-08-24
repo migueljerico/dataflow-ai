@@ -18,8 +18,22 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 - **Gestión de Memoria y Ciclo de Vida en Cloud Run (`tmpfs`)**:
   - Límite defensivo fijado en 20 MB (`MAX_URL_FILE_SIZE_BYTES`) con streaming en bloques de 64 KB y corte inmediato en caso de exceso.
   - Limpieza automática preventiva (`_cleanup_old_uploads`) de archivos temporales huérfanos para evitar acumulación en la RAM del contenedor.
-- **Suite de Pruebas Automatizadas**:
-  - Se añadieron 47 nuevos tests unitarios y de integración (`test_security_url.py`, `test_dataset_from_url.py`), alcanzando **76 tests automatizados (100% pasando en verde)**.
+
+### 🎨 Interfaz React para Ingesta por URL y Feedback en Vivo (Fase 2)
+- **Selector de Modo en UI (`FileUpload.tsx`)**: Pestañas de alternancia fluida entre *"Subir Archivo Local"*, *"Pegar Enlace Web (URL)"* y *"Explorar Open Data"*.
+- **Chips de Prueba Rápida con 1 Clic**: Datasets de prueba inmediatos (PIB Mundial, Carsharing & Movilidad, Dataset Iris) para verificación instantánea sin buscar enlaces externos.
+- **Feedback de Progreso en Vivo**: Indicadores animados secuenciales durante la conexión Anti-SSRF, descarga en streaming y profiling semántico.
+
+### 🏛️ Conector a Portal Open Data (CKAN) y Buscador Integrado (Fase 3)
+- **Integración con API CKAN (`app/services/open_data_service.py`)**: Endpoints `GET /open-data/search` y `GET /open-data/featured` para buscar y filtrar recursos CSV/XLSX en portales públicos gubernamentales (datos.gob.es, data.gov).
+- **Catálogo Curado con Fallback Resiliente**: Repositorio local de 5 datasets de calidad garantizada ante fallos o latencias de la API externa de CKAN.
+
+### 🛡️ Detección de Encoding con `charset-normalizer` y Guardrails Semánticos (Fase 4)
+- **Detección Estadística de Codificación**: Normalización automática de archivos en `Windows-1252`, `ISO-8859-1`, `latin-1` y `UTF-8 con BOM` (`\xef\xbb\xbf`) sin corrupción de caracteres españoles (`ñ`, tildes, `€`).
+- **Prioridad Semántica de Identificadores y Códigos**: Corrección en `ProfilerService` para garantizar que códigos postales (`08001`), códigos INE (`28079`) o identificadores alfanuméricos (`id_precio`, `id_alta`) se clasifiquen como `ID` y se preserven como `TEXT` (evitando su pérdida de ceros o suma errónea en Power BI).
+
+### 🧪 Suite de Pruebas Automatizadas
+- Se alcanzaron **88 tests unitarios y de integración automatizados (100% pasando en verde)** con cobertura de seguridad, Open Data, encodings y guardrails semánticos.
 
 ---
 
