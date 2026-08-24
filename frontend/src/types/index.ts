@@ -180,3 +180,21 @@ export interface ExecutiveAnalyticsReport {
   strategic_recommendations: string[];
   category_breakdown?: CategoryDistribution[];
 }
+
+export interface OpenDatasetItem {
+  id: string;
+  title: string;
+  description: string;
+  organization: string;
+  resource_url: string;
+  format: string;
+  size_bytes?: number;
+  tags: string[];
+}
+
+export interface OpenDataSearchResponse {
+  total: number;
+  results: OpenDatasetItem[];
+  source: string;
+}
+

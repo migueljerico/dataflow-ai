@@ -1,7 +1,7 @@
 # 🗺️ DataFlow AI — Roadmap de Evolución Arquitectónica
 
 **Versión del Roadmap:** 1.2  
-**Estado General:** Fase 1 y 2 Completadas · Fase 3 en Curso  
+**Estado General:** Fases 1, 2 y 3 Completadas · Fase 4 Siguiente Paso  
 **Stack Base:** Python 3.11 · FastAPI · Pandas 2.2 · React 18 · TypeScript · Google Cloud Run  
 **Autor:** [migueljerico](https://github.com/migueljerico)  
 
@@ -35,12 +35,12 @@ flowchart TD
         B2 --> B3["Mapeo Visual de Errores Remotos"]
     end
 
-    subgraph F3["⏳ FASE 3 (Siguiente Paso)"]
+    subgraph F3["✅ FASE 3 (Completada)"]
         C1["Conector CKAN REST API"] --> C2["Buscador Temático de Datasets"]
         C2 --> C3["Tarjetas con 1-Click Import"]
     end
 
-    subgraph F4["📋 FASE 4 (Planificada)"]
+    subgraph F4["⏳ FASE 4 (Siguiente Paso)"]
         D1["Autodetección de Encoding (charset-normalizer)"] --> D2["Ajuste Fino de Profiler Semántico"]
         D2 --> D3["Protección de IDs y Códigos INE"]
     end
@@ -86,27 +86,32 @@ flowchart TD
 ---
 
 ### 🔹 Fase 3: Conector a Portal Open Data (CKAN / Datos Abiertos)
-* **Estado:** 📋 **Planificada**
+* **Estado:** ✅ **Completada (24 de agosto de 2026)**
 * **Objetivo:** Integrar un catálogo de datos abiertos para explorar y cargar datasets públicos reales con 1 solo clic.
-* **Por qué CKAN (ej. *datos.gob.es* o *data.gov*):** Estándar abierto más extendido a nivel gubernamental; API REST en JSON sin registro ni claves obligatorias que entrega enlaces directos a recursos CSV.
-* **Qué se construye:**
-  1. **Backend:** Endpoint `GET /api/v1/datasets/open-data/search?query=...` que consulta la API pública de CKAN (`package_search`), filtra recursos CSV limpios y extrae título, descripción y tamaño.
-  2. **Frontend:** Tercera pestaña en la UI: **"Explorar Open Data"**, con barra de búsqueda rápida y 3–4 datasets de ejemplo preconfigurados (ej. *Carburantes*, *Calidad del aire*, *Tráfico*).
-  3. Botón *"Importar a DataFlow"* que canaliza la URL seleccionada al motor seguro de la Fase 1.
-* **Esfuerzo Relativo:** **Mediano** (integración API externa + nuevo componente UI).
-* **Cómo se verifica (sin programar):**
-  1. Buscar un término (ej. *"precios"*) en la pestaña de Open Data.
-  2. Hacer clic en *"Importar"* y comprobar que el dataset se descarga, limpia y genera su correspondiente script reproducible de Python.
+* **Qué se construyó:**
+  1. **Backend (`app/services/open_data_service.py`):**
+     - Endpoints `GET /api/v1/datasets/open-data/search` y `GET /api/v1/datasets/open-data/featured`.
+     - Integración con API pública estándar **CKAN (`package_search`)** con timeout defensivo y extracción automática de recursos CSV/XLSX.
+     - Catálogo curado de datasets públicos de alta calidad (PIB Banco Mundial, Calidad del Aire, Movilidad, Demografía y Ventas).
+     - Fallback tolerante a fallos si la API de CKAN externa no responde.
+  2. **Frontend (`FileUpload.tsx`):**
+     - Pestaña **"Explorar Open Data (CKAN)"** integrada en la interfaz de inicio.
+     - Buscador temático por palabra clave (tráfico, economía, precios, energía) con filtros por etiquetas.
+     - Tarjetas informativas con organismo emisor, formato y botón directo *"Importar a DataFlow"*.
+  3. **Tests:** 5 tests automatizados de integración y mocking (`test_opendata.py`), alcanzando **82 tests pasando al 100% en verde**.
+* **Verificación Manual:**
+  1. Acceder a la pestaña *"Explorar Open Data (CKAN)"* y realizar una búsqueda o filtrar por etiqueta.
+  2. Pulsar *"Importar a DataFlow"* en cualquier tarjeta y verificar la descarga, profiling y generación del script ETL en Power BI.
 
 ---
 
 ### 🔹 Fase 4: Guardrails de Ingesta, `charset-normalizer` y Corrección Semántica
-* **Estado:** 📋 **Planificada**
+* **Estado:** ⏳ **En Curso / Siguiente Paso**
 * **Objetivo:** Blindar la ingesta contra codificaciones problemáticas y evitar falsos positivos en la clasificación de datos públicos.
 * **Qué se construye:**
   1. **Detección Estadística de Codificación (`charset-normalizer`):** Reconocimiento automático de `UTF-8`, `UTF-8 con BOM`, `Windows-1252` e `ISO-8859-1/15` en los primeros bloques del archivo, evitando caracteres corruptos (`Ã±`, ``).
   2. **Ajuste de Inferencia Semántica:** Reforzar reglas para que códigos de INE, códigos postales o identificadores alfanuméricos no se clasifiquen erróneamente como dinero o fechas.
-* **Esfuerzo Relativo:** **Pequeño-Mediano** (ajustes defensivos en backend).
+* **Esfuerzo Relativo:** **Pequeño-Medio** (ajustes defensivos en backend).
 * **Cómo se verifica (sin programar):**
   1. Cargar un dataset oficial en formato `Windows-1252` y comprobar que las tildes y la `ñ` se visualizan perfectamente.
   2. Comprobar en el Profiler que columnas como `codigo_postal` o `id_tramo` se etiquetan como texto/código y no como divisa.
@@ -122,7 +127,7 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
 | **Colas de Tareas (Celery, Redis, RabbitMQ, SQS)** | Añadiría costes y servicios adicionales innecesarios. Con descargas en streaming síncronas de < 20 MB, las peticiones se completan en 1–3 segundos. |
 | **Almacenamiento S3 / Cloud Storage / MinIO** | Complejidad de credenciales IAM y costes recurrentes. El sistema de ficheros efímero (`tmpfs`) de Cloud Run es suficiente para el ciclo de vida de transformación. |
 | **Protocolo TUS / Subida Multipart compleja** | Diseñado para archivos de gigabytes; sobre-ingeniería para datasets de análisis moderado. |
-| **Migración a DuckDB, Polars o Spark** | Rompería la compatibilidad del motor determinista (`TransformationRegistry`) y los 76 tests existentes sin aportar valor perceptible para archivos ≤ 20 MB. |
+| **Migración a DuckDB, Polars o Spark** | Rompería la compatibilidad del motor determinista (`TransformationRegistry`) y los 82 tests existentes sin aportar valor perceptible para archivos ≤ 20 MB. |
 | **Múltiples APIs Open Data simultáneas** | Cada portal tiene esquemas dispares. Implementar el estándar CKAN cubre miles de fuentes públicas con una sola base de código limpia. |
 
 ---
@@ -132,9 +137,9 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
 | Fase | Entregable Principal | Esfuerzo | Tests Pytest | Estado |
 | :---: | :--- | :---: | :---: | :---: |
 | **1** | Backend URL Loader + Anti-SSRF + IP Pinning + `tmpfs` | Pequeño-Medio | 77 / 77 | ✅ **Completada (v1.2.0)** |
-| **2** | UI React Carga URL + Feedback en Vivo | Pequeño | — | ⏳ **En Curso** |
-| **3** | Conector CKAN Open Data + Buscador en UI | Mediano | ~85 esperados | 📋 Planificada |
-| **4** | `charset-normalizer` + Profiler Semántico Robusto | Pequeño-Medio | ~95 esperados | 📋 Planificada |
+| **2** | UI React Carga URL + Feedback en Vivo | Pequeño | — | ✅ **Completada** |
+| **3** | Conector CKAN Open Data + Buscador en UI | Mediano | 82 / 82 | ✅ **Completada** |
+| **4** | `charset-normalizer` + Profiler Semántico Robusto | Pequeño-Medio | ~92 esperados | ⏳ **Siguiente Paso** |
 
 ---
 

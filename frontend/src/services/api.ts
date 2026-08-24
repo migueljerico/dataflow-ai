@@ -6,7 +6,9 @@ import {
   TransformationStep, 
   ExecutionResult,
   SampleDataset,
-  ExecutiveAnalyticsReport
+  ExecutiveAnalyticsReport,
+  OpenDatasetItem,
+  OpenDataSearchResponse
 } from '../types';
 import { getApiKey } from '../utils/security';
 
@@ -54,6 +56,19 @@ export const api = {
   listSampleDatasets: async (): Promise<SampleDataset[]> => {
     const res = await fetch(`${API_BASE}/datasets/samples`);
     return handleResponse<SampleDataset[]>(res);
+  },
+
+  getFeaturedOpenDatasets: async (): Promise<OpenDatasetItem[]> => {
+    const res = await fetch(`${API_BASE}/datasets/open-data/featured`);
+    return handleResponse<OpenDatasetItem[]>(res);
+  },
+
+  searchOpenDatasets: async (query?: string, limit: number = 10): Promise<OpenDataSearchResponse> => {
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    params.append('limit', limit.toString());
+    const res = await fetch(`${API_BASE}/datasets/open-data/search?${params.toString()}`);
+    return handleResponse<OpenDataSearchResponse>(res);
   },
 
   loadSampleDataset: async (sampleId: string): Promise<DatasetMetadata> => {

@@ -522,6 +522,7 @@ Ubicación: `backend/tests/`
 | `test_dataset_upload.py` | 7 | Validación de formatos (`.csv`, `.xlsx`), límites de tamaño, detección de delimitador y dataset vacío. |
 | `test_dataset_from_url.py` | 8 | Ingesta remota por URL, validación de tamaños, streams defensivos y manejo de errores HTTP. |
 | `test_security_url.py` | 40 | Protección exhaustiva Anti-SSRF (IPv4/IPv6/Metadata GCP), mitigación de DNS Rebinding mediante IP Pinning, no credenciales embebidas y validación de esquemas. |
+| `test_opendata.py` | 5 | Explorador de datos abiertos (catálogo curado, búsqueda en tiempo real e integración con API CKAN). |
 | `test_profiler.py` | 1 | Inferencia de tipos y sugerencias semánticas automáticas. |
 | `test_quality.py` | 1 | Cálculo del Data Quality Score (0-100) en sus 5 dimensiones. |
 | `test_european_numbers.py` | 3 | Parseo unificado de importes con coma decimal, moneda (`€`, `$`) y porcentajes. |
@@ -532,7 +533,7 @@ Ubicación: `backend/tests/`
 | `test_analytics.py` | 2 | Cálculo de KPIs ejecutivos de negocio y reporte para Dirección. |
 | `test_dataset4_verification.py` | 6 | Verificación de marcadores de ausencia, preservación de mayúsculas en identificadores y no corrupción de conteos. |
 
-**Total:** 77 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
+**Total:** 82 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
 
 ---
 

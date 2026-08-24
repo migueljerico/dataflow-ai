@@ -13,16 +13,20 @@ import {
   Download,
   Loader2,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Database,
+  Search,
+  Building2,
+  RefreshCw
 } from 'lucide-react';
 import { api } from '../services/api';
-import { DatasetMetadata, SampleDataset } from '../types';
+import { DatasetMetadata, SampleDataset, OpenDatasetItem } from '../types';
 
 interface Props {
   onUploadSuccess: (metadata: DatasetMetadata) => void;
 }
 
-type TabType = 'file' | 'url';
+type TabType = 'file' | 'url' | 'opendata';
 
 const EXAMPLE_URLS = [
   {
@@ -50,16 +54,26 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   const [urlInput, setUrlInput] = useState<string>('');
   const [samples, setSamples] = useState<SampleDataset[]>([]);
 
+  // Estado de Open Data (Fase 3)
+  const [openDataSearchQuery, setOpenDataSearchQuery] = useState<string>('');
+  const [openDataResults, setOpenDataResults] = useState<OpenDatasetItem[]>([]);
+  const [openDataLoading, setOpenDataLoading] = useState<boolean>(false);
+  const [selectedTag, setSelectedTag] = useState<string>('Todos');
+
   useEffect(() => {
-    const fetchSamples = async () => {
+    const fetchInitialData = async () => {
       try {
-        const list = await api.listSampleDatasets();
-        setSamples(list);
+        const [sampleList, featuredOpenData] = await Promise.all([
+          api.listSampleDatasets().catch(() => []),
+          api.getFeaturedOpenDatasets().catch(() => [])
+        ]);
+        setSamples(sampleList);
+        setOpenDataResults(featuredOpenData);
       } catch {
-        // Fallback silencioso si la API aún no responde
+        // Fallback silencioso
       }
     };
-    fetchSamples();
+    fetchInitialData();
   }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,9 +97,8 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     }
   };
 
-  const handleUrlSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanUrl = urlInput.trim();
+  const importFromUrl = async (targetUrl: string) => {
+    const cleanUrl = targetUrl.trim();
     if (!cleanUrl) {
       setError('Por favor, ingresa una URL válida que empiece por http:// o https://.');
       return;
@@ -123,6 +136,25 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     }
   };
 
+  const handleUrlSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    importFromUrl(urlInput);
+  };
+
+  const handleOpenDataSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setOpenDataLoading(true);
+    setError(null);
+    try {
+      const resp = await api.searchOpenDatasets(openDataSearchQuery, 12);
+      setOpenDataResults(resp.results || []);
+    } catch (err: any) {
+      setError(err.message || 'Error al buscar en el catálogo Open Data.');
+    } finally {
+      setOpenDataLoading(false);
+    }
+  };
+
   const loadSample = async (sampleId: string) => {
     setLoading(true);
     setLoadingStatus('Cargando dataset demo de negocio...');
@@ -151,6 +183,12 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     return <Users size={20} className="text-primary" />;
   };
 
+  // Filtrado de tags en Open Data
+  const allTags = ['Todos', 'Economía', 'Movilidad', 'Población', 'Ventas', 'Medioambiente'];
+  const filteredOpenData = selectedTag === 'Todos' 
+    ? openDataResults 
+    : openDataResults.filter(item => item.tags.some(t => t.toLowerCase().includes(selectedTag.toLowerCase())));
+
   return (
     <div>
       <div className="card" style={{ marginBottom: '24px' }}>
@@ -165,7 +203,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
           </div>
         </div>
 
-        {/* Selector de Pestañas (Modo de Ingesta) */}
+        {/* Selector de Pestañas (Modos de Ingesta) */}
         <div 
           style={{ 
             display: 'flex', 
@@ -174,14 +212,15 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             backgroundColor: 'var(--bg-input)', 
             borderRadius: '10px', 
             marginBottom: '20px',
-            border: '1px solid var(--border-color)'
+            border: '1px solid var(--border-color)',
+            flexWrap: 'wrap'
           }}
         >
           <button
             type="button"
             className={`btn ${activeTab === 'file' ? 'btn-primary' : 'btn-outline'}`}
             style={{ 
-              flex: 1, 
+              flex: '1 1 180px', 
               justifyContent: 'center', 
               border: 'none', 
               boxShadow: activeTab === 'file' ? 'var(--shadow-sm)' : 'none' 
@@ -195,7 +234,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             type="button"
             className={`btn ${activeTab === 'url' ? 'btn-primary' : 'btn-outline'}`}
             style={{ 
-              flex: 1, 
+              flex: '1 1 180px', 
               justifyContent: 'center', 
               border: 'none', 
               boxShadow: activeTab === 'url' ? 'var(--shadow-sm)' : 'none' 
@@ -204,6 +243,20 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             disabled={loading}
           >
             <Globe size={16} /> Pegar Enlace Web (URL)
+          </button>
+          <button
+            type="button"
+            className={`btn ${activeTab === 'opendata' ? 'btn-primary' : 'btn-outline'}`}
+            style={{ 
+              flex: '1 1 180px', 
+              justifyContent: 'center', 
+              border: 'none', 
+              boxShadow: activeTab === 'opendata' ? 'var(--shadow-sm)' : 'none' 
+            }}
+            onClick={() => { setActiveTab('opendata'); setError(null); }}
+            disabled={loading}
+          >
+            <Database size={16} /> Explorar Open Data (CKAN)
           </button>
         </div>
 
@@ -357,6 +410,161 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pestaña 3: Explorador Open Data (Fase 3) */}
+        {activeTab === 'opendata' && (
+          <div style={{ padding: '8px 0' }}>
+            {/* Buscador CKAN */}
+            <form onSubmit={handleOpenDataSearch} style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      left: '12px', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)', 
+                      color: 'var(--text-muted)',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <Search size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar por temática: precios, transporte, energía, demografía..."
+                    value={openDataSearchQuery}
+                    onChange={(e) => setOpenDataSearchQuery(e.target.value)}
+                    disabled={loading || openDataLoading}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 38px',
+                      backgroundColor: 'var(--bg-input)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      color: 'var(--text-main)',
+                      fontSize: '0.9rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || openDataLoading}
+                  style={{ padding: '10px 20px', minWidth: '130px', justifyContent: 'center' }}
+                >
+                  {openDataLoading ? (
+                    <>
+                      <Loader2 size={16} className="spin" /> Buscando...
+                    </>
+                  ) : (
+                    <>
+                      <Search size={16} /> Buscar
+                    </>
+                  )}
+                </button>
+                {openDataSearchQuery && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => {
+                      setOpenDataSearchQuery('');
+                      api.getFeaturedOpenDatasets().then(setOpenDataResults);
+                    }}
+                    disabled={loading || openDataLoading}
+                    title="Restablecer destacados"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Filtro de Etiquetas Rápidas */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setSelectedTag(tag)}
+                  style={{
+                    fontSize: '0.78rem',
+                    padding: '4px 10px',
+                    borderRadius: '16px',
+                    border: '1px solid',
+                    borderColor: selectedTag === tag ? 'var(--primary)' : 'var(--border-color)',
+                    backgroundColor: selectedTag === tag ? 'var(--primary-light)' : 'var(--bg-input)',
+                    color: selectedTag === tag ? 'var(--primary)' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontWeight: selectedTag === tag ? 700 : 500
+                  }}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Grid de Tarjetas de Datasets Open Data */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredOpenData.length > 0 ? (
+                filteredOpenData.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      backgroundColor: 'var(--bg-input)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--primary)' }}>
+                          <Building2 size={14} />
+                          <span style={{ fontWeight: 600 }}>{item.organization}</span>
+                        </div>
+                        <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
+                          {item.format}
+                        </span>
+                      </div>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                        {item.title}
+                      </h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '8px' }}>
+                        {item.description}
+                      </p>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {item.tags.map((t, i) => (
+                          <span key={i} style={{ fontSize: '0.7rem', color: 'var(--text-dim)', backgroundColor: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '4px' }}>
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-outline"
+                      style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', padding: '8px 12px' }}
+                      onClick={() => importFromUrl(item.resource_url)}
+                      disabled={loading}
+                    >
+                      <Download size={14} /> Importar a DataFlow
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
+                  No se encontraron datasets para la búsqueda realizada. Prueba con otro término o selecciona "Todos".
+                </div>
+              )}
             </div>
           </div>
         )}

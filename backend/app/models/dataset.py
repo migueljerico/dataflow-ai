@@ -49,3 +49,19 @@ class DatasetFromUrlRequest(BaseModel):
         examples=["https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"]
     )
 
+class OpenDatasetItem(BaseModel):
+    id: str = Field(..., description="ID del dataset en el portal Open Data")
+    title: str = Field(..., description="Título legible del dataset")
+    description: str = Field(..., description="Descripción o resumen del contenido")
+    organization: str = Field(default="Open Data Portal", description="Organismo o entidad emisora")
+    resource_url: str = Field(..., description="URL directa de descarga del archivo CSV/XLSX")
+    format: str = Field(default="CSV", description="Formato del recurso (CSV, XLSX)")
+    size_bytes: Optional[int] = Field(default=None, description="Tamaño del archivo en bytes si está disponible")
+    tags: List[str] = Field(default_factory=list, description="Etiquetas temáticas (ej. Economía, Transporte)")
+
+class OpenDataSearchResponse(BaseModel):
+    total: int
+    results: List[OpenDatasetItem]
+    source: str = Field(default="CKAN Public Portal", description="Fuente de los metadatos")
+
+

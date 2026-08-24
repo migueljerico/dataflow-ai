@@ -3,14 +3,22 @@ import shutil
 import uuid
 import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, UploadFile, File, status, HTTPException
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
-from app.models.dataset import DatasetMetadata, DatasetFromUrlRequest, FileTypeEnum, ProcessingStateEnum
+from app.models.dataset import (
+    DatasetMetadata, 
+    DatasetFromUrlRequest, 
+    FileTypeEnum, 
+    ProcessingStateEnum,
+    OpenDatasetItem,
+    OpenDataSearchResponse
+)
 from app.services.dataset_service import DatasetService, DATASET_CACHE
+from app.services.open_data_service import OpenDataService
 
 router = APIRouter()
 
@@ -126,6 +134,20 @@ async def load_dataset_from_url(payload: DatasetFromUrlRequest):
     y streaming defensivo con límite de tamaño para proteger la memoria RAM (tmpfs) en Cloud Run.
     """
     return await DatasetService.download_and_process_url(str(payload.url))
+
+@router.get("/open-data/featured", response_model=List[OpenDatasetItem])
+async def get_featured_open_datasets():
+    """
+    Listar los datasets públicos de Open Data destacados y verificados para importación directa.
+    """
+    return OpenDataService.get_featured_datasets()
+
+@router.get("/open-data/search", response_model=OpenDataSearchResponse)
+async def search_open_datasets(query: Optional[str] = None, limit: int = 10):
+    """
+    Buscar datasets públicos en portales Open Data (estándar CKAN y catálogo curado).
+    """
+    return await OpenDataService.search_datasets(query=query, limit=limit)
 
 @router.get("/{dataset_id}", response_model=DatasetMetadata)
 async def get_dataset(dataset_id: str):
