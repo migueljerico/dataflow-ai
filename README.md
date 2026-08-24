@@ -76,12 +76,12 @@ La IA nunca ejecuta código arbitrario ni manipula datos sin supervisión. Todo 
 
 ```mermaid
 flowchart TD
-    A["📁 Datos Brutos (CSV / XLSX / URL / Open Data)"] --> B["🔍 Profiling y Detección Semántica"]
-    B --> C["📊 Data Quality Score (0-100)"]
-    C --> D["🤖 Propuesta de Plan ETL (Determinista o IA)"]
-    D --> E["👤 Revisión Humana (Human-in-the-Loop)"]
-    E --> F["⚙️ Motor Determinista (Python / Pandas)"]
-    F --> G["✅ Dataset Limpio + Analytics + Script .py"]
+    A["📁 1. Ingesta Multicanal<br/>CSV · Excel · URL · Open Data"] --> B["🔍 2. Profiling Automático<br/>Inferencia de Tipos y Códigos"]
+    B --> C["📊 3. Data Quality Score<br/>Evaluación 0-100 en 5 Dimensiones"]
+    C --> D["🤖 4. Propuesta de Plan ETL<br/>Motor Determinista o Copiloto IA"]
+    D --> E["👤 5. Revisión Humana<br/>Control Human-in-the-Loop"]
+    E --> F["⚙️ 6. Motor Determinista<br/>Transformación en Python/Pandas"]
+    F --> G["✅ 7. Salida para Power BI<br/>Dataset Limpio + KPIs + Script .py"]
 ```
 
 ---
