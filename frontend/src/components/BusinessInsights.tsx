@@ -45,7 +45,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
 
   return (
     <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '28px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={22} className="text-primary" /> Business Analytics & KPIs Ejecutivos
@@ -60,7 +60,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
       </div>
 
       {/* Tarjetas de Business KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         {report.kpis.map((kpi) => (
           <div
             key={kpi.id}
@@ -88,7 +88,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
           backgroundColor: 'rgba(59, 130, 246, 0.05)',
           border: '1px solid rgba(59, 130, 246, 0.2)',
           borderRadius: '10px',
-          padding: '20px',
+          padding: '16px 20px',
           marginBottom: '24px',
         }}
       >
@@ -102,7 +102,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
       </div>
 
       {/* Distribución por Categorías y Recomendaciones */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
         {/* Distribución */}
         {report.category_breakdown && report.category_breakdown.length > 0 && (
           <div style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '16px' }}>

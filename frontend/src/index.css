@@ -369,3 +369,205 @@ tr:hover td {
 .text-amber { color: var(--accent-amber); }
 .text-rose { color: var(--accent-rose); }
 .text-primary { color: var(--primary); }
+
+/* ==========================================================================
+   Responsive Design & Mobile Optimizations
+   ========================================================================== */
+
+/* Utility Responsive Classes */
+.hide-on-mobile {
+  display: inline-flex;
+}
+
+.mobile-stack {
+  display: flex;
+}
+
+/* Tablet & Mobile Screens (<= 768px) */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px 12px;
+  }
+
+  /* Header */
+  .navbar {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand-tagline {
+    display: none;
+  }
+
+  .brand-title {
+    font-size: 1.1rem;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Stepper Progress Bar */
+  .stepper {
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    justify-content: flex-start;
+  }
+
+  .step-item {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 16px 14px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-header .btn,
+  .card-header > div:last-child {
+    width: 100%;
+  }
+
+  .card-header .card-title {
+    font-size: 1rem;
+  }
+
+  /* Score Banner */
+  .score-banner {
+    grid-template-columns: 1fr;
+    padding: 20px 16px;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .score-badge-circle {
+    width: 110px;
+    height: 110px;
+  }
+
+  .score-num {
+    font-size: 2rem;
+  }
+
+  .score-banner > div:last-child > div:last-child {
+    justify-content: center;
+  }
+
+  /* Dimensions Grid */
+  .dimensions-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .dim-card {
+    padding: 12px;
+  }
+
+  .dim-score {
+    font-size: 1.2rem;
+  }
+
+  /* Dropzone */
+  .dropzone {
+    padding: 28px 14px;
+  }
+
+  .dropzone h3 {
+    font-size: 0.95rem !important;
+  }
+
+  .dropzone p {
+    font-size: 0.8rem !important;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.825rem;
+  }
+
+  /* Tables */
+  .table-wrapper {
+    margin: 0 -2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
+
+  th, td {
+    padding: 10px 12px;
+  }
+
+  /* Mobile Stack Helpers */
+  .mobile-stack {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .mobile-full-width {
+    width: 100% !important;
+  }
+}
+
+/* Small Smartphone Screens (<= 480px) */
+@media (max-width: 480px) {
+  .dimensions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .navbar {
+    padding: 10px 12px;
+  }
+
+  .brand-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brand-title {
+    font-size: 1rem;
+  }
+
+  .score-badge-circle {
+    width: 95px;
+    height: 95px;
+  }
+
+  .score-num {
+    font-size: 1.75rem;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Modal on Small Phones */
+  .modal-card {
+    padding: 16px !important;
+    max-width: 95vw !important;
+  }
+}

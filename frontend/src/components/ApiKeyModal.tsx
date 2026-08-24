@@ -57,12 +57,12 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
       zIndex: 9999,
       padding: '16px'
     }}>
-      <div className="card" style={{
+      <div className="card modal-card" style={{
         maxWidth: '520px',
         width: '100%',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg-card)',
         borderRadius: '12px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        boxShadow: 'var(--shadow-lg)',
         border: '1px solid var(--border-color)',
         padding: '24px',
         position: 'relative'
@@ -89,20 +89,20 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
             width: '40px',
             height: '40px',
             borderRadius: '8px',
-            backgroundColor: '#eff6ff',
+            backgroundColor: 'rgba(14, 165, 233, 0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--primary-color)'
+            color: 'var(--primary)'
           }}>
             <Key size={20} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600, color: 'var(--text-main)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>
               Configurar Google Gemini API Key
             </h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Modo BYOK (Bring Your Own Key) para la IA Copilot
+              Modo BYOK (Bring Your Own Key) para el Copiloto IA
             </p>
           </div>
         </div>
@@ -122,6 +122,8 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
                 padding: '10px 12px',
                 borderRadius: '6px',
                 border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-main)',
                 fontSize: '0.9rem',
                 fontFamily: 'monospace',
                 outline: 'none',
@@ -131,35 +133,35 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
           </div>
 
           <div style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
+            backgroundColor: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
             borderRadius: '8px',
             padding: '12px',
             fontSize: '0.8rem',
-            color: '#475569',
+            color: 'var(--text-muted)',
             marginBottom: '20px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px'
+            gap: '8px'
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-              <Shield size={14} style={{ color: '#059669', flexShrink: 0, marginTop: '2px' }} />
-              <span><strong>Seguridad Total:</strong> La clave se almacena exclusivamente en tu navegador (<code>localStorage</code>) y nunca se guarda en bases de datos.</span>
+              <Shield size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0, marginTop: '2px' }} />
+              <span><strong style={{ color: 'var(--text-main)' }}>Seguridad Local:</strong> La clave se almacena cifrada/ofuscada en tu navegador (<code>localStorage</code>) y nunca en bases de datos.</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-              <AlertCircle size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
-              <span><strong>Proxy en US:</strong> El backend (desplegado en US Central) gestiona las peticiones evitando restricciones geográficas europeas.</span>
+              <AlertCircle size={14} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+              <span><strong style={{ color: 'var(--text-main)' }}>Backend US:</strong> El servidor en Google Cloud Run evita restricciones geográficas.</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <a
               href="https://aistudio.google.com/app/apikey"
               target="_blank"
               rel="noopener noreferrer"
               style={{
                 fontSize: '0.8rem',
-                color: 'var(--primary-color)',
+                color: 'var(--primary)',
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',

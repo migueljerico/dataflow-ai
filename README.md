@@ -8,195 +8,153 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-us--central1-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
-![Estado](https://img.shields.io/badge/Estado-Desplegado%20en%20Producci%C3%B3n-brightgreen?style=for-the-badge)
-![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-29%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 
 *From raw business data to clean, trusted and actionable insights.*  
 *Un copiloto inteligente y gobernado para preparación, calidad, transformación y análisis de datos empresariales.*
 
-> 🌐 **Despliegue en Producción (Google Cloud Run):** [https://dataflow-ai-748914382449.us-central1.run.app](https://dataflow-ai-748914382449.us-central1.run.app)  
-> ⚠️ **Versión Piloto / MVP (En desarrollo activo)**  
-> *Diseñado para equipos de Business Intelligence, Analytics y Operaciones que necesitan datos fiables antes de construir reportes en Power BI.*
+> 🌐 **Despliegue en Producción:** [https://dataflow-ai-748914382449.us-central1.run.app](https://dataflow-ai-748914382449.us-central1.run.app)  
+> ⚠️ **Versión Piloto / MVP:** Diseñado para equipos de BI, Analytics y Operaciones que necesitan datos fiables antes de construir reportes en Power BI.
 
 ---
 
-## 🔗 Acceso / Demo
+## 🔗 Acceso y Despliegue
 
 ### 🌐 Despliegue en Producción (Google Cloud Run)
 
-La aplicación está desplegada y operativa en **Google Cloud Run** en la región **`us-central1`** con arquitectura de contenedor unificado y despliegue continuo (CD) automático en cada push a `main`:
+La plataforma está operativa en **Google Cloud Run** (`us-central1`) con despliegue continuo (CD) en cada push a `main`:
 
-| Recurso | URL |
+| Recurso | Enlace Directo |
 | :--- | :--- |
-| **Aplicación Web (Producción)** | [https://dataflow-ai-748914382449.us-central1.run.app](https://dataflow-ai-748914382449.us-central1.run.app) |
-| **API REST / OpenAPI** | [https://dataflow-ai-748914382449.us-central1.run.app/api/v1](https://dataflow-ai-748914382449.us-central1.run.app/api/v1) |
-| **Documentación Interactiva Swagger** | [https://dataflow-ai-748914382449.us-central1.run.app/docs](https://dataflow-ai-748914382449.us-central1.run.app/docs) |
-| **Healthcheck de Servicio** | [https://dataflow-ai-748914382449.us-central1.run.app/health](https://dataflow-ai-748914382449.us-central1.run.app/health) |
+| 🌐 **Aplicación Web** | [Abrir DataFlow AI](https://dataflow-ai-748914382449.us-central1.run.app) |
+| 🔌 **API REST / OpenAPI** | [Endpoints /api/v1](https://dataflow-ai-748914382449.us-central1.run.app/api/v1) |
+| 📖 **Documentación Swagger** | [Swagger UI /docs](https://dataflow-ai-748914382449.us-central1.run.app/docs) |
+| 💓 **Healthcheck** | [Estado del Servicio /health](https://dataflow-ai-748914382449.us-central1.run.app/health) |
 
-### 💻 Ejecución en Local
+### 💻 Entorno Local y Docker
 
-Para desarrollo y pruebas locales:
-
-| Recurso | URL |
-| :--- | :--- |
-| Aplicación web (frontend) | `http://localhost:3000` |
-| API REST (backend FastAPI) | `http://localhost:8000/api/v1` |
-| Documentación interactiva Swagger | `http://localhost:8000/docs` |
-| Healthcheck | `http://localhost:8000/health` |
-
-### 🐳 Ejecución con Docker Compose
-
-Stack completo frontend (Nginx) + backend (FastAPI):
-
-| Recurso | URL |
-| :--- | :--- |
-| Frontend (Nginx) | `http://localhost:3000` |
-| Backend (FastAPI, vía proxy `/api`) | `http://localhost:3000/api/v1` |
+| Entorno | Frontend | Backend / API | Swagger Docs |
+| :--- | :--- | :--- | :--- |
+| **Local Dev** | `http://localhost:3000` | `http://localhost:8000/api/v1` | `http://localhost:8000/docs` |
+| **Docker Compose** | `http://localhost:3000` | `http://localhost:3000/api/v1` | `http://localhost:8000/docs` |
 
 ---
 
-## 📋 Descripción
+## 📋 Descripción del Proyecto
 
-### 📌 Problema Empresarial
+### 📌 El Problema Empresarial
 
-Las empresas reciben diariamente datos desordenados e inconsistentes procedentes de múltiples plataformas (CRMs, ERPs, Contact Centers, sistemas de RRHH, exportaciones de terceros). Estos datos presentan habitualmente:
+Las organizaciones reciben a diario datos desestructurados e inconsistentes procedentes de CRMs, ERPs, Contact Centers o exportaciones de terceros. Estos archivos presentan problemas recurrentes:
 
-- **Filas vacías o malformadas** (`,,,,,,,`).
-- **Registros duplicados** que distorsionan los conteos de clientes o empleados.
-- **Formatos de fecha heterogéneos** (`2026-01-05` vs `06/01/2026` vs `07-01-2026`).
-- **Números almacenados como cadenas de texto** con símbolos (`1.200,50 €`, `$350.00`, `14.1%`) o marcadores como `"N/D"` / `"N/A"`.
-- **Inconsistencias de formato en texto** (`Madrid`, `MADRID`, `madrid `) y rotura de acrónimos (`SOPORTE SA` → `Soporte Sa`).
-- **Violaciones de reglas de negocio** (absentismos negativos que cancelan el absentismo real de otros empleados, productividades superiores al 100%).
+- **Filas vacías o corruptas** que rompen los pipelines de ingesta.
+- **Registros duplicados** que alteran los conteos de clientes y ventas.
+- **Formatos de fecha heterogéneos** mezclados en la misma columna (`YYYY-MM-DD`, `DD/MM/AAAA`).
+- **Números guardados como texto** con monedas o porcentajes (`1.200,50 €`, `$350.00`, `14.1%`) y marcadores como `N/D`, `N/A`, `--`.
+- **Inconsistencias tipográficas** y rotura de siglas (`SOPORTE SA` → `Soporte Sa`).
+- **Violaciones de lógica de negocio** (absentismos negativos que distorsionan medias, porcentajes fuera de rango).
 
-Antes de poder construir reportes de Business Intelligence (BI) o modelos analíticos fiables en Power BI, estos problemas requieren horas de trabajo manual repetitivo. **DataFlow AI** automatiza y gobierna este proceso.
+Resolver esto manualmente en Excel o Power Query consume horas y carece de trazabilidad. **DataFlow AI** automatiza y audita todo este proceso.
 
-### 💡 Solución y Principio Fundamental
-
-DataFlow AI sigue un principio estricto de gobierno de datos:
+### 💡 Principio Fundamental de Gobierno
 
 > **"La IA propone. El usuario decide. Python ejecuta."**
 
-La IA nunca ejecuta código arbitrario ni modifica directamente los datos sin supervisión. La plataforma realiza la manipulación de datos a través de un **motor ETL determinista** escrito en Python/pandas sobre un catálogo estricto de transformaciones validadas con **auditoría de validación explícita**.
+La IA nunca ejecuta código arbitrario ni manipula datos sin supervisión. Todo cambio se realiza a través de un **motor determinista en Python/pandas** basado en un catálogo cerrado de operaciones auditadas.
 
-**Flujo de Trabajo:**
+### 🔄 Flujo de Trabajo
 
-```text
-DATOS BRUTOS (CSV/XLSX)
-       ↓
-DATA PROFILING AUTOMÁTICO (Tipos, Nulos, Detección Semántica)
-       ↓
-EVALUACIÓN DE DATA QUALITY (Score 0-100 en 5 dimensiones)
-       ↓
-SUGERENCIA DE PLAN ETL (Reglas Deterministas o IA Copilot BYOK)
-       ↓
-REVISIÓN HUMANA (Human-in-the-Loop: Aprobar/Editar/Rechazar paso a paso)
-       ↓
-MOTOR DETERMINISTA PYTHON / PANDAS
-       ↓
-DATASET LIMPIO + BUSINESS ANALYTICS + SCRIPT REPRODUCIBLE (.py)
+```mermaid
+flowchart TD
+    A[📁 Datos Brutos CSV / XLSX] --> B[🔍 Profiling y Detección Semántica]
+    B --> C[📊 Data Quality Score 0-100]
+    C --> D[🤖 Propuesta de Plan ETL Determinista o IA]
+    D --> E[👤 Revisión Humana Human-in-the-Loop]
+    E --> F[⚙️ Motor Determinista Python / Pandas]
+    F --> G[✅ Dataset Limpio + Analytics + Script .py]
 ```
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades Principales
 
-| Funcionalidad | Descripción |
-| :--- | :--- |
-| **Carga de datasets** | Subida de archivos CSV/XLSX (máx. 10 MB) o carga de datasets demo con 1 clic. Detección automática de delimitador, limpieza de filas vacías y validación de formato. |
-| **Data Profiling automático** | Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y sugerencias semánticas (`email`, `currency`, `percentage`, `date`, `phone`, `name`, etc.). |
-| **Data Quality Score explicable** | Puntuación 0-100 ponderada en 5 dimensiones de negocio, con issues accionables y evidencia muestral. |
-| **Motor ETL determinista** | Catálogo de 11 transformaciones controladas registradas en `TransformationRegistry`. |
-| **Human-in-the-Loop** | Revisión, edición y aprobación/rechazo de cada paso antes de ejecutar. Los pasos rechazados no se ejecutan. |
-| **Business Analytics & KPIs** | Cálculo en tiempo real de KPIs ejecutivos por dominio (RRHH, Ventas, Contact Center) con pandas. |
-| **Copiloto IA gobernado** | Sugerencias de transformaciones con Google Gemini o motor determinista gratuito. Guardrails estrictos: solo operaciones del catálogo. |
-| **BYOK / Zero-Storage** | La API Key de Gemini se guarda solo en `localStorage` del navegador y viaja por cabecera `x-goog-api-key`. Nunca se persiste en backend ni en logs. |
-| **Privacidad RGPD** | Al LLM solo se envían esquema, estadísticas y 3 filas de muestra con PII enmascarada (`[NOMBRE]`, `[EMAIL]`, `[TELÉFONO]`). |
-| **Auditoría y trazabilidad** | Logs de auditoría por paso, hashes MD5 de entrada/salida, conteo de filas/columnas antes-después y script reproducible `.py`. |
-
-### 📊 Modelo de Data Quality Score (Lenguaje de Negocio Natural)
-
-La calidad del dataset se evalúa mediante una fórmula ponderada explicable basada en **5 dimensiones**:
-
-$$\text{Quality Score} = (0.30 \times C) + (0.25 \times V) + (0.20 \times K) + (0.15 \times U) + (0.10 \times I)$$
-
-| Dimensión | Ponderación | Descripción de Negocio |
-| :--- | :---: | :--- |
-| **Datos Completos ($C$)** | **30%** | Medición de campos sin valores nulos ni vacíos. |
-| **Formatos Válidos ($V$)** | **25%** | Verificación de que fechas, números y tipos cumplan con el formato esperado. |
-| **Formato Homogéneo ($K$)** | **20%** | Detección de espacios sobrantes y variaciones de mayúsculas/minúsculas (preservando siglas como SA, SL). |
-| **Registros Únicos ($U$)** | **15%** | Identificación de registros y filas duplicadas exactas. |
-| **Reglas de Negocio ($I$)** | **10%** | Comprobación de límites lógicos (e.g. Absentismo $\ge 0$, Productividad $\le 100\%$). |
-
-### 🛠️ Catálogo de Transformaciones ETL Controladas
-
-Toda modificación sobre los datos utiliza operaciones estrictas del `TransformationRegistry`:
-
-| Operación | Descripción |
-| :--- | :--- |
-| `trim_text` | Limpieza de espacios iniciales, finales y dobles espacios internos. |
-| `normalize_case` | Estandarización a Title Case preservando siglas corporativas (`SA`, `SL`, `SLU`, `KPI`). |
-| `convert_datetime` | Conversión a ISO 8601 (`%Y-%m-%d`) respetando formatos europeos `DD/MM/AAAA` sin inversión de día/mes. |
-| `convert_numeric` | Eliminación de símbolos (`$`, `€`, `%`) y marcadores (`N/D`, `N/A`) con soporte de separadores europeos y americanos. |
-| `clamp_range` | Acotación de valores negativos o fuera de rango lógico (`min_value`, `max_value`). |
-| `round_numeric` | Redondeo numérico a $N$ decimales. |
-| `fill_missing` | Imputación de valores faltantes por constante, media, mediana o moda. |
-| `remove_duplicates` | Eliminación de filas duplicadas exactas o por clave candidata. |
-| `rename_column` | Renombrado seguro de columnas. |
-| `drop_column` | Eliminación de columnas no deseadas. |
-| `normalize_category` | Reemplazo basado en diccionarios de mapeos explícitos. |
-
-### 📈 Módulo de Business Analytics & Executive Insights
-
-Una vez transformados los datos, DataFlow AI calcula en tiempo real con `pandas`:
-
-- **KPIs Operativos Clave por Dominio**:
-  - **RRHH / People Analytics**: Plantilla activa, salario medio, productividad media acotada y absentismo total acumulado.
-  - **Ventas & Retail**: Facturación total neta, ticket medio y unidades vendidas.
-  - **Contact Center**: Total llamadas, AHT medio operativo y CSAT/Score de calidad medio.
-- **Distribución Categórica**: Desglose por departamento, canal o agente.
-- **Resumen Ejecutivo de Negocio**: Informe estructurado para Dirección destacando el impacto de la calidad de datos y recomendaciones operativas.
-
-### 🤖 Rol de la IA, Guardrails y BYOK (Bring Your Own Key)
-
-El Copiloto de IA asiste en la propuesta de transformaciones con máximas garantías:
-
-- **Modo BYOK**: El usuario puede configurar su propia clave `GEMINI_API_KEY` desde la interfaz, almacenada únicamente en su navegador (`localStorage`). La clave viaja al backend por cabecera HTTP (`x-goog-api-key`) y nunca se persiste ni se registra en logs.
-- **Modelo configurable**: El Copiloto usa por defecto `gemini-2.5-flash`, configurable mediante la variable de entorno `GEMINI_MODEL`.
-- **Modo Determinista Gratuito**: Si no se dispone de API Key, el motor de reglas heurístico opera al 100% de capacidad sin coste.
-- **Minimización de Datos (RGPD)**: **Nunca se envía el dataset completo al LLM**. Solamente se envía el esquema, estadísticas descriptivas, conteo de nulos y 3 filas de muestra con **PII enmascarada**.
-- **Filtrado por Registro (Guardrails)**: Cualquier operación propuesta por la IA que no esté en el catálogo permitido es descartada automáticamente y **queda registrada como warning visible** en el plan de transformación.
-
-### 💼 Datasets Demostrativos Incluidos
-
-En el selector de demo de 1 clic o en el directorio [`data_samples/`](./data_samples) se incluyen:
-
-| Dataset | Archivo | Contenido |
-| :--- | :--- | :--- |
-| Contact Center & Operaciones | `contact_center_corrupted.csv` | KPIs de Contact Center (AHT, Conversión, Score de Calidad, Absentismo) con marcadores N/D, AHTs negativos y fechas `DD/MM/AAAA`. |
-| Ventas & Comercial | `sales_sample_corrupted.csv` | Transacciones comerciales con precios formateados como texto (`1200.50 €`, `$350.00`), fechas mezcladas, espacios y filas duplicadas. |
-| People Analytics & RRHH | `people_analytics_corrupted.csv` | Datos de RRHH con salarios multimoneda (`€`/`$`), absentismo negativo (`-3`), productividad > 100% (`112%`) y fila vacía corrupta. |
+- 📁 **Carga y Validación de Datasets:** Subida de CSV/XLSX (hasta 10 MB) con detección automática de delimitadores o carga de datasets demo con 1 clic.
+- 🔍 **Data Profiling Automático:** Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y detección semántica (`email`, `currency`, `percentage`, `date`, `phone`, `name`, `id`).
+- 📊 **Data Quality Score Explicable:** Puntuación 0-100 ponderada en 5 dimensiones con desglose de anomalías y muestras de evidencia.
+- ⚙️ **Motor ETL Determinista:** Catálogo estricto de 11 operaciones registradas en `TransformationRegistry` con ejecución reproducible.
+- 👤 **Human-in-the-Loop:** Control total para revisar, editar, aprobar o rechazar cada transformación antes de ejecutar.
+- 📈 **Business Analytics & KPIs:** Cálculo en tiempo real con `pandas` de métricas de negocio por dominio (Ventas, RRHH, Contact Center).
+- 🤖 **Copiloto IA Gobernado:** Asistente con Google Gemini para proponer transformaciones óptimas, con fallback 100% determinista sin coste.
+- 🔑 **Seguridad BYOK / Local Vault:** Almacenamiento seguro y ofuscado en `localStorage` del cliente; la clave nunca se almacena en el servidor ni en logs.
+- 🛡️ **Privacidad y RGPD:** Anonimización de datos personales (`[NOMBRE]`, `[EMAIL]`, `[TELÉFONO]`) en las muestras de análisis.
+- 📝 **Auditoría y Trazabilidad:** Logs paso a paso, hashes MD5 de entrada/salida y exportación de script reproducible en Python (`.py`).
 
 ---
 
-## ⚙️ Instalación
+## 📊 Modelo de Data Quality Score
+
+La calidad del dataset se calcula mediante una fórmula ponderada en **5 dimensiones de negocio**:
+
+$$\text{Quality Score} = (0.30 \times C) + (0.25 \times V) + (0.20 \times K) + (0.15 \times U) + (0.10 \times I)$$
+
+| Dimensión | Peso | Objetivo de Calidad |
+| :--- | :---: | :--- |
+| **Completitud ($C$)** | **30%** | Detección de campos nulos o vacíos. |
+| **Validez ($V$)** | **25%** | Verificación de formatos de fecha, tipos y números. |
+| **Consistencia ($K$)** | **20%** | Normalización de espacios y formatos de texto (respetando siglas). |
+| **Unicidad ($U$)** | **15%** | Eliminación de registros y filas duplicadas exactas. |
+| **Integridad ($I$)** | **10%** | Cumplimiento de límites lógicos (ej. valores $\ge 0$, porcentajes $[0, 100]$). |
+
+---
+
+## 🛠️ Catálogo de Transformaciones ETL
+
+Operaciones deterministas controladas por el motor de transformación:
+
+| Operación | Finalidad de Limpieza |
+| :--- | :--- |
+| `trim_text` | Limpieza de espacios iniciales, finales y dobles espacios internos. |
+| `normalize_case` | Estandarización a Title Case preservando siglas corporativas (`SA`, `SL`, `SLU`, `KPI`). |
+| `convert_datetime` | Conversión a ISO 8601 (`%Y-%m-%d`) soportando formatos europeos (`DD/MM/AAAA`). |
+| `convert_numeric` | Eliminación de símbolos (`€`, `$`, `%`) y marcadores (`N/D`, `N/A`, `--`) a numérico float64. |
+| `clamp_range` | Acotación de valores negativos o fuera de intervalo lógico (`min_value`, `max_value`). |
+| `round_numeric` | Redondeo de precisión a $N$ decimales. |
+| `fill_missing` | Imputación controlada por constante, media, mediana o moda. |
+| `remove_duplicates` | Eliminación de duplicados exactos o por clave candidata. |
+| `rename_column` | Renombrado seguro de columnas. |
+| `drop_column` | Eliminación de columnas irrelevantes o vacías. |
+| `normalize_category` | Mapeo explícito según diccionario de equivalencias. |
+
+---
+
+## 💼 Datasets Demostrativos Incluidos
+
+Disponibles para pruebas de 1 clic en la interfaz o en [`data_samples/`](./data_samples):
+
+- **Contact Center & Operaciones** (`contact_center_corrupted.csv`): Métricas de llamadas (AHT, Conversión, Score de Calidad) con valores `N/D`, AHT negativo y fechas europeas.
+- **Ventas & Retail** (`sales_sample_corrupted.csv`): Transacciones con precios como texto multimoneda (`1200.50 €`, `$350.00`), fechas mixtas y filas duplicadas.
+- **People Analytics & RRHH** (`people_analytics_corrupted.csv`): Salarios con símbolos, absentismo negativo (`-3`), productividad $>100\%$ y fila vacía.
+
+---
+
+## ⚙️ Instalación y Puesta en Marcha
 
 ### Requisitos Previos
 
 - **Python 3.11+**
-- **Node.js 18+** (recomendado Node 20 para Docker)
+- **Node.js 18+** (recomendado Node 20)
 - *(Opcional)* Docker y Docker Compose
 
-### 1. Clonar el repositorio
+### 1. Clonar el Repositorio
 
 ```bash
 git clone https://github.com/migueljerico/dataflow-ai.git
 cd dataflow-ai
 ```
 
-### 2. Ejecutar Backend (FastAPI)
+### 2. Backend (FastAPI)
 
 ```bash
 cd backend
@@ -212,20 +170,18 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-La API Swagger interactiva quedará disponible en: `http://localhost:8000/docs`.
+Documentación interactiva disponible en: `http://localhost:8000/docs`.
 
-### 3. Ejecutar Tests Automatizados (Pytest)
+### 3. Tests Automatizados (Pytest)
 
 ```bash
 cd backend
 pytest
 ```
 
-El resultado esperado es **23 tests unitarios, de integración y de gobierno — 100% en verde**. Cada test ejecuta aislado sobre un directorio temporal, sin dejar residuos en `uploads/`.
+> ✅ **29 tests automatizados — 100% pasando en verde** (unitarios, integración, calidad, parsing numérico y privacidad).
 
-### 4. Ejecutar Frontend (React + Vite + TypeScript)
-
-En una terminal aparte:
+### 4. Frontend (React + Vite + TypeScript)
 
 ```bash
 cd frontend
@@ -233,206 +189,53 @@ npm install
 npm run dev
 ```
 
-La aplicación web estará disponible en: `http://localhost:3000`.
+Aplicación disponible en: `http://localhost:3000`.
 
-### 5. Ejecución con Docker Compose (opcional)
-
-Desde la raíz del repositorio:
+### 5. Despliegue con Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-Esto levanta:
-
-- **Backend** expuesto en el puerto `8000`.
-- **Frontend** servido por Nginx en el puerto `3000`, con proxy `/api` hacia el backend sobre el mismo origen.
-
 ---
 
-## 🚀 Uso
-
-### Flujo interactivo desde la UI
-
-1. Abre `http://localhost:3000`.
-2. Sube un archivo CSV/XLSX o selecciona un dataset demo de 1 clic.
-3. Revisa el **Data Profiling** y el **Data Quality Score** con sus 5 dimensiones.
-4. Pulsa **Generar Plan** (motor de reglas determinista o Copiloto IA).
-5. Revisa, aprueba o rechaza cada paso del plan (Human-in-the-Loop).
-6. Ejecuta el plan y consulta el **Business Analytics**, la comparativa Antes vs Después, descarga el dataset limpio o el script reproducible `.py`.
-
-### Ejemplos de uso con la API REST
-
-#### Subir un dataset
-
-```bash
-curl -X POST http://localhost:8000/api/v1/datasets/upload \
-  -F "file=@data_samples/sales_sample_corrupted.csv"
-```
-
-#### Listar datasets demo
-
-```bash
-curl http://localhost:8000/api/v1/datasets/samples
-```
-
-#### Cargar un dataset demo de 1 clic
-
-```bash
-curl -X POST http://localhost:8000/api/v1/datasets/samples/sales/load
-```
-
-#### Obtener profiling y calidad
-
-```bash
-curl http://localhost:8000/api/v1/datasets/{dataset_id}/profiling
-curl http://localhost:8000/api/v1/datasets/{dataset_id}/quality
-```
-
-#### Proponer un plan de transformaciones (reglas deterministas)
-
-```bash
-curl -X POST http://localhost:8000/api/v1/plans/propose \
-  -H "Content-Type: application/json" \
-  -d '{"dataset_id":"TU_DATASET_ID"}'
-```
-
-#### Proponer un plan asistido por Copiloto IA (Gemini)
-
-```bash
-curl -X POST http://localhost:8000/api/v1/plans/propose/ai \
-  -H "Content-Type: application/json" \
-  -H "X-Gemini-Api-Key: TU_API_KEY" \
-  -d '{"dataset_id":"TU_DATASET_ID","provider":"gemini"}'
-```
-
-#### Aprobar y ejecutar un plan ETL
-
-```bash
-curl -X POST http://localhost:8000/api/v1/plans/{plan_id}/approve \
-  -H "Content-Type: application/json" \
-  -d '{"steps":[...]}'
-```
-
-#### Consultar Business Analytics de una ejecución
-
-```bash
-curl http://localhost:8000/api/v1/analytics/{run_id}
-```
-
-#### Descargar dataset limpio y script reproducible
-
-```bash
-curl -o clean_dataset.csv http://localhost:8000/api/v1/runs/{run_id}/download
-curl -o pipeline.py http://localhost:8000/api/v1/runs/{run_id}/script
-```
-
----
-
-## 📁 Estructura del proyecto
+## 📁 Estructura del Repositorio
 
 ```text
 dataflow-ai/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                     # CI/GitHub Actions: tests backend + build frontend
+├── .github/workflows/
+│   ├── ci.yml                 # CI: Pytest backend + Build frontend
+│   └── codeql.yml             # Análisis estático de seguridad CodeQL
 ├── backend/
 │   ├── app/
-│   │   ├── ai_providers/
-│   │   │   ├── base.py                # Contratos del LLMProvider y modelos de respuesta
-│   │   │   ├── gemini_provider.py     # Integración con Google Gemini (BYOK, cabecera x-goog-api-key)
-│   │   │   └── mock_provider.py       # Motor heurístico gratuito (sin API Key)
-│   │   ├── api/
-│   │   │   └── v1/
-│   │   │       ├── endpoints/
-│   │   │       │   ├── analytics.py   # Endpoint de Business Analytics
-│   │   │       │   ├── datasets.py    # Carga, listado y muestras demo
-│   │   │       │   ├── plans.py       # Propuesta, revisión y ejecución de planes ETL
-│   │   │       │   ├── profiling.py   # Data Profiling automático
-│   │   │       │   ├── quality.py     # Data Quality Score explicable
-│   │   │       │   └── runs.py        # Resultados, comparativas, descargas y scripts
-│   │   │       └── router.py          # Router principal /api/v1
-│   │   ├── core/
-│   │   │   ├── __init__.py
-│   │   │   ├── config.py              # Settings, CORS, límites de archivo
-│   │   │   ├── exceptions.py          # Excepciones funcionales y handler global
-│   │   │   └── number_parsing.py      # Parseo numérico europeo/americano centralizado
-│   │   ├── models/
-│   │   │   ├── __init__.py
-│   │   │   ├── analytics.py           # Modelos Pydantic de KPIs y reporte ejecutivo
-│   │   │   ├── dataset.py             # DatasetMetadata, estados, file types
-│   │   │   ├── etl.py                 # TransformationPlan, Steps, ExecutionResult
-│   │   │   ├── profiling.py           # ColumnProfile, SemanticHints
-│   │   │   └── quality.py             # QualityReport, QualityScore, Issues
-│   │   ├── services/
-│   │   │   ├── __init__.py
-│   │   │   ├── ai_service.py          # Servicio IA, guardrails y anonimización PII
-│   │   │   ├── analytics_service.py   # KPIs ejecutivos por dominio con pandas
-│   │   │   ├── dataset_service.py     # Validación, limpieza y caché de datasets
-│   │   │   ├── etl_service.py         # Motor ETL determinista y auditoría
-│   │   │   ├── profiler_service.py    # Profiling y detección semántica
-│   │   │   ├── quality_service.py     # Evaluación de calidad en 5 dimensiones
-│   │   │   └── script_generator.py    # Generador de script .py reproducible
-│   │   ├── transformations/
-│   │   │   ├── base.py                # Contrato BaseTransformation
-│   │   │   ├── datetime_ops.py        # convert_datetime
-│   │   │   ├── missing_ops.py         # fill_missing, remove_duplicates, rename, drop
-│   │   │   ├── numeric_ops.py         # convert_numeric, round, clamp
-│   │   │   ├── registry.py            # Registro estricto de transformaciones
-│   │   │   └── text_ops.py            # trim_text, normalize_case, normalize_category
-│   │   ├── __init__.py
-│   │   └── main.py                    # FastAPI app, CORS, SPA, healthcheck
-│   ├── tests/
-│   │   ├── conftest.py                # Aislamiento de tests (dir temporal + cachés limpias)
-│   │   ├── test_ai_privacy.py         # Privacidad PII y minimización RGPD
-│   │   ├── test_ai_provider.py        # Generación de planes IA
-│   │   ├── test_analytics.py          # Business Analytics end-to-end
-│   │   ├── test_dataset_upload.py     # Carga y validación de archivos
-│   │   ├── test_etl.py                # Motor ETL: pipeline completo y auditoría
-│   │   ├── test_european_numbers.py   # Parseo de números europeos/americanos
-│   │   ├── test_plan_governance.py    # Gobierno del plan y aprobación por pasos
-│   │   ├── test_profiler.py           # Profiling y detección semántica
-│   │   └── test_quality.py            # Data Quality y dimensiones del score
-│   ├── Dockerfile                     # Imagen backend
-│   ├── pytest.ini                     # Configuración de pytest
-│   ├── requirements.txt               # Dependencias Python
-│   └── uploads/
-│       └── .gitkeep                   # Directorio de subida de datasets
+│   │   ├── ai_providers/      # Gemini Provider (BYOK) y Mock determinista
+│   │   ├── api/v1/endpoints/  # Datasets, Profiling, Quality, Plans, Runs, Analytics
+│   │   ├── core/              # Configuración, excepciones y parsing numérico
+│   │   ├── models/            # Esquemas Pydantic y contratos de datos
+│   │   ├── services/          # Profiler, Quality, ETL determinista y Analytics
+│   │   ├── transformations/   # Catálogo TransformationRegistry
+│   │   └── main.py            # FastAPI app, middleware CORS y servido SPA
+│   ├── tests/                 # Suite de 29 pruebas automatizadas
+│   ├── Dockerfile             # Imagen de backend
+│   └── requirements.txt       # Dependencias Python
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── ApiKeyModal.tsx         # Modal para API Key
-│   │   │   ├── BusinessInsights.tsx    # Vista de insights ejecutivos
-│   │   │   ├── ExecutionReport.tsx     # Reporte de ejecución ETL
-│   │   │   ├── FileUpload.tsx          # Componente de subida de archivos
-│   │   │   ├── Header.tsx              # Cabecera de la aplicación
-│   │   │   ├── PlanReview.tsx          # Revisión y edición del plan ETL
-│   │   │   └── ProfilingDashboard.tsx  # Panel de profiling y calidad
-│   │   ├── services/
-│   │   │   └── api.ts                  # Cliente HTTP hacia el backend
-│   │   ├── types/
-│   │   │   └── index.ts                # Tipos TypeScript
-│   │   ├── App.tsx                     # Componente raíz
-│   │   ├── main.tsx                    # Punto de entrada React
-│   │   └── index.css                   # Estilos globales
-│   ├── Dockerfile                     # Imagen frontend
-│   ├── index.html                     # Plantilla HTML
-│   ├── nginx.conf                     # Configuración de nginx
-│   ├── package.json                   # Dependencias npm
-│   ├── package-lock.json              # Lockfile npm
-│   ├── tsconfig.json                  # Configuración TypeScript
-│   └── vite.config.ts                 # Configuración Vite
-├── data_samples/
-│   ├── contact_center_corrupted.csv   # Muestra demo Contact Center
-│   ├── people_analytics_corrupted.csv # Muestra demo People Analytics
-│   └── sales_sample_corrupted.csv     # Muestra demo Ventas
-├── .gitignore
-├── CHANGELOG.md                       # Historial de cambios y versiones (Keep a Changelog)
-├── docker-compose.yml                 # Orquestación multi-servicio
-├── Dockerfile                         # Dockerfile raíz unificado para Google Cloud Run
-├── LICENSE                            # Licencia MIT
-├── MANUAL_TECNICO.md                  # Manual técnico exhaustivo de arquitectura y gobernanza
+│   │   ├── components/        # UI: Upload, Profiling, PlanReview, Execution, Insights
+│   │   ├── services/          # Cliente API HTTP
+│   │   ├── utils/             # Seguridad y Vault local (CWE-312)
+│   │   ├── index.css          # Sistema de diseño responsivo mobile-first
+│   │   └── App.tsx            # Componente raíz y stepper de navegación
+│   ├── Dockerfile             # Imagen de frontend Nginx
+│   └── package.json           # Dependencias React y TypeScript
+├── data_samples/              # Datasets sintéticos de prueba
+├── CHANGELOG.md               # Historial de versiones (Keep a Changelog)
+├── MANUAL_TECNICO.md          # Documentación técnica de arquitectura
+├── Dockerfile                 # Dockerfile unificado para Google Cloud Run
 └── README.md
 ```
 
-<p align="center">Creado por <a href="https://github.com/migueljerico">@migueljerico</a> y documentado por QwenCloud (deepseek-v4-pro-0813) desde la App Asistente de IA · 2026</p>
+---
+
+<p align="center">
+  Creado por <a href="https://github.com/migueljerico">@migueljerico</a> y documentado por QwenCloud (deepseek-v4-pro-0813) desde la App Asistente de IA · 2026
+</p>

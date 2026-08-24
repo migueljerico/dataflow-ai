@@ -25,7 +25,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setIsModalOpen(true)}
             className="btn btn-outline"
@@ -36,27 +36,27 @@ export const Header: React.FC = () => {
               padding: '6px 12px',
               fontSize: '0.8rem',
               fontWeight: 500,
-              backgroundColor: hasApiKey ? '#ecfdf5' : '#f8fafc',
-              borderColor: hasApiKey ? '#a7f3d0' : '#cbd5e1',
-              color: hasApiKey ? '#065f46' : '#334155',
+              backgroundColor: hasApiKey ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-input)',
+              borderColor: hasApiKey ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-color)',
+              color: hasApiKey ? 'var(--accent-emerald)' : 'var(--text-main)',
               borderRadius: '6px',
               cursor: 'pointer'
             }}
             title="Configura tu API Key de Google Gemini para usar la IA Copilot"
           >
-            <Key size={14} style={{ color: hasApiKey ? '#059669' : 'var(--primary-color)' }} />
+            <Key size={14} style={{ color: hasApiKey ? 'var(--accent-emerald)' : 'var(--primary)' }} />
             {hasApiKey ? (
-              <span>Gemini IA: <strong style={{ color: '#059669' }}>Activa</strong></span>
+              <span>Gemini: <strong style={{ color: 'var(--accent-emerald)' }}>Activo</strong></span>
             ) : (
-              <span>Configurar API Key</span>
+              <span>API Key</span>
             )}
           </button>
 
-          <span className="badge badge-emerald" title="Cumplimiento estricto de privacidad: procesamiento efímero y minimización de datos">
-            <ShieldCheck size={13} /> Gobierno RGPD / Privacidad
+          <span className="badge badge-emerald hide-on-mobile" title="Cumplimiento estricto de privacidad: procesamiento efímero y minimización de datos">
+            <ShieldCheck size={13} /> Privacidad RGPD
           </span>
-          <span className="badge badge-primary">
-            <Sparkles size={12} /> Copiloto ETL Activo
+          <span className="badge badge-primary hide-on-mobile">
+            <Sparkles size={12} /> Copiloto ETL
           </span>
         </div>
       </header>

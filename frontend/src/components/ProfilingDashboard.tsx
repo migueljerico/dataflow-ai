@@ -122,7 +122,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
           <h3 className="card-title">
             <Table size={20} className="text-primary" /> Catálogo y Perfilado Estructural de Columnas
           </h3>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="mobile-stack" style={{ gap: '10px', flexWrap: 'wrap' }}>
             <button
               className="btn btn-outline"
               disabled={loadingPlan}

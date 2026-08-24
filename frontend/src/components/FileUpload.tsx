@@ -125,7 +125,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
           <span className="badge badge-emerald">Datos Sintéticos Listos</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
           {samples.length > 0 ? (
             samples.map((s) => (
               <div

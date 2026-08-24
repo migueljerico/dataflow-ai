@@ -77,22 +77,21 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                 transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <div>
-                  <span className="badge badge-blue" style={{ marginRight: '8px' }}>{step.step_id}</span>
-                  <span className="badge badge-emerald" style={{ marginRight: '8px' }}>{step.operation}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                  <span className="badge badge-blue">{step.step_id}</span>
+                  <span className="badge badge-emerald">{step.operation}</span>
                   {step.column && <span className="badge badge-amber">Columna: {step.column}</span>}
                   <span
                     className={`badge ${
                       step.risk === 'high' ? 'badge-rose' : step.risk === 'medium' ? 'badge-amber' : 'badge-emerald'
                     }`}
-                    style={{ marginLeft: '8px' }}
                   >
                     Riesgo {step.risk}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                   <button
                     className={`btn ${isApproved ? 'btn-primary' : 'btn-outline'}`}
                     style={{ padding: '6px 12px', fontSize: '0.8rem' }}
@@ -115,14 +114,14 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                 </div>
               </div>
 
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: '8px 0' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-main)', margin: '8px 0', lineHeight: 1.5 }}>
                 <strong>Motivo:</strong> {step.reason}
               </p>
 
-              <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap', marginTop: '8px' }}>
                 <span>Confianza IA/Reglas: {(step.confidence * 100).toFixed(0)}%</span>
                 <span>Filas estimadas: {step.affected_rows_estimate}</span>
-                <span>Parámetros: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
+                <span style={{ wordBreak: 'break-word' }}>Parámetros: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
               </div>
             </div>
           );
