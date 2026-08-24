@@ -1,8 +1,0 @@
-extensions:
-  - addsTo:
-      pack: codeql/python-all
-    extensible: barrierModel
-    data:
-      - ["app.core.security_url", "Member[validate_and_resolve_url]", "ssrf"]
-      - ["app.core.security_url", "Member[safe_download_url_to_file]", "ssrf"]
-      - ["app.core.security_url", "Member[is_ip_blocked]", "ssrf"]

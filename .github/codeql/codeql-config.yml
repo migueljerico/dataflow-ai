@@ -1,8 +1,0 @@
-name: "DataFlow AI CodeQL Configuration"
-
-packs:
-  - codeql/python-all
-
-# Custom Model Extensions for declarative barriers/sanitizers
-model-extensions:
-  - .github/codeql/extensions/models.yml
