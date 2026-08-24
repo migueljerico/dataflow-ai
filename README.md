@@ -9,7 +9,7 @@
 ![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-us--central1-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-29%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-76%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 
@@ -80,7 +80,8 @@ flowchart TD
 
 ## ✨ Funcionalidades Principales
 
-- 📁 **Carga y Validación de Datasets:** Subida de CSV/XLSX (hasta 10 MB) con detección automática de delimitadores o carga de datasets demo con 1 clic.
+- 📁 **Carga y Validación de Datasets:** Subida de CSV/XLSX (hasta 10 MB), importación directa desde URLs públicas (hasta 20 MB) con protección Anti-SSRF o carga de datasets demo con 1 clic.
+- 🛡️ **Seguridad Defensiva y Anti-SSRF:** Validación estricta de esquemas (`http`/`https`), bloqueo integral de rangos IPv4/IPv6 privados y de metadatos de Cloud, y mitigación de DNS Rebinding mediante IP Pinning.
 - 🔍 **Data Profiling Automático:** Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y detección semántica (`email`, `currency`, `percentage`, `date`, `phone`, `name`, `id`).
 - 📊 **Data Quality Score Explicable:** Puntuación 0-100 ponderada en 5 dimensiones con desglose de anomalías y muestras de evidencia.
 - ⚙️ **Motor ETL Determinista:** Catálogo estricto de 11 operaciones registradas en `TransformationRegistry` con ejecución reproducible.

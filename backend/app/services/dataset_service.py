@@ -12,6 +12,9 @@ from app.core.config import settings
 from app.core.exceptions import FunctionalException
 from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
 
+import time
+from app.core.security_url import safe_download_url_to_file
+
 DATASET_CACHE: Dict[str, DatasetMetadata] = {}
 EMPTY_ROWS_PURGED_CACHE: Dict[str, int] = {}
 
@@ -54,7 +57,129 @@ class DatasetService:
         return cleaned_df, dropped_count
 
     @staticmethod
+    def _cleanup_old_uploads(max_age_seconds: int = 7200, max_files: int = 20) -> None:
+        """
+        Limpia preventivamente archivos temporales antiguos en uploads/ para evitar
+        acumulación innecesaria en la memoria RAM (tmpfs) de Google Cloud Run.
+        """
+        try:
+            upload_dir = settings.UPLOAD_DIR
+            if not upload_dir.exists():
+                return
+            now = time.time()
+            files = [f for f in upload_dir.iterdir() if f.is_file()]
+
+            # Eliminar archivos con más de max_age_seconds (2 horas)
+            for f in files:
+                try:
+                    if now - f.stat().st_mtime > max_age_seconds:
+                        f.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
+            # Si se supera el límite de ficheros retenidos, purgar los más antiguos
+            remaining = [f for f in upload_dir.iterdir() if f.is_file()]
+            if len(remaining) > max_files:
+                remaining.sort(key=lambda x: x.stat().st_mtime)
+                for f in remaining[: len(remaining) - max_files]:
+                    try:
+                        f.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+        except Exception:
+            pass
+
+    @staticmethod
+    def _process_saved_dataset_file(
+        saved_path: Path,
+        filename: str,
+        file_ext: str,
+        file_size: int,
+        dataset_id: str
+    ) -> DatasetMetadata:
+        file_type = FileTypeEnum.CSV if file_ext == ".csv" else FileTypeEnum.XLSX
+        warnings: List[str] = []
+
+        try:
+            if file_type == FileTypeEnum.CSV:
+                delimiter = DatasetService._detect_csv_delimiter(saved_path)
+                full_df = pd.read_csv(saved_path, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
+            else:
+                excel_file = pd.ExcelFile(saved_path)
+                sheet_names = excel_file.sheet_names
+                if len(sheet_names) > 1:
+                    warnings.append(f"El archivo Excel contiene {len(sheet_names)} hojas. Se procesará la primera hoja ('{sheet_names[0]}').")
+                full_df = pd.read_excel(saved_path, sheet_name=0)
+
+            # Limpiar filas completamente vacías y registrar el conteo
+            full_df, empty_dropped = DatasetService._clean_empty_rows(full_df)
+            EMPTY_ROWS_PURGED_CACHE[dataset_id] = empty_dropped
+
+            if empty_dropped > 0:
+                warnings.append(f"Se detectaron y eliminaron {empty_dropped} fila(s) completamente vacías o malformadas (,,,,,,,).")
+                if file_type == FileTypeEnum.CSV:
+                    full_df.to_csv(saved_path, index=False, encoding="utf-8")
+                else:
+                    full_df.to_excel(saved_path, index=False)
+
+        except FunctionalException:
+            if saved_path.exists():
+                saved_path.unlink(missing_ok=True)
+            raise
+        except Exception as exc:
+            if saved_path.exists():
+                saved_path.unlink(missing_ok=True)
+            raise FunctionalException(
+                message=f"No se pudo leer la estructura del archivo '{filename}'. Asegúrate de que sea un archivo CSV o Excel válido.",
+                code="FILE_PARSING_ERROR",
+                details={"technical_error": str(exc)}
+            )
+
+        row_count, col_count = full_df.shape
+        columns = [str(col) for col in full_df.columns]
+
+        if row_count == 0:
+            if saved_path.exists():
+                saved_path.unlink(missing_ok=True)
+            raise FunctionalException(
+                message="El archivo no contiene filas de datos válidas.",
+                code="NO_ROWS_FOUND"
+            )
+
+        if col_count == 0:
+            if saved_path.exists():
+                saved_path.unlink(missing_ok=True)
+            raise FunctionalException(
+                message="El archivo no contiene columnas estructuradas.",
+                code="NO_COLUMNS_FOUND"
+            )
+
+        if row_count > settings.MAX_RECOMMENDED_ROWS:
+            warnings.append(f"El dataset contiene {row_count:,} filas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_ROWS:,}).")
+
+        if col_count > settings.MAX_RECOMMENDED_COLS:
+            warnings.append(f"El dataset contiene {col_count} columnas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_COLS}).")
+
+        metadata = DatasetMetadata(
+            dataset_id=dataset_id,
+            filename=filename,
+            file_type=file_type,
+            size_bytes=file_size,
+            row_count=row_count,
+            column_count=col_count,
+            columns=columns,
+            created_at=datetime.now(timezone.utc),
+            status=ProcessingStateEnum.VALIDATED,
+            warnings=warnings
+        )
+
+        DATASET_CACHE[dataset_id] = metadata
+        return metadata
+
+    @staticmethod
     async def process_uploaded_file(file: UploadFile) -> DatasetMetadata:
+        DatasetService._cleanup_old_uploads()
+
         filename = file.filename or "uploaded_file"
         file_ext = Path(filename).suffix.lower()
         
@@ -90,80 +215,60 @@ class DatasetService:
         with open(saved_path, "wb") as f:
             f.write(content)
 
-        file_type = FileTypeEnum.CSV if file_ext == ".csv" else FileTypeEnum.XLSX
-        warnings: List[str] = []
-
-        try:
-            if file_type == FileTypeEnum.CSV:
-                delimiter = DatasetService._detect_csv_delimiter(saved_path)
-                full_df = pd.read_csv(saved_path, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
-            else:
-                excel_file = pd.ExcelFile(saved_path)
-                sheet_names = excel_file.sheet_names
-                if len(sheet_names) > 1:
-                    warnings.append(f"El archivo Excel contiene {len(sheet_names)} hojas. Se procesará la primera hoja ('{sheet_names[0]}').")
-                full_df = pd.read_excel(saved_path, sheet_name=0)
-
-            # Limpiar filas completamente vacías y registrar el conteo
-            full_df, empty_dropped = DatasetService._clean_empty_rows(full_df)
-            EMPTY_ROWS_PURGED_CACHE[dataset_id] = empty_dropped
-
-            if empty_dropped > 0:
-                warnings.append(f"Se detectaron y eliminaron {empty_dropped} fila(s) completamente vacías o malformadas (,,,,,,,).")
-                if file_type == FileTypeEnum.CSV:
-                    full_df.to_csv(saved_path, index=False, encoding="utf-8")
-                else:
-                    full_df.to_excel(saved_path, index=False)
-
-        except Exception as exc:
-            if saved_path.exists():
-                os.remove(saved_path)
-            raise FunctionalException(
-                message=f"No se pudo leer la estructura del archivo '{filename}'. Asegúrate de que sea un archivo CSV o Excel válido.",
-                code="FILE_PARSING_ERROR",
-                details={"technical_error": str(exc)}
-            )
-
-        row_count, col_count = full_df.shape
-        columns = [str(col) for col in full_df.columns]
-
-        if row_count == 0:
-            if saved_path.exists():
-                os.remove(saved_path)
-            raise FunctionalException(
-                message="El archivo no contiene filas de datos válidas.",
-                code="NO_ROWS_FOUND"
-            )
-
-        if col_count == 0:
-            if saved_path.exists():
-                os.remove(saved_path)
-            raise FunctionalException(
-                message="El archivo no contiene columnas estructuradas.",
-                code="NO_COLUMNS_FOUND"
-            )
-
-        if row_count > settings.MAX_RECOMMENDED_ROWS:
-            warnings.append(f"El dataset contiene {row_count:,} filas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_ROWS:,}).")
-
-        if col_count > settings.MAX_RECOMMENDED_COLS:
-            warnings.append(f"El dataset contiene {col_count} columnas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_COLS}).")
-
-        metadata = DatasetMetadata(
-            dataset_id=dataset_id,
+        return DatasetService._process_saved_dataset_file(
+            saved_path=saved_path,
             filename=filename,
-            file_type=file_type,
-            size_bytes=file_size,
-            row_count=row_count,
-            column_count=col_count,
-            columns=columns,
-            created_at=datetime.now(timezone.utc),
-            status=ProcessingStateEnum.VALIDATED,
-            warnings=warnings
+            file_ext=file_ext,
+            file_size=file_size,
+            dataset_id=dataset_id
         )
 
-        DATASET_CACHE[dataset_id] = metadata
-        return metadata
+    @staticmethod
+    async def download_and_process_url(url: str) -> DatasetMetadata:
+        DatasetService._cleanup_old_uploads()
+
+        dataset_id = str(uuid.uuid4())
+        temp_filename = f"temp_{dataset_id}.tmp"
+        temp_path = settings.UPLOAD_DIR / temp_filename
+
+        try:
+            download_info = await safe_download_url_to_file(
+                url=url,
+                destination_path=temp_path,
+                max_bytes=settings.MAX_URL_FILE_SIZE_BYTES,
+                timeout_seconds=settings.URL_DOWNLOAD_TIMEOUT_SECONDS
+            )
+
+            raw_filename = download_info.get("filename") or "imported_dataset.csv"
+            file_ext = Path(raw_filename).suffix.lower()
+
+            if file_ext not in settings.ALLOWED_EXTENSIONS:
+                content_type = (download_info.get("content_type") or "").lower()
+                if "excel" in content_type or "spreadsheet" in content_type:
+                    file_ext = ".xlsx"
+                    raw_filename = f"{Path(raw_filename).stem}.xlsx"
+                else:
+                    file_ext = ".csv"
+                    raw_filename = f"{Path(raw_filename).stem}.csv"
+
+            safe_filename = f"{dataset_id}_{Path(raw_filename).name}"
+            final_path = settings.UPLOAD_DIR / safe_filename
+
+            if temp_path.exists():
+                temp_path.replace(final_path)
+
+            file_size = final_path.stat().st_size
+            return DatasetService._process_saved_dataset_file(
+                saved_path=final_path,
+                filename=raw_filename,
+                file_ext=file_ext,
+                file_size=file_size,
+                dataset_id=dataset_id
+            )
+        except Exception:
+            if temp_path.exists():
+                temp_path.unlink(missing_ok=True)
+            raise
 
     @staticmethod
     def get_dataset_metadata(dataset_id: str) -> DatasetMetadata:

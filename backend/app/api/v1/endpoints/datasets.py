@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
-from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
+from app.models.dataset import DatasetMetadata, DatasetFromUrlRequest, FileTypeEnum, ProcessingStateEnum
 from app.services.dataset_service import DatasetService, DATASET_CACHE
 
 router = APIRouter()
@@ -117,6 +117,15 @@ async def upload_dataset(file: UploadFile = File(...)):
     Subir un dataset empresarial (CSV o XLSX) para validación de formato y estructura.
     """
     return await DatasetService.process_uploaded_file(file)
+
+@router.post("/from-url", response_model=DatasetMetadata, status_code=status.HTTP_201_CREATED)
+async def load_dataset_from_url(payload: DatasetFromUrlRequest):
+    """
+    Importar y procesar un dataset directamente desde una URL pública (HTTP/HTTPS).
+    Incluye protección contra SSRF, mitigación de DNS Rebinding mediante IP Pinning,
+    y streaming defensivo con límite de tamaño para proteger la memoria RAM (tmpfs) en Cloud Run.
+    """
+    return await DatasetService.download_and_process_url(str(payload.url))
 
 @router.get("/{dataset_id}", response_model=DatasetMetadata)
 async def get_dataset(dataset_id: str):

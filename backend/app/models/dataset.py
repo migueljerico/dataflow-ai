@@ -41,3 +41,11 @@ class ErrorResponse(BaseModel):
     code: str
     message: str
     details: Dict[str, Any] = {}
+
+class DatasetFromUrlRequest(BaseModel):
+    url: str = Field(
+        ...,
+        description="URL pública directa al archivo CSV o XLSX para importar",
+        examples=["https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"]
+    )
+

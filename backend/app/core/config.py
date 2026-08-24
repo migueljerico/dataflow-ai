@@ -4,11 +4,14 @@ from typing import List
 
 class Settings:
     PROJECT_NAME: str = "DataFlow AI"
-    VERSION: str = "1.1.3"
+    VERSION: str = "1.2.0"
     API_V1_STR: str = "/api/v1"
 
     # File limits
-    MAX_FILE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit for MVP
+    MAX_FILE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit for direct file upload
+    MAX_URL_FILE_SIZE_BYTES: int = 20 * 1024 * 1024  # 20 MB limit for URL imports
+    URL_DOWNLOAD_TIMEOUT_SECONDS: float = 20.0  # 20s timeout
+    MAX_UPLOAD_FILES_KEPT: int = 20  # Prevent unbounded growth in Cloud Run tmpfs
     ALLOWED_EXTENSIONS: set = {".csv", ".xlsx"}
     MAX_RECOMMENDED_ROWS: int = 100_000
     MAX_RECOMMENDED_COLS: int = 50

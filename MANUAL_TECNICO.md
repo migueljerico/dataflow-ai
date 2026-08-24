@@ -1,7 +1,7 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.1.2  
-**Fecha de actualización:** 19 de agosto de 2026  
+**Versión:** 1.2.0  
+**Fecha de actualización:** 24 de agosto de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
 **Stack:** Python 3.11 · FastAPI · Pandas · React 18 · TypeScript · Vite · Docker
@@ -381,6 +381,7 @@ Base URL: `/api/v1`
 | Método | Ruta | Descripción | Parámetros |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/datasets/upload` | Sube un fichero CSV o XLSX y crea el dataset. | `file` (multipart, requerido, máx 10 MB) |
+| `POST` | `/datasets/from-url` | Descarga e importa un dataset desde una URL pública con protección Anti-SSRF. | Body: `{"url": string}` (máx 20 MB) |
 | `GET` | `/datasets/samples` | Lista los datasets de demostración preconfigurados. | — |
 | `POST` | `/datasets/samples/{sample_id}/load` | Carga un dataset demo sin subir archivo. | `sample_id` (path): `contact_center` \| `sales` \| `people_analytics` |
 | `GET` | `/datasets/{dataset_id}` | Obtiene los metadatos de un dataset. | `dataset_id` (path) |
@@ -434,6 +435,10 @@ Base URL: `/api/v1`
 | :--- | :--- | :---: |
 | `INVALID_FILE_TYPE` | Formato de fichero no permitido. | 400 |
 | `EMPTY_FILE` | Fichero vacío (0 bytes o sin datos). | 400 |
+| `FILE_TOO_LARGE` | El fichero supera el límite configurado (10 MB upload / 20 MB URL). | 400 |
+| `SSRF_BLOCKED_IP` | Acceso bloqueado: la IP destino es privada, loopback o metadatos Cloud. | 400 |
+| `INVALID_URL_SCHEME` | Esquema de URL prohibido (solo se admite http/https). | 400 |
+| `DOWNLOAD_TIMEOUT` | Tiempo de espera agotado al descargar archivo remoto. | 408 |
 | `INVALID_COLUMN` | Columna inexistente en la transformación. | 400 |
 | `UNREGISTERED_OPERATION` | Operación no contemplada en el catálogo. | 400 |
 | `AI_API_KEY_MISSING` | Falta la API Key de Gemini. | 400 |
@@ -515,6 +520,8 @@ Ubicación: `backend/tests/`
 | Fichero | Tests | Objetivo |
 | :--- | :---: | :--- |
 | `test_dataset_upload.py` | 7 | Validación de formatos (`.csv`, `.xlsx`), límites de tamaño, detección de delimitador y dataset vacío. |
+| `test_dataset_from_url.py` | 8 | Ingesta remota por URL, validación de tamaños, streams defensivos y manejo de errores HTTP. |
+| `test_security_url.py` | 39 | Protección exhaustiva Anti-SSRF (IPv4/IPv6/Metadata GCP), mitigación de DNS Rebinding mediante IP Pinning y validación de esquemas. |
 | `test_profiler.py` | 1 | Inferencia de tipos y sugerencias semánticas automáticas. |
 | `test_quality.py` | 1 | Cálculo del Data Quality Score (0-100) en sus 5 dimensiones. |
 | `test_european_numbers.py` | 3 | Parseo unificado de importes con coma decimal, moneda (`€`, `$`) y porcentajes. |
@@ -523,8 +530,9 @@ Ubicación: `backend/tests/`
 | `test_ai_provider.py` | 1 | Generación de sugerencias IA y guardrails de catálogo. |
 | `test_etl.py` | 3 | Ejecución del motor determinista sobre transformaciones individuales y pipelines combinados. |
 | `test_analytics.py` | 2 | Cálculo de KPIs ejecutivos de negocio y reporte para Dirección. |
+| `test_dataset4_verification.py` | 6 | Verificación de marcadores de ausencia, preservación de mayúsculas en identificadores y no corrupción de conteos. |
 
-**Total:** 23 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
+**Total:** 76 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
 
 ---
 

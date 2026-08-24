@@ -4,6 +4,25 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.0] — 2026-08-24
+
+### 🌐 Ingesta Segura por URL y Blindaje Anti-SSRF (Fase 1)
+- **Endpoint de Ingesta Remota (`POST /api/v1/datasets/from-url`)**: Descarga y procesamiento automático de datasets CSV/XLSX desde URLs públicas HTTP/HTTPS, integrándose directamente en el flujo determinista de DataFlow AI.
+- **Protección Integral Anti-SSRF (`app/core/security_url.py`)**:
+  - Restricción estricta de esquemas a `http` y `https` (bloqueo de `file://`, `ftp://`, `gopher://`, etc.).
+  - Cobertura exhaustiva de rangos prohibidos: Loopback (`127.0.0.0/8`, `::1`), Metadatos de Google Cloud (`169.254.0.0/16`), Redes privadas RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), Link-Local IPv6 (`fe80::/10`), ULA IPv6 (`fc00::/7`), e IPv4-mapped IPv6 (`::ffff:0:0/96`).
+- **Mitigación de DNS Rebinding mediante IP Pinning**:
+  - Resolución DNS única con `socket.getaddrinfo()` y validación previa de todas las IPs candidatas.
+  - Conexión TCP directa fijada a la IP pública validada (`PinnedAsyncNetworkBackend`), preservando `server_hostname` (SNI) y la cabecera `Host` para validación estricta de certificados TLS en conexiones HTTPS.
+  - Intercepción y revalidación segura de redirecciones HTTP salto a salto (máx. 3 saltos).
+- **Gestión de Memoria y Ciclo de Vida en Cloud Run (`tmpfs`)**:
+  - Límite defensivo fijado en 20 MB (`MAX_URL_FILE_SIZE_BYTES`) con streaming en bloques de 64 KB y corte inmediato en caso de exceso.
+  - Limpieza automática preventiva (`_cleanup_old_uploads`) de archivos temporales huérfanos para evitar acumulación en la RAM del contenedor.
+- **Suite de Pruebas Automatizadas**:
+  - Se añadieron 47 nuevos tests unitarios y de integración (`test_security_url.py`, `test_dataset_from_url.py`), alcanzando **76 tests automatizados (100% pasando en verde)**.
+
+---
+
 ## [1.1.3] — 2026-08-24
 
 ### 📱 Soporte PWA e Instalación en Móvil (Progressive Web App)
