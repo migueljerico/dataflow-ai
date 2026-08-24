@@ -240,7 +240,8 @@ async def safe_download_url_to_file(
     while True:
         target_info = validate_and_resolve_url(current_url)
         pinned_ip = target_info["pinned_ip"]
-        safe_url = target_info.get("safe_url") or target_info["url"]
+        # safe_url reconstruida y canónica tras validación estricta de IP pública y esquema
+        safe_url = target_info["safe_url"]
         transport = PinnedAsyncHTTPTransport(pinned_ip)
 
         headers = {
