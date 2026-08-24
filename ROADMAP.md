@@ -133,7 +133,7 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
 
 | Fase | Entregable Principal | Esfuerzo | Tests Pytest | Estado |
 | :---: | :--- | :---: | :---: | :---: |
-| **1** | Backend URL Loader + Anti-SSRF + IP Pinning + `tmpfs` | Pequeño-Medio | 76 / 76 | ✅ **Completada (v1.2.0)** |
+| **1** | Backend URL Loader + Anti-SSRF + IP Pinning + `tmpfs` | Pequeño-Medio | 77 / 77 | ✅ **Completada (v1.2.0)** |
 | **2** | UI React Carga URL + Feedback en Vivo | Pequeño | — | ⏳ **En Curso** |
 | **3** | Conector CKAN Open Data + Buscador en UI | Mediano | ~85 esperados | 📋 Planificada |
 | **4** | `charset-normalizer` + Profiler Semántico Robusto | Pequeño-Medio | ~95 esperados | 📋 Planificada |

@@ -59,9 +59,9 @@ def is_ip_blocked(ip_str: str) -> bool:
 
 def validate_and_resolve_url(url_str: str) -> Dict[str, Any]:
     """
-    Parsea la URL, valida esquema y puertos, resuelve el DNS una única vez
-    y verifica que todas las IPs candidatas sean públicas.
-    Retorna los datos de conexión con la IP fijada (Pinned IP).
+    Parsea la URL con urlsplit, valida esquema y puertos, comprueba ausencia de credenciales,
+    resuelve el DNS una única vez y verifica que todas las IPs candidatas sean públicas.
+    Reconstruye una URL segura y canónica y retorna los datos de conexión con IP Pinning.
     """
     if not url_str or not isinstance(url_str, str):
         raise FunctionalException(
@@ -70,8 +70,11 @@ def validate_and_resolve_url(url_str: str) -> Dict[str, Any]:
             status_code=400
         )
 
-    parsed = urllib.parse.urlparse(url_str.strip())
-    if parsed.scheme.lower() not in ALLOWED_SCHEMES:
+    cleaned_url = url_str.strip()
+    parsed = urllib.parse.urlsplit(cleaned_url)
+
+    scheme = parsed.scheme.lower()
+    if scheme not in ALLOWED_SCHEMES:
         raise FunctionalException(
             message=f"Esquema de URL no permitido ('{parsed.scheme}'). Solo se aceptan URLs 'http' o 'https'.",
             code="INVALID_URL_SCHEME",
@@ -87,7 +90,15 @@ def validate_and_resolve_url(url_str: str) -> Dict[str, Any]:
             status_code=400
         )
 
-    port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+    # Validar que no contenga credenciales de autenticación embebidas
+    if parsed.username or parsed.password:
+        raise FunctionalException(
+            message="No se permiten credenciales embebidas en la URL.",
+            code="EMBEDDED_CREDENTIALS_DISALLOWED",
+            status_code=400
+        )
+
+    port = parsed.port or (443 if scheme == "https" else 80)
 
     # Resolución DNS única
     try:
@@ -121,12 +132,22 @@ def validate_and_resolve_url(url_str: str) -> Dict[str, Any]:
         )
 
     pinned_ip = validated_ips[0]
+
+    # Reconstrucción explícita de URL canónica a partir de componentes validados
+    netloc = f"{hostname}:{port}" if (
+        (scheme == "http" and port != 80) or (scheme == "https" and port != 443)
+    ) else hostname
+    path = parsed.path if parsed.path else "/"
+    safe_url = urllib.parse.urlunsplit((scheme, netloc, path, parsed.query, ""))
+
     return {
-        "url": url_str.strip(),
-        "scheme": parsed.scheme.lower(),
+        "url": cleaned_url,
+        "safe_url": safe_url,
+        "scheme": scheme,
         "hostname": hostname,
         "port": port,
-        "path": parsed.path,
+        "path": path,
+        "query": parsed.query,
         "pinned_ip": pinned_ip
     }
 
@@ -219,9 +240,11 @@ async def safe_download_url_to_file(
     while True:
         target_info = validate_and_resolve_url(current_url)
         pinned_ip = target_info["pinned_ip"]
+        safe_url = target_info.get("safe_url") or target_info["url"]
         transport = PinnedAsyncHTTPTransport(pinned_ip)
 
         headers = {
+            "Host": target_info["hostname"],
             "User-Agent": "DataFlow-AI/1.2 (Dataset Importer; Portfolio BI)",
             "Accept": "text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/plain, */*"
         }
@@ -232,7 +255,7 @@ async def safe_download_url_to_file(
                 timeout=timeout_seconds,
                 follow_redirects=False
             ) as client:
-                async with client.stream("GET", current_url, headers=headers) as response:
+                async with client.stream("GET", safe_url, headers=headers) as response:
                     # Manejo explícito y controlado de redirecciones
                     if response.status_code in (301, 302, 303, 307, 308):
                         redirect_count += 1
@@ -251,7 +274,7 @@ async def safe_download_url_to_file(
                                 status_code=400
                             )
 
-                        current_url = urllib.parse.urljoin(current_url, location)
+                        current_url = urllib.parse.urljoin(safe_url, location)
                         continue
 
                     if response.status_code != 200:

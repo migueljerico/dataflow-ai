@@ -126,3 +126,10 @@ async def test_pinned_network_backend_forces_pinned_ip():
         args, kwargs = mock_connect.call_args
         assert args[0] == "93.184.216.34"
         assert args[1] == 443
+
+
+def test_validate_url_rejects_embedded_credentials():
+    with pytest.raises(FunctionalException) as exc_info:
+        validate_and_resolve_url("http://user:password@example.com/data.csv")
+    assert exc_info.value.code == "EMBEDDED_CREDENTIALS_DISALLOWED"
+
