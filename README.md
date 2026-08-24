@@ -41,6 +41,14 @@ La plataforma está operativa en **Google Cloud Run** (`us-central1`) con despli
 | **Local Dev** | `http://localhost:3000` | `http://localhost:8000/api/v1` | `http://localhost:8000/docs` |
 | **Docker Compose** | `http://localhost:3000` | `http://localhost:3000/api/v1` | `http://localhost:8000/docs` |
 
+### 📚 Documentación y Trazabilidad
+
+| Documento | Descripción |
+| :--- | :--- |
+| 🗺️ **[ROADMAP.md](ROADMAP.md)** | Plan de evolución arquitectónica (Ingesta URL, Open Data CKAN, Guardrails). |
+| 📜 **[CHANGELOG.md](CHANGELOG.md)** | Historial completo de versiones, fixes y notas de release. |
+| 📖 **[MANUAL_TECNICO.md](MANUAL_TECNICO.md)** | Manual de arquitectura, catálogo ETL, modelos y seguridad. |
+
 ---
 
 ## 📋 Descripción del Proyecto
