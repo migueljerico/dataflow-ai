@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f17"/>
+      <stop offset="50%" stop-color="#131b2a"/>
+      <stop offset="100%" stop-color="#0b0f17"/>
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="#233047" stroke-width="8"/>
+
+  <!-- Glowing background effect -->
+  <circle cx="256" cy="256" r="140" fill="url(#primaryGrad)" opacity="0.15" filter="url(#glow)"/>
+
+  <!-- Database Stack -->
+  <g transform="translate(106, 116)">
+    <!-- Bottom Disk -->
+    <path d="M0,170 C0,140 134,140 150,140 C166,140 300,140 300,170 L300,210 C300,245 166,245 150,245 C134,245 0,245 0,210 Z" fill="#1e293b" stroke="#334155" stroke-width="8"/>
+    <path d="M0,170 C0,205 134,205 150,205 C166,205 300,205 300,170" fill="none" stroke="url(#primaryGrad)" stroke-width="8"/>
+    <path d="M0,210 C0,245 134,245 150,245 C166,245 300,245 300,210" fill="none" stroke="url(#primaryGrad)" stroke-width="8"/>
+
+    <!-- Middle Disk -->
+    <path d="M0,90 C0,60 134,60 150,60 C166,60 300,60 300,90 L300,130 C300,165 166,165 150,165 C134,165 0,165 0,130 Z" fill="#1e293b" stroke="#334155" stroke-width="8"/>
+    <path d="M0,90 C0,125 134,125 150,125 C166,125 300,125 300,90" fill="none" stroke="url(#primaryGrad)" stroke-width="8"/>
+    <path d="M0,130 C0,165 134,165 150,165 C166,165 300,165 300,130" fill="none" stroke="url(#primaryGrad)" stroke-width="8"/>
+
+    <!-- Top Disk -->
+    <ellipse cx="150" cy="45" rx="150" ry="45" fill="url(#primaryGrad)"/>
+    <ellipse cx="150" cy="45" rx="142" ry="38" fill="#0f172a"/>
+    <ellipse cx="150" cy="45" rx="110" ry="28" fill="url(#primaryGrad)" opacity="0.3"/>
+  </g>
+
+  <!-- Sparkle / AI Star -->
+  <g transform="translate(340, 100)" filter="url(#glow)">
+    <path d="M40,0 L48,28 L76,36 L48,44 L40,72 L32,44 L4,36 L32,28 Z" fill="url(#emeraldGrad)"/>
+  </g>
+
+  <!-- Flow Wave -->
+  <path d="M120,380 C180,340 240,420 320,370 C360,345 380,360 400,380" fill="none" stroke="url(#emeraldGrad)" stroke-width="12" stroke-linecap="round"/>
+</svg>
