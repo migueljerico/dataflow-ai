@@ -42,6 +42,15 @@ export const api = {
     return handleResponse<DatasetMetadata>(res);
   },
 
+  loadDatasetFromUrl: async (url: string): Promise<DatasetMetadata> => {
+    const res = await fetch(`${API_BASE}/datasets/from-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    return handleResponse<DatasetMetadata>(res);
+  },
+
   listSampleDatasets: async (): Promise<SampleDataset[]> => {
     const res = await fetch(`${API_BASE}/datasets/samples`);
     return handleResponse<SampleDataset[]>(res);

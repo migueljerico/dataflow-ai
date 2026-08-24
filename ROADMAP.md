@@ -1,7 +1,7 @@
 # 🗺️ DataFlow AI — Roadmap de Evolución Arquitectónica
 
 **Versión del Roadmap:** 1.2  
-**Estado General:** Fase 1 Completada (v1.2.0) · Fase 2 en Curso  
+**Estado General:** Fase 1 y 2 Completadas · Fase 3 en Curso  
 **Stack Base:** Python 3.11 · FastAPI · Pandas 2.2 · React 18 · TypeScript · Google Cloud Run  
 **Autor:** [migueljerico](https://github.com/migueljerico)  
 
@@ -30,12 +30,12 @@ flowchart TD
         A3 --> A4["Control de Memoria tmpfs (20 MB)"]
     end
 
-    subgraph F2["⏳ FASE 2 (Siguiente Paso)"]
+    subgraph F2["✅ FASE 2 (Completada)"]
         B1["Pestaña 'Pegar Enlace Web' en UI"] --> B2["Feedback de Progreso en Vivo"]
         B2 --> B3["Mapeo Visual de Errores Remotos"]
     end
 
-    subgraph F3["📋 FASE 3 (Planificada)"]
+    subgraph F3["⏳ FASE 3 (Siguiente Paso)"]
         C1["Conector CKAN REST API"] --> C2["Buscador Temático de Datasets"]
         C2 --> C3["Tarjetas con 1-Click Import"]
     end
@@ -73,17 +73,15 @@ flowchart TD
 ---
 
 ### 🔹 Fase 2: Interfaz en React para Carga por URL con Feedback
-* **Estado:** ⏳ **En Curso / Siguiente Paso**
+* **Estado:** ✅ **Completada (24 de agosto de 2026)**
 * **Objetivo:** Dotar a la aplicación web de una experiencia fluida para importar datasets pegando enlaces, sin necesidad de usar Swagger.
-* **Qué se construye:**
+* **Qué se construyó:**
   1. Selector de modo en `FileUpload.tsx`: **"Subir Archivo Local"** | **"Pegar Enlace Web (URL)"**.
-  2. Campo de entrada con validación en tiempo real (`http://` / `https://`) y botón *"Descargar e Importar"*.
-  3. Indicadores de estado visual: *"Conectando con el servidor..."* $\rightarrow$ *"Descargando dataset..."* $\rightarrow$ *"Analizando calidad..."*.
-  4. Gestión de errores amigable ante enlaces inaccesibles, bloqueos de seguridad o exceso de tamaño.
-* **Esfuerzo Relativo:** **Pequeño** (modificaciones contenidas en frontend).
-* **Cómo se verifica (sin programar):**
-  1. Pegar una URL pública en la web y observar la transición automática hacia el panel de Profiling y Plan ETL.
-  2. Pegar una URL inválida o privada y comprobar que la interfaz muestra un mensaje de aviso claro en rojo.
+  2. Campo de entrada con validación en tiempo real (`http://` / `https://`) y botón interactivo *"Importar Dataset"*.
+  3. Indicadores de estado visual: *"Conectando con el servidor..."* $\rightarrow$ *"Descargando dataset en streaming..."* $\rightarrow$ *"Analizando calidad y perfil semántico..."*.
+  4. Botones de 1-clic con datasets públicos de prueba (PIB Mundial, Carsharing, Dataset Iris).
+  5. Gestión y mapeo visual de errores ante enlaces no accesibles, archivos superiores a 20 MB o bloqueos de seguridad Anti-SSRF.
+* **Verificación Manual:** Carga de URLs directas desde la UI con transición automática al Profiling Dashboard y comprobación de mensajes de error ante URLs privadas.
 
 ---
 
