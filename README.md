@@ -5,7 +5,7 @@
 ![Pandas](https://img.shields.io/badge/pandas-2.2-150458?style=for-the-badge&logo=pandas&logoColor=white)
 ![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-us--central1-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
@@ -76,21 +76,22 @@ La IA nunca ejecuta código arbitrario ni manipula datos sin supervisión. Todo 
 
 ```mermaid
 flowchart TD
-    A[📁 Datos Brutos CSV / XLSX] --> B[🔍 Profiling y Detección Semántica]
-    B --> C[📊 Data Quality Score 0-100]
-    C --> D[🤖 Propuesta de Plan ETL Determinista o IA]
-    D --> E[👤 Revisión Humana Human-in-the-Loop]
-    E --> F[⚙️ Motor Determinista Python / Pandas]
-    F --> G[✅ Dataset Limpio + Analytics + Script .py]
+    A["📁 Datos Brutos (CSV / XLSX / URL / Open Data)"] --> B["🔍 Profiling y Detección Semántica"]
+    B --> C["📊 Data Quality Score (0-100)"]
+    C --> D["🤖 Propuesta de Plan ETL (Determinista o IA)"]
+    D --> E["👤 Revisión Humana (Human-in-the-Loop)"]
+    E --> F["⚙️ Motor Determinista (Python / Pandas)"]
+    F --> G["✅ Dataset Limpio + Analytics + Script .py"]
 ```
 
 ---
 
 ## ✨ Funcionalidades Principales
 
-- 📁 **Carga y Validación de Datasets:** Subida de CSV/XLSX (hasta 10 MB), importación directa desde URLs públicas (hasta 20 MB) con protección Anti-SSRF o carga de datasets demo con 1 clic.
-- 🛡️ **Seguridad Defensiva y Anti-SSRF:** Validación estricta de esquemas (`http`/`https`), bloqueo integral de rangos IPv4/IPv6 privados y de metadatos de Cloud, y mitigación de DNS Rebinding mediante IP Pinning.
-- 🔍 **Data Profiling Automático:** Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y detección semántica (`email`, `currency`, `percentage`, `date`, `phone`, `name`, `id`).
+- 📁 **Carga y Validación Multicanal:** Subida de CSV/XLSX locales, importación directa por URL remota (streaming con tope de 20 MB) y explorador de portales **Open Data (CKAN)** con buscador temático y tarjetas de 1 clic.
+- 🛡️ **Seguridad Defensiva y Blindaje Anti-SSRF:** Validación estricta de esquemas (`http`/`https`), bloqueo integral de rangos IPv4/IPv6 privados y de metadatos de GCP, y mitigación de DNS Rebinding mediante IP Pinning a nivel de socket.
+- 🌐 **Detección Estadística de Codificación (`charset-normalizer`):** Reconocimiento transparente de `UTF-8`, `UTF-8 con BOM`, `Windows-1252` e `ISO-8859-1/15` con normalización automática a UTF-8 y preservación de `ñ`, tildes y monedas (`€`).
+- 🔍 **Data Profiling Automático con Guardrails de Códigos:** Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y detección semántica con protección de ceros iniciales en códigos postales (`08001`), códigos INE y referencias.
 - 📊 **Data Quality Score Explicable:** Puntuación 0-100 ponderada en 5 dimensiones con desglose de anomalías y muestras de evidencia.
 - ⚙️ **Motor ETL Determinista:** Catálogo estricto de 11 operaciones registradas en `TransformationRegistry` con ejecución reproducible.
 - 👤 **Human-in-the-Loop:** Control total para revisar, editar, aprobar o rechazar cada transformación antes de ejecutar.
@@ -188,7 +189,7 @@ cd backend
 pytest
 ```
 
-> ✅ **29 tests automatizados — 100% pasando en verde** (unitarios, integración, calidad, parsing numérico y privacidad).
+> ✅ **88 tests automatizados — 100% pasando en verde** (seguridad Anti-SSRF, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -213,33 +214,33 @@ docker compose up --build
 ```text
 dataflow-ai/
 ├── .github/workflows/
-│   ├── ci.yml                 # CI: Pytest backend + Build frontend
-│   └── codeql.yml             # Análisis estático de seguridad CodeQL
+│   └── ci.yml                 # CI: Pytest backend (88 tests) + Build React Vite
 ├── backend/
 │   ├── app/
 │   │   ├── ai_providers/      # Gemini Provider (BYOK) y Mock determinista
-│   │   ├── api/v1/endpoints/  # Datasets, Profiling, Quality, Plans, Runs, Analytics
-│   │   ├── core/              # Configuración, excepciones y parsing numérico
+│   │   ├── api/v1/endpoints/  # Datasets (URL & Open Data), Profiling, Quality, Plans, Runs, Analytics
+│   │   ├── core/              # Configuración, excepciones, parsing numérico y seguridad Anti-SSRF (IP Pinning)
 │   │   ├── models/            # Esquemas Pydantic y contratos de datos
-│   │   ├── services/          # Profiler, Quality, ETL determinista y Analytics
+│   │   ├── services/          # Profiler, Quality, ETL determinista, Open Data (CKAN) y Analytics
 │   │   ├── transformations/   # Catálogo TransformationRegistry
 │   │   └── main.py            # FastAPI app, middleware CORS y servido SPA
-│   ├── tests/                 # Suite de 29 pruebas automatizadas
+│   ├── tests/                 # Suite de 88 pruebas automatizadas
 │   ├── Dockerfile             # Imagen de backend
 │   └── requirements.txt       # Dependencias Python
 ├── frontend/
 │   ├── src/
-│   │   ├── components/        # UI: Upload, Profiling, PlanReview, Execution, Insights
+│   │   ├── components/        # UI: FileUpload (Local/URL/OpenData), Profiling, PlanReview, Execution, Insights
 │   │   ├── services/          # Cliente API HTTP
 │   │   ├── utils/             # Seguridad y Vault local (CWE-312)
 │   │   ├── index.css          # Sistema de diseño responsivo mobile-first
 │   │   └── App.tsx            # Componente raíz y stepper de navegación
 │   ├── Dockerfile             # Imagen de frontend Nginx
-│   └── package.json           # Dependencias React y TypeScript
+│   └── package.json           # Dependencias React 18, Vite 8 y TypeScript
 ├── data_samples/              # Datasets sintéticos de prueba
 ├── CHANGELOG.md               # Historial de versiones (Keep a Changelog)
 ├── MANUAL_TECNICO.md          # Documentación técnica de arquitectura
-├── Dockerfile                 # Dockerfile unificado para Google Cloud Run
+├── ROADMAP.md                 # Roadmap de evolución arquitectónica (Fases 1 a 4)
+├── Dockerfile                 # Dockerfile multi-stage unificado para Google Cloud Run
 └── README.md
 ```
 

@@ -98,7 +98,7 @@ flowchart TD
      - Pestaña **"Explorar Open Data (CKAN)"** integrada en la interfaz de inicio.
      - Buscador temático por palabra clave (tráfico, economía, precios, energía) con filtros por etiquetas.
      - Tarjetas informativas con organismo emisor, formato y botón directo *"Importar a DataFlow"*.
-  3. **Tests:** 5 tests automatizados de integración y mocking (`test_opendata.py`), alcanzando **82 tests pasando al 100% en verde**.
+   3. **Tests:** 5 tests automatizados de integración y mocking (`test_opendata.py`), complementando la suite total de **88 tests pasando al 100% en verde**.
 * **Verificación Manual:**
   1. Acceder a la pestaña *"Explorar Open Data (CKAN)"* y realizar una búsqueda o filtrar por etiqueta.
   2. Pulsar *"Importar a DataFlow"* en cualquier tarjeta y verificar la descarga, profiling y generación del script ETL en Power BI.
