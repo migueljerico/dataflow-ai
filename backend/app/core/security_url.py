@@ -57,6 +57,52 @@ def is_ip_blocked(ip_str: str) -> bool:
         return True
 
 
+def _try_parse_custom_ipv4(host_str: str) -> Optional[str]:
+    """
+    Intenta parsear y normalizar notaciones numéricas alternativas de IPv4 (decimal entero, hex, octal).
+    Ejemplos:
+    - '2130706433' -> '127.0.0.1'
+    - '0x7f.0.0.1' -> '127.0.0.1'
+    - '0177.0.0.1' -> '127.0.0.1'
+    """
+    host_clean = host_str.strip().strip("[]")
+    # 1. Entero decimal puro (ej. 2130706433)
+    if host_clean.isdigit():
+        try:
+            num = int(host_clean, 10)
+            if 0 <= num <= 0xFFFFFFFF:
+                return str(ipaddress.IPv4Address(num))
+        except (ValueError, OverflowError):
+            pass
+
+    # 2. Notaciones con puntos (decimal, hex 0x.., octal 0..)
+    if "." in host_clean:
+        parts = host_clean.split(".")
+        if len(parts) == 4:
+            try:
+                octets = []
+                for p in parts:
+                    p = p.strip()
+                    if p.startswith(("0x", "0X")):
+                        val = int(p, 16)
+                    elif p.startswith("0") and len(p) > 1 and p.isdigit():
+                        val = int(p, 8)
+                    elif p.isdigit():
+                        val = int(p, 10)
+                    else:
+                        return None
+                    if 0 <= val <= 255:
+                        octets.append(str(val))
+                    else:
+                        return None
+                if len(octets) == 4:
+                    normalized = ".".join(octets)
+                    return str(ipaddress.IPv4Address(normalized))
+            except (ValueError, OverflowError):
+                pass
+    return None
+
+
 def validate_and_resolve_url(url_str: str) -> Dict[str, Any]:
     """
     Parsea la URL con urlsplit, valida esquema y puertos, comprueba ausencia de credenciales,
@@ -100,16 +146,28 @@ def validate_and_resolve_url(url_str: str) -> Dict[str, Any]:
 
     port = parsed.port or (443 if scheme == "https" else 80)
 
-    # Resolución DNS única
-    try:
-        addr_info = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
-    except socket.gaierror as e:
-        raise FunctionalException(
-            message=f"No se pudo resolver el nombre de dominio '{hostname}'. Verifica que la URL sea correcta.",
-            code="DNS_RESOLUTION_FAILED",
-            status_code=400,
-            details={"technical_error": str(e)}
-        )
+    # Normalización proactiva de formatos de IP alternativos (decimal, hex, octal)
+    normalized_ip = _try_parse_custom_ipv4(hostname)
+    if normalized_ip:
+        if is_ip_blocked(normalized_ip):
+            raise FunctionalException(
+                message=f"Acceso denegado por seguridad: el destino ({normalized_ip}) es una dirección IP privada o restringida.",
+                code="SSRF_BLOCKED_IP",
+                status_code=400,
+                details={"blocked_ip": normalized_ip, "host": hostname}
+            )
+        addr_info = [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (normalized_ip, port))]
+    else:
+        # Resolución DNS única
+        try:
+            addr_info = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+        except socket.gaierror as e:
+            raise FunctionalException(
+                message=f"No se pudo resolver el nombre de dominio '{hostname}'. Verifica que la URL sea correcta.",
+                code="DNS_RESOLUTION_FAILED",
+                status_code=400,
+                details={"technical_error": str(e)}
+            )
 
     validated_ips: List[str] = []
     for family, _, _, _, sockaddr in addr_info:

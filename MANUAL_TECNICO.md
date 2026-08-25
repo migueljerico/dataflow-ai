@@ -522,6 +522,7 @@ Ubicación: `backend/tests/`
 | `test_dataset_upload.py` | 7 | Validación de formatos (`.csv`, `.xlsx`), límites de tamaño, detección de delimitador y dataset vacío. |
 | `test_dataset_from_url.py` | 8 | Ingesta remota por URL, validación de tamaños, streams defensivos y manejo de errores HTTP. |
 | `test_security_url.py` | 40 | Protección exhaustiva Anti-SSRF (IPv4/IPv6/Metadata GCP), mitigación de DNS Rebinding mediante IP Pinning, no credenciales embebidas y validación de esquemas. |
+| `test_security_url_ssrf_regression.py` | 8 | Batería de regresión automatizada que reproduce las 7 pruebas de penetración reales ejecutadas contra producción (Cloud Run) + caso de control. |
 | `test_opendata.py` | 5 | Explorador de datos abiertos (catálogo curado, búsqueda en tiempo real e integración con API CKAN). |
 | `test_phase4_guardrails.py` | 6 | Detección estadística con `charset-normalizer`, soporte de BOM, Windows-1252 y prioridad semántica de IDs/códigos sobre fechas/divisas. |
 | `test_profiler.py` | 1 | Inferencia de tipos y sugerencias semánticas automáticas. |
@@ -534,7 +535,7 @@ Ubicación: `backend/tests/`
 | `test_analytics.py` | 2 | Cálculo de KPIs ejecutivos de negocio y reporte para Dirección. |
 | `test_dataset4_verification.py` | 6 | Verificación de marcadores de ausencia, preservación de mayúsculas en identificadores y no corrupción de conteos. |
 
-**Total:** 88 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
+**Total:** 96 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
 
 ---
 

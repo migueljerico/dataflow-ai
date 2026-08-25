@@ -32,8 +32,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 - **Detección Estadística de Codificación**: Normalización automática de archivos en `Windows-1252`, `ISO-8859-1`, `latin-1` y `UTF-8 con BOM` (`\xef\xbb\xbf`) sin corrupción de caracteres españoles (`ñ`, tildes, `€`).
 - **Prioridad Semántica de Identificadores y Códigos**: Corrección en `ProfilerService` para garantizar que códigos postales (`08001`), códigos INE (`28079`) o identificadores alfanuméricos (`id_precio`, `id_alta`) se clasifiquen como `ID` y se preserven como `TEXT` (evitando su pérdida de ceros o suma errónea en Power BI).
 
+### 🛡️ Evidencia de Seguridad y Penetration Testing en Producción
+- **Pruebas Manuales Reales en Producción (2026-08-24)**: Ejecución y verificación manual de 7 vectores de ataque SSRF reales (metadatos GCP `169.254.169.254`, loopback `127.0.0.1`, bypass por nombre `localhost`, evasión decimal `2130706433`, evasión hexadecimal `0x7f.0.0.1`, evasión octal `0177.0.0.1` y userinfo spoofing) directamente contra el contenedor desplegado en Google Cloud Run, confirmando el bloqueo `400` y `SSRF_BLOCKED_IP`/`EMBEDDED_CREDENTIALS_DISALLOWED` en todos los casos.
+- **Suite de Regresión Automatizada**: Conversión de los 7 vectores más el caso positivo de control a tests automatizados en `test_security_url_ssrf_regression.py`.
+
 ### 🧪 Suite de Pruebas Automatizadas
-- Se alcanzaron **88 tests unitarios y de integración automatizados (100% pasando en verde)** con cobertura de seguridad, Open Data, encodings y guardrails semánticos.
+- Se alcanzaron **96 tests unitarios y de integración automatizados (100% pasando en verde)** con cobertura de seguridad Anti-SSRF, regresión de pentesting, Open Data, encodings y guardrails semánticos.
 
 ---
 

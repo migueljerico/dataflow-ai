@@ -9,7 +9,7 @@
 ![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-us--central1-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-88%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-96%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 
@@ -103,6 +103,27 @@ flowchart TD
 
 ---
 
+## 🛡️ Evidencia de Seguridad Verificada (Penetration Testing en Producción)
+
+Para validar el blindaje **Anti-SSRF** y la resistencia a técnicas de evasión en el endpoint de ingesta remota (`POST /api/v1/datasets/from-url`), el **2026-08-24** se ejecutó una batería manual de **7 pruebas de penetración reales** directamente contra el contenedor desplegado en **Google Cloud Run** (no simuladas).
+
+Los resultados obtenidos confirman el bloqueo determinista en todas las categorías de ataque:
+
+| # | Categoría de Ataque SSRF | URL Probada en Producción | Resultado Real | Código de Error | Comportamiento Observado / Evidencia |
+| :-: | :--- | :--- | :---: | :--- | :--- |
+| **1** | **Metadatos de Google Cloud** | `http://169.254.169.254/computeMetadata/v1/` | **400 Bad Request** | `SSRF_BLOCKED_IP` | Bloqueo estricto del servicio de metadatos de Cloud Run (`blocked_ip: 169.254.169.254`). |
+| **2** | **Loopback Directo IPv4** | `http://127.0.0.1/` | **400 Bad Request** | `SSRF_BLOCKED_IP` | Bloqueo inmediato de rangos locales (`blocked_ip: 127.0.0.1`). |
+| **3** | **Bypass por Nombre de Host** | `http://localhost/` | **400 Bad Request** | `SSRF_BLOCKED_IP` | **Resolución DNS previa a la validación**: el hostname se traduce a IP antes del chequeo (`host: localhost` $\rightarrow$ `127.0.0.1`). |
+| **4** | **Evasión Notación Decimal** | `http://2130706433/` | **400 Bad Request** | `SSRF_BLOCKED_IP` | **Normalización de IP**: el entero decimal `2130706433` se normaliza a `127.0.0.1` antes de cotejar contra la lista de redes bloqueadas. |
+| **5** | **Evasión Notación Hexadecimal** | `http://0x7f.0.0.1/` | **400 Bad Request** | `SSRF_BLOCKED_IP` | Reconocimiento y normalización de octetos hexadecimales (`0x7f.0.0.1` $\rightarrow$ `127.0.0.1`). |
+| **6** | **Evasión Notación Octal** | `http://0177.0.0.1/` | **400 Bad Request** | `SSRF_BLOCKED_IP` | Reconocimiento y normalización de octetos octales (`0177.0.0.1` $\rightarrow$ `127.0.0.1`). |
+| **7** | **Userinfo / Credenciales Embebidas** | `http://169.254.169.254@raw.githubusercontent.com/` | **400 Bad Request** | `EMBEDDED_CREDENTIALS_DISALLOWED` | Rechazo directo de userinfo/credenciales en URL sin interpretar ambigüedades del parser (`Body: {}`). |
+| **Control** | **Caso Positivo de Control** | `https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv` | **201 Created** | *(Éxito)* | Ingesta correcta: `dataset_id` generado, 13.979 filas, 4 columnas, 562.767 bytes y `status: "validated"`. |
+
+> 🧪 **Cobertura de Regresión Automatizada:** Toda esta batería de ataques reales está además codificada en la suite de pruebas unitarias y de integración ([`test_security_url_ssrf_regression.py`](backend/tests/test_security_url_ssrf_regression.py)), asegurando que ningún cambio futuro pueda reabrir estas vulnerabilidades en CI/CD.
+
+---
+
 ## 📊 Modelo de Data Quality Score
 
 La calidad del dataset se calcula mediante una fórmula ponderada en **5 dimensiones de negocio**:
@@ -189,7 +210,7 @@ cd backend
 pytest
 ```
 
-> ✅ **88 tests automatizados — 100% pasando en verde** (seguridad Anti-SSRF, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **96 tests automatizados — 100% pasando en verde** (seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -214,7 +235,7 @@ docker compose up --build
 ```text
 dataflow-ai/
 ├── .github/workflows/
-│   └── ci.yml                 # CI: Pytest backend (88 tests) + Build React Vite
+│   └── ci.yml                 # CI: Pytest backend (96 tests) + Build React Vite
 ├── backend/
 │   ├── app/
 │   │   ├── ai_providers/      # Gemini Provider (BYOK) y Mock determinista
@@ -224,7 +245,7 @@ dataflow-ai/
 │   │   ├── services/          # Profiler, Quality, ETL determinista, Open Data (CKAN) y Analytics
 │   │   ├── transformations/   # Catálogo TransformationRegistry
 │   │   └── main.py            # FastAPI app, middleware CORS y servido SPA
-│   ├── tests/                 # Suite de 88 pruebas automatizadas
+│   ├── tests/                 # Suite de 96 pruebas automatizadas
 │   ├── Dockerfile             # Imagen de backend
 │   └── requirements.txt       # Dependencias Python
 ├── frontend/
