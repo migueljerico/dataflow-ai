@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Smartphone, X, Share2, PlusSquare, Check } from 'lucide-react';
 
 interface Props {
@@ -16,11 +16,27 @@ export const InstallPwaModal: React.FC<Props> = ({
   isInstallable,
   isIOS,
 }) => {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div
+      ref={overlayRef}
       className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pwa-modal-title"
+      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
       style={{
         position: 'fixed',
         top: 0,
@@ -63,7 +79,7 @@ export const InstallPwaModal: React.FC<Props> = ({
           }}
           aria-label="Cerrar"
         >
-          <X size={20} />
+          <X size={20} aria-hidden="true" />
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -79,10 +95,10 @@ export const InstallPwaModal: React.FC<Props> = ({
               color: 'var(--primary)',
             }}
           >
-            <Smartphone size={22} />
+            <Smartphone size={22} aria-hidden="true" />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            <h3 id="pwa-modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
               Instalar DataFlow AI en tu Móvil
             </h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -114,11 +130,11 @@ export const InstallPwaModal: React.FC<Props> = ({
               Instrucciones para iPhone / iPad (Safari):
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Share2 size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+              <Share2 size={18} aria-hidden="true" style={{ color: 'var(--primary)', flexShrink: 0 }} />
               <span>1. Toca el botón <strong>Compartir</strong> en la barra de Safari.</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <PlusSquare size={18} style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
+              <PlusSquare size={18} aria-hidden="true" style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
               <span>2. Selecciona <strong>"Añadir a pantalla de inicio"</strong>.</span>
             </div>
           </div>
@@ -138,10 +154,10 @@ export const InstallPwaModal: React.FC<Props> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-emerald)' }}>
-              <Check size={16} /> <strong>Acceso Instantáneo:</strong> Icono directo en tu escritorio móvil.
+              <Check size={16} aria-hidden="true" /> <strong>Acceso Instantáneo:</strong> Icono directo en tu escritorio móvil.
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)' }}>
-              <Check size={16} /> <strong>Experiencia Inmersiva:</strong> Interfaz limpia sin barras del navegador.
+              <Check size={16} aria-hidden="true" /> <strong>Experiencia Inmersiva:</strong> Interfaz limpia sin barras del navegador.
             </div>
           </div>
         )}

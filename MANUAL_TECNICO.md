@@ -1,7 +1,7 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.2.0  
-**Fecha de actualización:** 24 de agosto de 2026  
+**Versión:** 1.2.2  
+**Fecha de actualización:** 27 de agosto de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
 **Stack:** Python 3.11 · FastAPI · Pandas · React 18 · TypeScript · Vite · Docker
@@ -565,4 +565,4 @@ Ubicación: `backend/tests/`
 
 ---
 
-<p align="center">Creado por <a href="https://github.com/migueljerico">@migueljerico</a> y documentado por QwenCloud (deepseek-v4-pro-0813) desde la App Asistente de IA · 2026</p>
+<p align="center">Creado por <a href="https://github.com/migueljerico">@migueljerico</a> · Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por <strong>Muse Spark 1.2 Contributor</strong> (27-08-2026) · Sin cambios en el disparador de Google Cloud Build</p>

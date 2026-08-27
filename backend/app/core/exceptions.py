@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 import logging
@@ -30,16 +32,18 @@ async def functional_exception_handler(request: Request, exc: FunctionalExceptio
     )
 
 async def global_exception_handler(request: Request, exc: Exception):
+    error_id = uuid.uuid4().hex[:12]
     error_traceback = traceback.format_exc()
-    print(f"\n❌ [CRITICAL UNHANDLED ERROR] {request.url}:\n{error_traceback}\n", flush=True)
-    logger.error(f"Unhandled server error on {request.url}: {str(exc)}\n{error_traceback}")
-    
+    logger.error(
+        f"[error_id={error_id}] Unhandled server error on {request.url}: {str(exc)}\n{error_traceback}"
+    )
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": True,
             "code": "INTERNAL_SERVER_ERROR",
-            "message": f"Ha ocurrido un problema interno al procesar el dataset: {str(exc)}",
-            "details": {"technical_summary": str(exc)}
-        }
+            "message": f"Ha ocurrido un problema interno al procesar el dataset (ID: {error_id}). Contacte con soporte si persiste.",
+            "details": {"error_id": error_id},
+        },
     )

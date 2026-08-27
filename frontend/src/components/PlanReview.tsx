@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, Play, ShieldAlert, Sliders, Sparkles } from 'lucide-react';
 import { TransformationPlan, TransformationStep } from '../types';
 
@@ -10,6 +10,7 @@ interface Props {
 
 export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) => {
   const [steps, setSteps] = useState<TransformationStep[]>(plan.steps);
+  useEffect(() => { setSteps(plan.steps); }, [plan.steps]);
 
   const toggleStepStatus = (stepId: string, newStatus: 'approved' | 'rejected') => {
     setSteps((prev) =>

@@ -4,10 +4,15 @@ import { ApiKeyModal } from './ApiKeyModal';
 import { InstallPwaModal } from './InstallPwaModal';
 import { getApiKey } from '../utils/security';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export const Header: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -17,7 +22,7 @@ export const Header: React.FC = () => {
     setHasApiKey(!!key);
 
     // Detectar si ya está en modo standalone (instalada)
-    const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+    const isRunningStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
     setIsStandalone(isRunningStandalone);
 
     // Detectar iOS Safari
@@ -28,7 +33,7 @@ export const Header: React.FC = () => {
     // Capturar evento de instalación en Android / Chrome / Edge
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -41,8 +46,8 @@ export const Header: React.FC = () => {
   const handleInstallClick = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult: any) => {
-        if (choiceResult.outcome === 'accepted') {
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if ((choiceResult as { outcome: string }).outcome === 'accepted') {
           setDeferredPrompt(null);
         }
       });
@@ -56,7 +61,7 @@ export const Header: React.FC = () => {
       <header className="navbar">
         <div className="brand">
           <div className="brand-icon">
-            <Database size={22} />
+            <Database size={22} aria-hidden="true" />
           </div>
           <div>
             <h1 className="brand-title">DataFlow AI</h1>
@@ -84,7 +89,7 @@ export const Header: React.FC = () => {
               }}
               title="Instala DataFlow AI en tu móvil o escritorio"
             >
-              <Smartphone size={14} />
+              <Smartphone size={14} aria-hidden="true" />
               <span>Instalar App</span>
             </button>
           )}
@@ -107,7 +112,7 @@ export const Header: React.FC = () => {
             }}
             title="Configura tu API Key de Google Gemini para usar la IA Copilot"
           >
-            <Key size={14} style={{ color: hasApiKey ? 'var(--accent-emerald)' : 'var(--primary)' }} />
+            <Key size={14} aria-hidden="true" style={{ color: hasApiKey ? 'var(--accent-emerald)' : 'var(--primary)' }} />
             {hasApiKey ? (
               <span>Gemini: <strong style={{ color: 'var(--accent-emerald)' }}>Activo</strong></span>
             ) : (

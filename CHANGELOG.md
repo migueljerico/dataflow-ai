@@ -4,6 +4,32 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.2] — 2026-08-27
+
+### 🚀 Muse Spark 1.2 Contributor — Sprints de Hardening (sin impacto en despliegue Cloud Build)
+
+> **Atribución:** Este release fue implementado por **Muse Spark 1.2 Contributor** a petición del autor. El disparador automático de **Google Cloud Build → Cloud Run (`us-central1`)** permanece intacto: el `Dockerfile` raíz no se modifica y el CD sigue compilando en cada push a `main` sin intervención manual.
+
+#### 🛡️ Seguridad
+- **CWE-209 — Exposición de detalles técnicos en 500:** `backend/app/core/exceptions.py` ya no devuelve `str(exc)` al cliente; responde con `error_id` correlacionado y traza solo en logs del servidor.
+- **Inyección en script reproducible:** `backend/app/services/script_generator.py` escapa columnas/filenames con `json.dumps`/`repr`, neutralizando payloads tipo `a"; os.system("...`.
+- **CORS endurecido:** `backend/app/main.py` restringe `allow_methods` y `allow_headers` a lista explícita (`GET/POST/PUT/DELETE/OPTIONS` y `Content-Type, Authorization, X-Gemini-Api-Key`).
+- **BYOK single-send:** `frontend/src/services/api.ts` envía la API Key solo por header `X-Gemini-Api-Key` (ya no duplica en `body.api_key`).
+- **Ofuscación honesta (CWE-312):** `frontend/src/utils/security.ts` y `ApiKeyModal` aclaran que `localStorage` es Base64 reversible, no cifrado.
+
+#### ♿ Accesibilidad (WCAG 2.2)
+- `frontend/index.html` elimina `user-scalable=no` / `maximum-scale=1.0` para permitir zoom 200% (1.4.4).
+- Modales `ApiKeyModal`/`InstallPwaModal` con `role="dialog"`, `aria-modal`, `Escape` y cierre por overlay, `aria-hidden` en iconos decorativos.
+- `ProfilingDashboard` con `caption`/`scope="col"`, `aria-busy` en botones; `FileUpload` con `role="alert"` en errores y `role="button"` en dropzone; `BusinessInsights` con guard de desmontaje; `App` stepper con `aria-label`/`aria-current`.
+
+#### 🧩 Resiliencia Frontend
+- **Toasts no bloqueantes + ErrorBoundary:** `frontend/src/App.tsx` reemplaza `alert()` por `Toast` (auto-dismiss 6s) y envuelve el wizard en `ErrorBoundary`.
+- **Tipado estricto:** `frontend/src/types/index.ts` reemplaza `any[]/Record<string,any>` por `unknown[]/unknown`; `frontend/src/services/api.ts` tipa `getRunQualityReport` como `ExecutionResult | null`; `Header` tipa `BeforeInstallPromptEvent` sin `any`.
+- **FileUpload:** `useRef` en lugar de `getElementById`, `useMemo` en filtrado Open Data, guard de `Abort` en efectos, validación cliente de 10 MB y `aria` en errores.
+- **PlanReview:** sincroniza `plan.steps` con `useEffect`; `ExecutionReport`/`BusinessInsights` corrigen props y evitan `setState` tras unmount.
+
+---
+
 ## [1.2.0] — 2026-08-24
 
 ### 🌐 Ingesta Segura por URL y Blindaje Anti-SSRF (Fase 1)

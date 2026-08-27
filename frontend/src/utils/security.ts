@@ -1,17 +1,14 @@
 /**
- * DataFlow AI — Módulo de Almacenamiento Seguro de Credenciales del Cliente (CWE-312)
+ * DataFlow AI — Almacenamiento ofuscado de credenciales del cliente (CWE-312)
  *
- * Protege tokens y claves API efímeras del usuario en el navegador evitando su
- * almacenamiento en texto plano mediante ofuscación y codificación antes de persistir
- * en localStorage.
+ * NOTA: La clave se ofusca con Base64 (btoa) para evitar texto plano casual en
+ * localStorage. NO es cifrado — cualquier XSS puede leerla. La API Key nunca
+ * se persiste en el servidor ni en logs.
  */
 
 const STORAGE_VAULT_KEY = 'dataflow_vault_key_enc';
 const LEGACY_STORAGE_KEY = 'dataflow_gemini_api_key';
 
-/**
- * Codifica de forma segura la clave para no almacenarla en texto plano.
- */
 function encodeSecret(secret: string): string {
   try {
     return btoa(encodeURIComponent(secret));
@@ -20,9 +17,6 @@ function encodeSecret(secret: string): string {
   }
 }
 
-/**
- * Decodifica la clave almacenada en el vault local.
- */
 function decodeSecret(encoded: string): string {
   try {
     return decodeURIComponent(atob(encoded));

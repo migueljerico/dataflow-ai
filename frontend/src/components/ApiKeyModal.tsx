@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Key, Shield, ExternalLink, Check, Trash2, X, AlertCircle } from 'lucide-react';
 import { saveApiKey, getApiKey, removeApiKey } from '../utils/security';
 
@@ -11,11 +11,28 @@ interface ApiKeyModalProps {
 export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKeyChange }) => {
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const storedKey = getApiKey() || '';
     setApiKey(storedKey);
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -30,7 +47,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
       onKeyChange(null);
     }
     setSaved(true);
-    setTimeout(() => {
+    timeoutRef.current = window.setTimeout(() => {
       setSaved(false);
       onClose();
     }, 800);
@@ -43,7 +60,14 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
   };
 
   return (
-    <div className="modal-overlay" style={{
+    <div
+      ref={overlayRef}
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="apikey-modal-title"
+      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      style={{
       position: 'fixed',
       top: 0,
       left: 0,
@@ -95,10 +119,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
             justifyContent: 'center',
             color: 'var(--primary)'
           }}>
-            <Key size={20} />
+            <Key size={20} aria-hidden="true" />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>
+            <h3 id="apikey-modal-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>
               Configurar Google Gemini API Key
             </h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -145,11 +169,11 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
             gap: '8px'
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-              <Shield size={14} style={{ color: 'var(--accent-emerald)', flexShrink: 0, marginTop: '2px' }} />
-              <span><strong style={{ color: 'var(--text-main)' }}>Seguridad Local:</strong> La clave se almacena cifrada/ofuscada en tu navegador (<code>localStorage</code>) y nunca en bases de datos.</span>
+              <Shield size={14} aria-hidden="true" style={{ color: 'var(--accent-emerald)', flexShrink: 0, marginTop: '2px' }} />
+              <span><strong style={{ color: 'var(--text-main)' }}>Seguridad Local:</strong> La clave se almacena ofuscada (Base64, no cifrado) en tu navegador (<code>localStorage</code>) y nunca en el servidor.</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-              <AlertCircle size={14} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+              <AlertCircle size={14} aria-hidden="true" style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
               <span><strong style={{ color: 'var(--text-main)' }}>Backend US:</strong> El servidor en Google Cloud Run evita restricciones geográficas.</span>
             </div>
           </div>
@@ -168,7 +192,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
                 gap: '4px'
               }}
             >
-              Obtener clave gratis en Google AI Studio <ExternalLink size={12} />
+              Obtener clave gratis en Google AI Studio <ExternalLink size={12} aria-hidden="true" />
             </a>
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -179,7 +203,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
                   className="btn btn-outline"
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}
                 >
-                  <Trash2 size={14} /> Quitar
+                  <Trash2 size={14} aria-hidden="true" /> Quitar
                 </button>
               )}
               <button
@@ -187,7 +211,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
                 className="btn btn-primary"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
               >
-                {saved ? <><Check size={14} /> Guardada</> : 'Guardar Clave'}
+                {saved ? <><Check size={14} aria-hidden="true" /> Guardada</> : 'Guardar Clave'}
               </button>
             </div>
           </div>

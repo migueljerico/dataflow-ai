@@ -38,7 +38,7 @@ export interface ColumnProfile {
   null_count: number;
   null_percentage: number;
   unique_count: number;
-  sample_values: any[];
+  sample_values: unknown[];
   min_value?: number;
   max_value?: number;
   mean?: number;
@@ -70,7 +70,7 @@ export interface QualityIssue {
   description: string;
   affected_rows: number;
   affected_percentage: number;
-  evidence_sample: any[];
+  evidence_sample: unknown[];
   suggested_action: string;
 }
 
@@ -105,7 +105,7 @@ export interface TransformationStep {
   step_id: string;
   operation: string;
   column?: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   reason: string;
   confidence: number;
   risk: 'low' | 'medium' | 'high';

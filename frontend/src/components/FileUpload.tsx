@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -48,6 +48,9 @@ const EXAMPLE_URLS = [
 
 export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   const [activeTab, setActiveTab] = useState<TabType>('file');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const statusTimer1Ref = useRef<number | null>(null);
+  const statusTimer2Ref = useRef<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -61,19 +64,23 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   const [selectedTag, setSelectedTag] = useState<string>('Todos');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchInitialData = async () => {
       try {
         const [sampleList, featuredOpenData] = await Promise.all([
-          api.listSampleDatasets().catch(() => []),
-          api.getFeaturedOpenDatasets().catch(() => [])
+          api.listSampleDatasets().catch(() => [] as SampleDataset[]),
+          api.getFeaturedOpenDatasets().catch(() => [] as OpenDatasetItem[])
         ]);
-        setSamples(sampleList);
-        setOpenDataResults(featuredOpenData);
+        if (!cancelled) {
+          setSamples(sampleList);
+          setOpenDataResults(featuredOpenData);
+        }
       } catch {
         // Fallback silencioso
       }
     };
     fetchInitialData();
+    return () => { cancelled = true; };
   }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,14 +90,18 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   };
 
   const uploadFile = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setError('El archivo supera el límite de 10 MB.');
+      return;
+    }
     setLoading(true);
     setLoadingStatus('Validando archivo y analizando estructura...');
     setError(null);
     try {
       const metadata = await api.uploadDataset(file);
       onUploadSuccess(metadata);
-    } catch (err: any) {
-      setError(err.message || 'Error al subir el archivo.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al subir el archivo.');
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -113,23 +124,23 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     setError(null);
     setLoadingStatus('Conectando de forma segura con el servidor remoto (Anti-SSRF)...');
 
-    const statusTimer1 = setTimeout(() => {
+    statusTimer1Ref.current = window.setTimeout(() => {
       setLoadingStatus('Descargando dataset en streaming (máx. 20 MB)...');
     }, 1200);
 
-    const statusTimer2 = setTimeout(() => {
+    statusTimer2Ref.current = window.setTimeout(() => {
       setLoadingStatus('Analizando calidad, tipos de datos y perfil semántico...');
     }, 2800);
 
     try {
       const metadata = await api.loadDatasetFromUrl(cleanUrl);
-      clearTimeout(statusTimer1);
-      clearTimeout(statusTimer2);
+      if (statusTimer1Ref.current) window.clearTimeout(statusTimer1Ref.current);
+      if (statusTimer2Ref.current) window.clearTimeout(statusTimer2Ref.current);
       onUploadSuccess(metadata);
-    } catch (err: any) {
-      clearTimeout(statusTimer1);
-      clearTimeout(statusTimer2);
-      setError(err.message || 'No se pudo descargar el dataset desde la URL proporcionada.');
+    } catch (err: unknown) {
+      if (statusTimer1Ref.current) window.clearTimeout(statusTimer1Ref.current);
+      if (statusTimer2Ref.current) window.clearTimeout(statusTimer2Ref.current);
+      setError(err instanceof Error ? err.message : 'No se pudo descargar el dataset desde la URL proporcionada.');
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -148,8 +159,8 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     try {
       const resp = await api.searchOpenDatasets(openDataSearchQuery, 12);
       setOpenDataResults(resp.results || []);
-    } catch (err: any) {
-      setError(err.message || 'Error al buscar en el catálogo Open Data.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al buscar en el catálogo Open Data.');
     } finally {
       setOpenDataLoading(false);
     }
@@ -162,8 +173,8 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     try {
       const metadata = await api.loadSampleDataset(sampleId);
       onUploadSuccess(metadata);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar el dataset de demostración.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al cargar el dataset de demostración.');
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -183,11 +194,10 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
     return <Users size={20} className="text-primary" />;
   };
 
-  // Filtrado de tags en Open Data
-  const allTags = ['Todos', 'Economía', 'Movilidad', 'Población', 'Ventas', 'Medioambiente'];
-  const filteredOpenData = selectedTag === 'Todos' 
+  const allTags = ['Todos', 'Economía', 'Movilidad', 'Población', 'Ventas', 'Medioambiente'] as const;
+  const filteredOpenData = useMemo(() => selectedTag === 'Todos' 
     ? openDataResults 
-    : openDataResults.filter(item => item.tags.some(t => t.toLowerCase().includes(selectedTag.toLowerCase())));
+    : openDataResults.filter(item => item.tags.some(t => t.toLowerCase().includes(selectedTag.toLowerCase()))), [openDataResults, selectedTag]);
 
   return (
     <div>
@@ -266,10 +276,15 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             className="dropzone"
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
-            onClick={() => !loading && document.getElementById('fileInput')?.click()}
+            onClick={() => !loading && fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+            aria-label="Zona de arrastre para subir archivo"
             style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             <input
+              ref={fileInputRef}
               id="fileInput"
               type="file"
               accept=".csv,.xlsx"
@@ -594,6 +609,8 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
         {/* Mensaje de Error */}
         {error && (
           <div 
+            role="alert"
+            aria-live="assertive"
             style={{ 
               marginTop: '16px', 
               padding: '12px 16px', 
@@ -607,7 +624,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
               fontSize: '0.875rem'
             }}
           >
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <AlertCircle size={18} aria-hidden="true" style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}

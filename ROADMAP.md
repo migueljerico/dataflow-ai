@@ -1,7 +1,7 @@
 # 🗺️ DataFlow AI — Roadmap de Evolución Arquitectónica
 
-**Versión del Roadmap:** 1.2  
-**Estado General:** ✅ Todas las Fases Completadas (v1.2.0)  
+**Versión del Roadmap:** 1.2.2  
+**Estado General:** ✅ Todas las Fases Completadas (v1.2.2 — Hardening Muse Spark sin impacto en deploy)  
 **Stack Base:** Python 3.11 · FastAPI · Pandas 2.2 · React 18 · TypeScript · Google Cloud Run  
 **Autor:** [migueljerico](https://github.com/migueljerico)  
 

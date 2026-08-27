@@ -13,18 +13,20 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
         const data = await api.getBusinessAnalytics(runId);
-        setReport(data);
-      } catch (err: any) {
-        setError(err.message || 'No se pudieron calcular los Business Analytics.');
+        if (!cancelled) setReport(data);
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudieron calcular los Business Analytics.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchAnalytics();
+    return () => { cancelled = true; };
   }, [runId]);
 
   if (loading) {
@@ -48,7 +50,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrendingUp size={22} className="text-primary" /> Business Analytics & KPIs Ejecutivos
+            <TrendingUp size={22} className="text-primary" aria-hidden="true" /> Business Analytics & KPIs Ejecutivos
           </h3>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Métricas de valor calculadas con pandas sobre el dataset depurado para soporte en la toma de decisiones.

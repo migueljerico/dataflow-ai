@@ -120,12 +120,13 @@ export const ProfilingDashboard: React.FC<Props> = ({
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">
-            <Table size={20} className="text-primary" /> Catálogo y Perfilado Estructural de Columnas
+            <Table size={20} className="text-primary" aria-hidden="true" /> Catálogo y Perfilado Estructural de Columnas
           </h3>
           <div className="mobile-stack" style={{ gap: '10px', flexWrap: 'wrap' }}>
             <button
               className="btn btn-outline"
               disabled={loadingPlan}
+              aria-busy={loadingPlan}
               onClick={() => onGeneratePlan('rules')}
             >
               Motor de Reglas Determinista
@@ -133,24 +134,26 @@ export const ProfilingDashboard: React.FC<Props> = ({
             <button
               className="btn btn-primary"
               disabled={loadingPlan}
+              aria-busy={loadingPlan}
               onClick={() => onGeneratePlan('mock')}
             >
-              <Sparkles size={16} /> Generar Plan con Copiloto IA
+              <Sparkles size={16} aria-hidden="true" /> Generar Plan con Copiloto IA
             </button>
           </div>
         </div>
 
         <div className="table-wrapper">
           <table>
+              <caption className="sr-only" style={{position:'absolute',left:-9999}}>Perfilado de columnas del dataset</caption>
             <thead>
               <tr>
-                <th>Columna</th>
-                <th>Tipo Inferido</th>
-                <th>Sugerencia Semántica</th>
-                <th>Nulos (%)</th>
-                <th>Únicos</th>
-                <th>Muestra de Valores</th>
-                <th>Advertencias</th>
+                <th scope="col">Columna</th>
+                <th scope="col">Tipo Inferido</th>
+                <th scope="col">Sugerencia Semántica</th>
+                <th scope="col">Nulos (%)</th>
+                <th scope="col">Únicos</th>
+                <th scope="col">Muestra de Valores</th>
+                <th scope="col">Advertencias</th>
               </tr>
             </thead>
             <tbody>

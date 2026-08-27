@@ -268,5 +268,5 @@ dataflow-ai/
 ---
 
 <p align="center">
-  Creado por <a href="https://github.com/migueljerico">@migueljerico</a> y documentado por QwenCloud (deepseek-v4-pro-0813) desde la App Asistente de IA · 2026
+  Creado por <a href="https://github.com/migueljerico">@migueljerico</a> · Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por <strong>Muse Spark 1.2 Contributor</strong> — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026
 </p>

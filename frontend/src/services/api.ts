@@ -117,20 +117,12 @@ export const api = {
   proposeAIPlan: async (datasetId: string, provider?: string, apiKey?: string): Promise<TransformationPlan> => {
     const storedKey = apiKey || getApiKey() || undefined;
     const effectiveProvider = provider || (storedKey ? 'gemini' : 'mock');
-
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (storedKey) {
-      headers['X-Gemini-Api-Key'] = storedKey;
-    }
-
+    if (storedKey) headers['X-Gemini-Api-Key'] = storedKey;
     const res = await fetch(`${API_BASE}/plans/propose/ai`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        dataset_id: datasetId,
-        provider: effectiveProvider,
-        api_key: storedKey,
-      }),
+      body: JSON.stringify({ dataset_id: datasetId, provider: effectiveProvider }),
     });
     return handleResponse<TransformationPlan>(res);
   },
@@ -149,10 +141,10 @@ export const api = {
     return handleResponse<ExecutionResult>(res);
   },
 
-  getRunQualityReport: async (runId: string): Promise<any> => {
+  getRunQualityReport: async (runId: string): Promise<ExecutionResult | null> => {
     try {
       const res = await fetch(`${API_BASE}/runs/${runId}`);
-      return handleResponse<any>(res);
+      return handleResponse<ExecutionResult>(res);
     } catch {
       return null;
     }
