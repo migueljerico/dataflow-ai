@@ -47,3 +47,10 @@ backend/uploads/*
 *.swo
 .DS_Store
 Thumbs.db
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+coverage.xml
+*.log

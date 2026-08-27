@@ -29,10 +29,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código backend
 COPY backend/app ./app
-COPY backend/uploads ./uploads
+RUN mkdir -p ./uploads
 
 # Copiar frontend compilado desde Stage 1 a /app/static
 COPY --from=builder /app/frontend/dist ./static
+
+RUN groupadd -r app && useradd -r -g app app && chown -R app:app /app
+USER app
 
 EXPOSE 8080
 
@@ -41,4 +44,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:' + str(__import__('os').environ.get('PORT', 8080)) + '/health')" || exit 1
 
 # Uvicorn escucha en $PORT inyectado dinámicamente por Cloud Run
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

@@ -1,0 +1,56 @@
+# Git & CI
+.git
+.gitignore
+.github
+cloudbuild.yaml
+
+# Python caches & envs
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+venv
+env
+ENV
+.pytest_cache
+.coverage
+htmlcov
+coverage.xml
+.mypy_cache
+.ruff_cache
+.hypothesis
+*.log
+
+# Node
+node_modules
+frontend/node_modules
+dist
+frontend/dist
+.vite
+frontend/.vite
+
+# Env & secrets (never bake into image build context)
+.env
+.env.*
+*.pem
+*.key
+*credentials*.json
+*.json_key
+
+# IDE & OS
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Dev-only large fixtures — tighten context without affecting Dockerfile COPY
+# (Dockerfile raíz copia explícitamente backend/app y frontend/dist, no necesita esto)
+data_samples
+backend/tests
+
+# Ephemeral uploads are created at runtime
+backend/uploads/*
+!backend/uploads/.gitkeep
+uploads

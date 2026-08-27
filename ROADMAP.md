@@ -1,7 +1,7 @@
 # 🗺️ DataFlow AI — Roadmap de Evolución Arquitectónica
 
-**Versión del Roadmap:** 1.2.2  
-**Estado General:** ✅ Todas las Fases Completadas (v1.2.2 — Hardening Muse Spark sin impacto en deploy)  
+**Versión del Roadmap:** 1.2.3  
+**Estado General:** ✅ Todas las Fases Completadas (v1.2.3 — Hardening de Infra y DX (Muse Spark))  
 **Stack Base:** Python 3.11 · FastAPI · Pandas 2.2 · React 18 · TypeScript · Google Cloud Run  
 **Autor:** [migueljerico](https://github.com/migueljerico)  
 
@@ -147,3 +147,9 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
   <b>DataFlow AI</b> · <i>From raw business data to clean, trusted and actionable insights.</i><br>
   Documentado y mantenido por <a href="https://github.com/migueljerico">@migueljerico</a> · 2026
 </p>
+
+---
+
+## 🔧 Sprint 1.2.3 — Infra y DX por Muse Spark 1.2 Contributor (2026-08-27)
+
+Cierre del hardening con Docker non-root, .dockerignore, CI no-bloqueante, dependabot, semantics helper, .env.example, vite manualChunks y nginx caching. Sin cambios en el trigger de Cloud Build.

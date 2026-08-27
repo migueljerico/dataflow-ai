@@ -4,6 +4,34 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.3] — 2026-08-27
+
+### 🔧 Muse Spark 1.2 Contributor — Hardening de Infra y DX (v1.2.3)
+
+> **Continuación sin impacto en CD:** Esta release culmina el hardening pendiente. El `Dockerfile` raíz validado en `v1.2.2` se mantiene; los cambios de Docker/CI son **no bloqueantes** y no alteran el disparador **Cloud Build → Cloud Run**.
+
+#### 🐳 Docker & Deploy
+- `Dockerfile` raíz añade usuario no-root (`USER app`) y `exec` en CMD — validado con build local.
+- `backend/Dockerfile` multi-stage (`builder` → `python:3.11-slim`) con `pip --prefix=/install` y `HEALTHCHECK`.
+- `frontend/Dockerfile` con `npm ci` y `HEALTHCHECK` vía `wget`.
+- `.dockerignore` para aligerar contexto de Cloud Build (sin afectar `COPY` necesarios).
+
+#### ⚙️ CI & Seguridad Supply Chain
+- `ci.yml` añade `concurrency/cancel-in-progress`, `timeout-minutes`, jobs **no bloqueantes** `ruff/black/bandit/pip-audit` (`|| true`), `gitleaks` y `docker build check` con `buildx` + `gha` cache.
+- `dependabot.yml` (pip + npm, weekly).
+- `.gitignore` ignora `.mypy_cache/.ruff_cache/.hypothesis/coverage.xml/*.log`.
+
+#### 🧠 Backend
+- `core/semantics.py` helper compartido `is_percentage_or_score_column` (evita duplicación en 4 ficheros).
+- `.env.example` con `GEMINI_API_KEY`, `BACKEND_CORS_ORIGINS`, `PORT`, límites.
+
+#### 🎨 Frontend & Infra
+- `vite.config.ts` `manualChunks` (`vendor` + `icons`) con split real en build.
+- `nginx.conf` `gzip` + `expires 1y` en `/assets` + headers `X-Frame-Options/nosniff/Referrer-Policy`.
+- `docker-compose.yml` sin `version: 3.8` obsoleto, `healthcheck`, `restart: unless-stopped`, `env_file: .env`, `depends_on: condition: service_healthy`.
+
+---
+
 ## [1.2.2] — 2026-08-27
 
 ### 🚀 Muse Spark 1.2 Contributor — Sprints de Hardening (sin impacto en despliegue Cloud Build)
