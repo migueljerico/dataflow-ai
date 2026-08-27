@@ -1,7 +1,7 @@
 from enum import Enum
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, HttpUrl, Field
 
 class FileTypeEnum(str, Enum):
     CSV = "csv"
@@ -43,7 +43,7 @@ class ErrorResponse(BaseModel):
     details: Dict[str, Any] = {}
 
 class DatasetFromUrlRequest(BaseModel):
-    url: str = Field(
+    url: HttpUrl = Field(
         ...,
         description="URL pública directa al archivo CSV o XLSX para importar",
         examples=["https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"]

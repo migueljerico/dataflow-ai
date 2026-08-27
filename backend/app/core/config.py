@@ -1,10 +1,11 @@
+# pydantic-settings recomendado para validación futura; se mantiene compatibilidad sin dependencia extra
 import os
 from pathlib import Path
 from typing import List
 
 class Settings:
     PROJECT_NAME: str = "DataFlow AI"
-    VERSION: str = "1.2.3"
+    VERSION: str = "1.2.4"
     API_V1_STR: str = "/api/v1"
 
     # File limits

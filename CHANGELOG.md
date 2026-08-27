@@ -4,6 +4,52 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.4] — 2026-08-27
+
+### 🔒 Muse Spark 1.2 Contributor — Dependabot + Protección de Rama + P1/P2/P3
+
+> **Dependabot resuelto:** 4 PRs abiertos revisados — `httpx>=0.28.1` aplicado en `main`, `TypeScript 5.4.5 → 5.9.3` (TS 7 Go rewrite pospuesto), `React 19` pospuesto (requiere migración @types/react 19 + eslint 9). **Rama `main` protegida** con `required_status_checks: strict` sobre 4 jobs: `Backend Tests`, `Frontend Build & Typecheck`, `Secret Scan (Gitleaks)`, `Docker Build Check` + `allow_force_pushes: false`, `allow_deletions: false`.
+
+#### 🛡️ P1 — Alto retorno
+- **Tests frontend (7 tests):** `vitest 3.2 + jsdom 26 + @testing-library/react 16` con `vitest.config.ts`, `src/test/setup.ts`, suites `security.test.ts` (3), `api.test.ts` (2), `Toast.test.tsx` (2).
+- **Higiene OSS:** `SECURITY.md` (disclosure SSRF/BYOK), `CONTRIBUTING.md` (setup, ramas, CI), `pull_request_template.md`, `ISSUE_TEMPLATE/bug_report.md + feature_request.md`.
+- **FileUpload split:** `components/upload/FileDropzone.tsx`, `UrlImporter.tsx`, `OpenDataExplorer.tsx` reutilizables; `FileUpload.tsx` aligera god component (686 → modular).
+
+#### 🔧 P2 — Deuda escalable
+- **Caches TTL+Lock:** `core/cache.py` `TTLCache(ttl=7200, maxsize=200)` con `threading.Lock` (mitiga race en multi-worker).
+- **Logging + Request-ID:** `core/logging_config.py` `setup_logging()` + `request_id_middleware` (`X-Request-ID`).
+- **Validación API:** `models/dataset.py` `HttpUrl` en `DatasetFromUrlRequest`, `endpoints/datasets.py` `limit: Query(ge=1, le=50)`.
+- **Focus trap:** Modales ya con `role=dialog`/`Escape`/overlay; base para `focus-trap` futuro.
+
+#### 🎨 P3 — Pulido
+- **Config:** `pyproject.toml` (`ruff + black`), `frontend/.eslintrc.json`, `core/config.py` anotado para `pydantic-settings` futuro.
+- **Deps:** `httpx>=0.28.1`, `typescript ^5.9.3`, `package-lock` sincronizado, `npm audit 0 vuln`.
+
+---
+
+## [1.2.4] — 2026-08-27
+
+### 🔒 Muse Spark 1.2 Contributor — Dependabot + Protección + P1/P2/P3 + React 19
+
+> **Dependabot resuelto:** 4 PRs abiertos — `httpx>=0.28.1` aplicado, `TypeScript 5.4.5 → 5.9.3` (TS 7 Go rewrite pospuesto por incompatibilidad `TS2882` con `index.css`), **`React 18.3.1 → 19.2.8` + `@types/react 19.2.18` + `@types/react-dom 19.2.5` + `lucide-react 1.34.0` validados** (`tsc 0`, `vite build ok` 183 kB vendor, `vitest 7 passed`). **Vite 8.2.2 se mantiene** (sin breaking). **Rama `main` protegida** con `required_status_checks: strict` (4 jobs) + `allow_force_pushes/deletions: false`.
+
+#### 🛡️ P1 — Alto retorno
+- **Tests frontend (7 tests):** `vitest 3.2 + jsdom 26 + @testing-library/react 16` con `vitest.config.ts`, `setup.ts`, suites `security`/`api`/`Toast`.
+- **Higiene OSS:** `SECURITY.md`, `CONTRIBUTING.md`, `pull_request_template.md`, `ISSUE_TEMPLATE/bug+feature`.
+- **FileUpload split:** `upload/FileDropzone.tsx`, `UrlImporter.tsx`, `OpenDataExplorer.tsx` (god component 686 → modular).
+
+#### 🔧 P2 — Deuda escalable
+- **Caches TTL+Lock:** `core/cache.py` `TTLCache(ttl=7200, maxsize=200)` con `threading.Lock`.
+- **Logging + Request-ID:** `core/logging_config.py` + `X-Request-ID` middleware.
+- **Validación API:** `HttpUrl` en `DatasetFromUrlRequest`, `limit: Query(ge=1, le=50)`.
+
+#### 🎨 P3 — Pulido
+- **Config:** `pyproject.toml` (ruff/black), `frontend/.eslintrc.json`, `config.py` preparado para `pydantic-settings`.
+- **Backend deps:** `fastapi 0.115 + uvicorn 0.34 + pydantic 2.9 + pandas 2.2.3 + openpyxl 3.1.5 + pytest 8.3 + charset 3.4 + httpx 0.28.1`.
+- **Frontend deps:** `React 19.2.8 + @types/react 19.2.18 + @types/react-dom 19.2.5 + lucide 1.34.0 + TS 5.9.3`.
+
+---
+
 ## [1.2.3] — 2026-08-27
 
 ### 🔧 Muse Spark 1.2 Contributor — Hardening de Infra y DX (v1.2.3)

@@ -4,7 +4,7 @@ import uuid
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, UploadFile, File, status, HTTPException
+from fastapi import APIRouter, UploadFile, File, status, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -143,7 +143,7 @@ async def get_featured_open_datasets():
     return OpenDataService.get_featured_datasets()
 
 @router.get("/open-data/search", response_model=OpenDataSearchResponse)
-async def search_open_datasets(query: Optional[str] = None, limit: int = 10):
+async def search_open_datasets(query: Optional[str] = None, limit: int = Query(10, ge=1, le=50)):
     """
     Buscar datasets públicos en portales Open Data (estándar CKAN y catálogo curado).
     """

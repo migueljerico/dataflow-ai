@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { DatasetMetadata, SampleDataset, OpenDatasetItem } from '../types';
+import { FileDropzone } from './upload/FileDropzone';
+import { UrlImporter } from './upload/UrlImporter';
+import { OpenDataExplorer } from './upload/OpenDataExplorer';
 
 interface Props {
   onUploadSuccess: (metadata: DatasetMetadata) => void;

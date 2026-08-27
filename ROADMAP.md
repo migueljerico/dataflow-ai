@@ -1,6 +1,6 @@
 # 🗺️ DataFlow AI — Roadmap de Evolución Arquitectónica
 
-**Versión del Roadmap:** 1.2.3  
+**Versión del Roadmap:** 1.2.4  
 **Estado General:** ✅ Todas las Fases Completadas (v1.2.3 — Hardening de Infra y DX (Muse Spark))  
 **Stack Base:** Python 3.11 · FastAPI · Pandas 2.2 · React 18 · TypeScript · Google Cloud Run  
 **Autor:** [migueljerico](https://github.com/migueljerico)  
@@ -153,3 +153,9 @@ Para garantizar la mantenibilidad y sostenibilidad del proyecto por una sola per
 ## 🔧 Sprint 1.2.3 — Infra y DX por Muse Spark 1.2 Contributor (2026-08-27)
 
 Cierre del hardening con Docker non-root, .dockerignore, CI no-bloqueante, dependabot, semantics helper, .env.example, vite manualChunks y nginx caching. Sin cambios en el trigger de Cloud Build.
+
+---
+
+## 🔧 Sprint 1.2.4 — Dependabot + Protección + P1/P2/P3 + React 19 por Muse Spark 1.2 Contributor (2026-08-27)
+
+Cierre de deuda: dependabot (httpx + TS 5.9.3), rama protegida, tests frontend, SECURITY/CONTRIBUTING, FileUpload split, caches TTL, logging request-id, HttpUrl + Query limit, ruff/eslint config.
