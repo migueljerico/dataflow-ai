@@ -1,19 +1,38 @@
 import re
-import pandas as pd
+from typing import Any, Dict, Tuple
+
 import numpy as np
-from typing import Dict, Any, Tuple
-from app.transformations.base import BaseTransformation
+import pandas as pd
 from app.core.exceptions import FunctionalException
+from app.transformations.base import BaseTransformation
+
 
 class ConvertDatetimeTransformation(BaseTransformation):
     operation_name = "convert_datetime"
     description = "Convierte cadenas de fecha a ISO 8601 (%Y-%m-%d) discriminando formatos ISO y europeos y reportando fechas inválidas."
     risk = "medium"
+    reversible = False
+    allowed_parameters = ["column", "target_format"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna de fecha a estandarizar"},
+        "target_format": {
+            "type": "string",
+            "required": False,
+            "default": "%Y-%m-%d",
+            "description": "Formato de salida deseado (por defecto ISO %Y-%m-%d)",
+        },
+    }
+    requires_human_approval = True
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
         if not col or col not in df.columns:
             raise FunctionalException(message=f"La columna '{col}' no existe en el dataset.", code="INVALID_COLUMN")
+        target_format = parameters.get("target_format", "%Y-%m-%d")
+        if not isinstance(target_format, str) or not target_format.strip():
+            raise FunctionalException(
+                message="El parámetro 'target_format' debe ser una cadena válida.", code="INVALID_PARAMETER"
+            )
 
     @staticmethod
     def _parse_single_date(val: Any, target_format: str) -> Tuple[Any, bool, bool]:
@@ -22,7 +41,7 @@ class ConvertDatetimeTransformation(BaseTransformation):
         """
         if pd.isna(val) or val is None:
             return np.nan, False, False
-        
+
         s = str(val).strip()
         if not s or s.lower() in ["nan", "none", "null", ""]:
             return np.nan, False, False

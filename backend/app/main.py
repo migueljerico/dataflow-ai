@@ -1,20 +1,27 @@
 import os
 from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
+from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import FunctionalException, functional_exception_handler, global_exception_handler
-from app.api.v1.router import api_router
+from app.core.logging_config import request_id_middleware, setup_logging
+
+setup_logging()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    description="DataFlow AI — Intelligent Data Preparation & Business Analytics API"
+    description="DataFlow AI — Intelligent Data Preparation & Business Analytics API",
 )
+
+# Middleware de trazabilidad de peticiones HTTP (X-Request-ID)
+app.middleware("http")(request_id_middleware)
 
 # Configuración de CORS: orígenes permitidos configurables por entorno
 app.add_middleware(
@@ -22,17 +29,20 @@ app.add_middleware(
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Gemini-Api-Key"],
+    allow_headers=["Content-Type", "Authorization", "X-Gemini-Api-Key", "X-Request-ID"],
 )
+
 
 # Manejadores de excepciones
 app.add_exception_handler(FunctionalException, functional_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
+
 # Endpoint de Healthcheck para Cloud Run
 @app.get("/health")
 def health():
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": settings.VERSION}
+
 
 # Incluir router API V1
 app.include_router(api_router, prefix=settings.API_V1_STR)
@@ -65,12 +75,9 @@ if os.path.exists(BASE_STATIC_DIR) and os.path.exists(INDEX_HTML_PATH):
             return FileResponse(full_target_path)
 
         return FileResponse(INDEX_HTML_PATH)
+
 else:
+
     @app.get("/")
     def root():
-        return {
-            "name": settings.PROJECT_NAME,
-            "version": settings.VERSION,
-            "status": "online",
-            "docs_url": "/docs"
-        }
+        return {"name": settings.PROJECT_NAME, "version": settings.VERSION, "status": "online", "docs_url": "/docs"}

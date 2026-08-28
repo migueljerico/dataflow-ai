@@ -1,6 +1,7 @@
 import React from 'react';
 import { Download, FileCode, CheckCircle, ArrowRight, ShieldCheck, FileCheck2 } from 'lucide-react';
 import { ExecutionResult } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { BusinessInsights } from './BusinessInsights';
 
 interface Props {
@@ -10,21 +11,24 @@ interface Props {
 }
 
 export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, onResetSession }) => {
+  const { t } = useLanguage();
+
   return (
     <div className="card">
       <div className="card-header">
         <div>
           <h2 className="card-title text-emerald">
-            <CheckCircle size={24} aria-hidden="true" /> ¡Ejecución ETL Completada con Éxito!
+            <CheckCircle size={24} aria-hidden="true" /> {t.report.title}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '4px' }}>
-            Run ID: <code style={{ color: 'var(--primary)' }}>{result.run_id}</code> | Duración: 0.5s
+            Run ID: <code style={{ color: 'var(--primary)' }}>{result.run_id}</code> | {t.report.subtitle}
           </p>
         </div>
         <button className="btn btn-outline" onClick={onResetSession}>
-          Procesar Otro Dataset
+          {t.report.resetSession}
         </button>
       </div>
+
 
       {/* Comparativa Antes vs Después */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
@@ -111,7 +115,7 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
           className="btn btn-success"
           style={{ textDecoration: 'none', padding: '10px 18px', textAlign: 'center', flex: 1 }}
         >
-          <Download size={18} aria-hidden="true" /> Descargar Dataset Limpio ({result.clean_filename})
+          <Download size={18} aria-hidden="true" /> {t.report.downloadDataset} ({result.clean_filename})
         </a>
 
         <a
@@ -120,7 +124,7 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
           className="btn btn-primary"
           style={{ textDecoration: 'none', padding: '10px 18px', textAlign: 'center', flex: 1 }}
         >
-          <FileCode size={18} aria-hidden="true" /> Descargar Script Python (.py)
+          <FileCode size={18} aria-hidden="true" /> {t.report.downloadScript}
         </a>
       </div>
 
@@ -129,3 +133,4 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
     </div>
   );
 };
+

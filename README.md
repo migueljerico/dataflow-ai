@@ -9,8 +9,9 @@
 ![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-us--central1-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-96%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-105%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
+
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
 
 *From raw business data to clean, trusted and actionable insights.*  
@@ -203,14 +204,20 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Documentación interactiva disponible en: `http://localhost:8000/docs`.
 
-### 3. Tests Automatizados (Pytest)
+### 3. Tests Automatizados (Pytest & Vitest)
 
 ```bash
+# Backend (105 tests)
 cd backend
 pytest
+
+# Frontend (9 tests)
+cd ../frontend
+npm test
 ```
 
-> ✅ **96 tests automatizados — 100% pasando en verde** (seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **114 tests automatizados totales (105 backend + 9 frontend) — 100% pasando en verde** (gobernanza determinista, esquemas de transformación, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+
 
 ### 4. Frontend (React + Vite + TypeScript)
 

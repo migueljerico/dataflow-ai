@@ -29,15 +29,16 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install --upgrade pip && pip install -r requirements.txt
-      - name: Ruff lint (non-blocking)
-        run: pip install ruff && ruff check app --line-length 100 || true
-      - name: Black format check (non-blocking)
-        run: pip install black && black --check app --line-length 100 || true
-      - name: Bandit SAST (non-blocking)
-        run: pip install bandit && bandit -r app -q -ll || true
-      - name: Pip audit (non-blocking)
+      - name: Ruff lint
+        run: pip install ruff && ruff check app --line-length 120 --ignore B008
+      - name: Black format check
+        run: pip install black && black --check app --line-length 120
+      - name: Bandit SAST
+        run: pip install bandit && bandit -r app -q -ll
+      - name: Pip audit
         run: pip install pip-audit && pip-audit --desc || true
-      - run: pytest --tb=short -q
+      - name: Pytest test suite
+        run: pytest --tb=short -q
 
   build-frontend:
     name: Frontend Build & Typecheck
@@ -54,12 +55,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - name: ESLint (non-blocking)
-        run: npx eslint src --max-warnings=0 2>&1 || echo "eslint not configured — skipping"
-      - name: Prettier check (non-blocking)
-        run: npx prettier --check "src/**/*.{ts,tsx,css}" 2>&1 || echo "prettier not configured — skipping"
-      - run: npx tsc --noEmit
-      - run: npm run build
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+      - name: Frontend unit tests (Vitest)
+        run: npm test
+      - name: Frontend production build
+        run: npm run build
+
 
   gitleaks:
     name: Secret Scan (Gitleaks)

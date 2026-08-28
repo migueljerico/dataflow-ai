@@ -1,23 +1,22 @@
-import os
-import uuid
 import csv
-import pandas as pd
-import numpy as np
+import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
+
+import charset_normalizer
+import pandas as pd
 from fastapi import UploadFile
 
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
-from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
-
-import time
-import charset_normalizer
 from app.core.security_url import safe_download_url_to_file
+from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
 
 DATASET_CACHE: Dict[str, DatasetMetadata] = {}
 EMPTY_ROWS_PURGED_CACHE: Dict[str, int] = {}
+
 
 class DatasetService:
     @staticmethod
@@ -63,17 +62,14 @@ class DatasetService:
             with open(file_path, "r", encoding=encoding, errors="replace") as f:
                 sample = f.read(8192)
                 if not sample.strip():
-                    raise FunctionalException(
-                        message="El archivo CSV está vacío.",
-                        code="EMPTY_FILE"
-                    )
+                    raise FunctionalException(message="El archivo CSV está vacío.", code="EMPTY_FILE")
                 sniffer = csv.Sniffer()
-                dialect = sniffer.sniff(sample, delimiters=[',', ';', '\t', '|'])
+                dialect = sniffer.sniff(sample, delimiters=[",", ";", "\t", "|"])
                 return dialect.delimiter
         except FunctionalException:
             raise
         except Exception:
-            return ','
+            return ","
 
     @staticmethod
     def _clean_empty_rows(df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
@@ -131,11 +127,7 @@ class DatasetService:
 
     @staticmethod
     def _process_saved_dataset_file(
-        saved_path: Path,
-        filename: str,
-        file_ext: str,
-        file_size: int,
-        dataset_id: str
+        saved_path: Path, filename: str, file_ext: str, file_size: int, dataset_id: str
     ) -> DatasetMetadata:
         file_type = FileTypeEnum.CSV if file_ext == ".csv" else FileTypeEnum.XLSX
         warnings: List[str] = []
@@ -144,22 +136,12 @@ class DatasetService:
             if file_type == FileTypeEnum.CSV:
                 detected_encoding = DatasetService._detect_csv_encoding(saved_path)
                 delimiter = DatasetService._detect_csv_delimiter(saved_path, encoding=detected_encoding)
-                
+
                 try:
-                    full_df = pd.read_csv(
-                        saved_path, 
-                        sep=delimiter, 
-                        encoding=detected_encoding, 
-                        on_bad_lines="skip"
-                    )
+                    full_df = pd.read_csv(saved_path, sep=delimiter, encoding=detected_encoding, on_bad_lines="skip")
                 except (UnicodeDecodeError, LookupError):
                     # Fallback robusto a latin-1/windows-1252 si fallase la decodificación
-                    full_df = pd.read_csv(
-                        saved_path,
-                        sep=delimiter,
-                        encoding="latin-1",
-                        on_bad_lines="skip"
-                    )
+                    full_df = pd.read_csv(saved_path, sep=delimiter, encoding="latin-1", on_bad_lines="skip")
                     detected_encoding = "latin-1"
 
                 # Normalizar nombres de columnas (eliminar BOM y espacios sobrantes)
@@ -167,14 +149,18 @@ class DatasetService:
                 full_df.columns = clean_cols
 
                 if detected_encoding not in ("utf-8", "ascii"):
-                    warnings.append(f"Codificación '{detected_encoding}' detectada automáticamente y normalizada a UTF-8.")
+                    warnings.append(
+                        f"Codificación '{detected_encoding}' detectada automáticamente y normalizada a UTF-8."
+                    )
                     # Guardar archivo estandarizado a UTF-8
                     full_df.to_csv(saved_path, index=False, encoding="utf-8")
             else:
                 excel_file = pd.ExcelFile(saved_path)
                 sheet_names = excel_file.sheet_names
                 if len(sheet_names) > 1:
-                    warnings.append(f"El archivo Excel contiene {len(sheet_names)} hojas. Se procesará la primera hoja ('{sheet_names[0]}').")
+                    warnings.append(
+                        f"El archivo Excel contiene {len(sheet_names)} hojas. Se procesará la primera hoja ('{sheet_names[0]}')."
+                    )
                 full_df = pd.read_excel(saved_path, sheet_name=0)
                 clean_cols = [str(c).strip() for c in full_df.columns]
                 full_df.columns = clean_cols
@@ -184,7 +170,9 @@ class DatasetService:
             EMPTY_ROWS_PURGED_CACHE[dataset_id] = empty_dropped
 
             if empty_dropped > 0:
-                warnings.append(f"Se detectaron y eliminaron {empty_dropped} fila(s) completamente vacías o malformadas (,,,,,,,).")
+                warnings.append(
+                    f"Se detectaron y eliminaron {empty_dropped} fila(s) completamente vacías o malformadas (,,,,,,,)."
+                )
                 if file_type == FileTypeEnum.CSV:
                     full_df.to_csv(saved_path, index=False, encoding="utf-8")
                 else:
@@ -200,8 +188,8 @@ class DatasetService:
             raise FunctionalException(
                 message=f"No se pudo leer la estructura del archivo '{filename}'. Asegúrate de que sea un archivo CSV o Excel válido.",
                 code="FILE_PARSING_ERROR",
-                details={"technical_error": str(exc)}
-            )
+                details={"technical_error": str(exc)},
+            ) from exc
 
         row_count, col_count = full_df.shape
         columns = [str(col) for col in full_df.columns]
@@ -209,24 +197,22 @@ class DatasetService:
         if row_count == 0:
             if saved_path.exists():
                 saved_path.unlink(missing_ok=True)
-            raise FunctionalException(
-                message="El archivo no contiene filas de datos válidas.",
-                code="NO_ROWS_FOUND"
-            )
+            raise FunctionalException(message="El archivo no contiene filas de datos válidas.", code="NO_ROWS_FOUND")
 
         if col_count == 0:
             if saved_path.exists():
                 saved_path.unlink(missing_ok=True)
-            raise FunctionalException(
-                message="El archivo no contiene columnas estructuradas.",
-                code="NO_COLUMNS_FOUND"
-            )
+            raise FunctionalException(message="El archivo no contiene columnas estructuradas.", code="NO_COLUMNS_FOUND")
 
         if row_count > settings.MAX_RECOMMENDED_ROWS:
-            warnings.append(f"El dataset contiene {row_count:,} filas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_ROWS:,}).")
+            warnings.append(
+                f"El dataset contiene {row_count:,} filas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_ROWS:,})."
+            )
 
         if col_count > settings.MAX_RECOMMENDED_COLS:
-            warnings.append(f"El dataset contiene {col_count} columnas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_COLS}).")
+            warnings.append(
+                f"El dataset contiene {col_count} columnas (máximo recomendado para MVP: {settings.MAX_RECOMMENDED_COLS})."
+            )
 
         metadata = DatasetMetadata(
             dataset_id=dataset_id,
@@ -238,7 +224,7 @@ class DatasetService:
             columns=columns,
             created_at=datetime.now(timezone.utc),
             status=ProcessingStateEnum.VALIDATED,
-            warnings=warnings
+            warnings=warnings,
         )
 
         DATASET_CACHE[dataset_id] = metadata
@@ -250,22 +236,19 @@ class DatasetService:
 
         filename = file.filename or "uploaded_file"
         file_ext = Path(filename).suffix.lower()
-        
+
         if file_ext not in settings.ALLOWED_EXTENSIONS:
             raise FunctionalException(
                 message=f"Formato no soportado ('{file_ext}'). Por favor, sube un archivo CSV o XLSX.",
                 code="INVALID_FILE_TYPE",
-                details={"allowed_extensions": list(settings.ALLOWED_EXTENSIONS)}
+                details={"allowed_extensions": list(settings.ALLOWED_EXTENSIONS)},
             )
 
         content = await file.read()
         file_size = len(content)
 
         if file_size == 0:
-            raise FunctionalException(
-                message="El archivo subido está vacío (0 bytes).",
-                code="EMPTY_FILE"
-            )
+            raise FunctionalException(message="El archivo subido está vacío (0 bytes).", code="EMPTY_FILE")
 
         if file_size > settings.MAX_FILE_SIZE_BYTES:
             max_mb = settings.MAX_FILE_SIZE_BYTES / (1024 * 1024)
@@ -273,7 +256,7 @@ class DatasetService:
             raise FunctionalException(
                 message=f"El archivo supera el límite de {max_mb} MB (tamaño recibido: {actual_mb} MB).",
                 code="FILE_TOO_LARGE",
-                details={"max_size_bytes": settings.MAX_FILE_SIZE_BYTES, "actual_size_bytes": file_size}
+                details={"max_size_bytes": settings.MAX_FILE_SIZE_BYTES, "actual_size_bytes": file_size},
             )
 
         dataset_id = str(uuid.uuid4())
@@ -284,11 +267,7 @@ class DatasetService:
             f.write(content)
 
         return DatasetService._process_saved_dataset_file(
-            saved_path=saved_path,
-            filename=filename,
-            file_ext=file_ext,
-            file_size=file_size,
-            dataset_id=dataset_id
+            saved_path=saved_path, filename=filename, file_ext=file_ext, file_size=file_size, dataset_id=dataset_id
         )
 
     @staticmethod
@@ -304,7 +283,7 @@ class DatasetService:
                 url=url,
                 destination_path=temp_path,
                 max_bytes=settings.MAX_URL_FILE_SIZE_BYTES,
-                timeout_seconds=settings.URL_DOWNLOAD_TIMEOUT_SECONDS
+                timeout_seconds=settings.URL_DOWNLOAD_TIMEOUT_SECONDS,
             )
 
             raw_filename = download_info.get("filename") or "imported_dataset.csv"
@@ -331,7 +310,7 @@ class DatasetService:
                 filename=raw_filename,
                 file_ext=file_ext,
                 file_size=file_size,
-                dataset_id=dataset_id
+                dataset_id=dataset_id,
             )
         except Exception:
             if temp_path.exists():
@@ -346,17 +325,17 @@ class DatasetService:
         matching_files = list(settings.UPLOAD_DIR.glob(f"{dataset_id}_*"))
         if matching_files:
             target_file = matching_files[0]
-            orig_filename = target_file.name[len(dataset_id)+1:]
+            orig_filename = target_file.name[len(dataset_id) + 1 :]
             file_ext = target_file.suffix.lower()
             file_type = FileTypeEnum.CSV if file_ext == ".csv" else FileTypeEnum.XLSX
-            
+
             try:
                 if file_type == FileTypeEnum.CSV:
                     delimiter = DatasetService._detect_csv_delimiter(target_file)
                     df = pd.read_csv(target_file, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
                 else:
                     df = pd.read_excel(target_file, sheet_name=0)
-                
+
                 df, _ = DatasetService._clean_empty_rows(df)
                 row_count, col_count = df.shape
                 metadata = DatasetMetadata(
@@ -369,7 +348,7 @@ class DatasetService:
                     columns=[str(c) for c in df.columns],
                     created_at=datetime.now(timezone.utc),
                     status=ProcessingStateEnum.VALIDATED,
-                    warnings=[]
+                    warnings=[],
                 )
                 DATASET_CACHE[dataset_id] = metadata
                 return metadata
@@ -379,7 +358,7 @@ class DatasetService:
         raise FunctionalException(
             message=f"No se encontró ningún dataset con el ID '{dataset_id}'. Por favor, vuelve a subir el archivo.",
             code="DATASET_NOT_FOUND",
-            status_code=404
+            status_code=404,
         )
 
     @staticmethod
@@ -388,14 +367,14 @@ class DatasetService:
         matching_files = list(settings.UPLOAD_DIR.glob(f"{dataset_id}_*"))
         if matching_files:
             return matching_files[0]
-        
+
         safe_filename = f"{dataset_id}_{Path(metadata.filename).name}"
         target_path = settings.UPLOAD_DIR / safe_filename
         if not target_path.exists():
             raise FunctionalException(
                 message=f"El archivo físico del dataset '{dataset_id}' no está disponible.",
                 code="FILE_NOT_FOUND_ON_DISK",
-                status_code=404
+                status_code=404,
             )
         return target_path
 

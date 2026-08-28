@@ -6,6 +6,7 @@ import { PlanReview } from './components/PlanReview';
 import { ExecutionReport } from './components/ExecutionReport';
 import { ToastContainer, ToastItem } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { api } from './services/api';
 import {
   DatasetMetadata, ProfilingReport, QualityReport, TransformationPlan, TransformationStep, ExecutionResult
@@ -17,7 +18,8 @@ function toErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { t } = useLanguage();
   const [step, setStep] = useState<number>(1);
   const [metadata, setMetadata] = useState<DatasetMetadata | null>(null);
   const [profiling, setProfiling] = useState<ProfilingReport | null>(null);
@@ -50,7 +52,7 @@ export const App: React.FC = () => {
       setQuality(qualRes);
       setStep(2);
     } catch (err: unknown) {
-      pushToast(toErrorMessage(err, 'Error al obtener profiling del dataset.'));
+      pushToast(toErrorMessage(err, t.errors.fetchProfiling));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export const App: React.FC = () => {
       setPlan(proposedPlan);
       setStep(3);
     } catch (err: unknown) {
-      pushToast(toErrorMessage(err, 'Error al generar plan de transformaciones.'));
+      pushToast(toErrorMessage(err, t.errors.generatePlan));
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,7 @@ export const App: React.FC = () => {
       setReportBeforeAfter(rep);
       setStep(4);
     } catch (err: unknown) {
-      pushToast(toErrorMessage(err, 'Error al ejecutar plan ETL.'));
+      pushToast(toErrorMessage(err, t.errors.executePlan));
     } finally {
       setExecuting(false);
     }
@@ -106,22 +108,22 @@ export const App: React.FC = () => {
       <Header />
 
       <main className="container">
-        <nav className="stepper" aria-label="Progreso del flujo">
+        <nav className="stepper" aria-label="Progreso del flujo / Workflow progress">
           <div className={`step-item ${step === 1 ? 'active' : step > 1 ? 'completed' : ''}`} aria-current={step === 1 ? 'step' : undefined}>
             <div className="step-num">1</div>
-            <span>Subir Datos</span>
+            <span>{t.stepper.step1}</span>
           </div>
           <div className={`step-item ${step === 2 ? 'active' : step > 2 ? 'completed' : ''}`} aria-current={step === 2 ? 'step' : undefined}>
             <div className="step-num">2</div>
-            <span>Data Quality</span>
+            <span>{t.stepper.step2}</span>
           </div>
           <div className={`step-item ${step === 3 ? 'active' : step > 3 ? 'completed' : ''}`} aria-current={step === 3 ? 'step' : undefined}>
             <div className="step-num">3</div>
-            <span>Plan ETL & IA</span>
+            <span>{t.stepper.step3}</span>
           </div>
           <div className={`step-item ${step === 4 ? 'active' : ''}`} aria-current={step === 4 ? 'step' : undefined}>
             <div className="step-num">4</div>
-            <span>Resultados & Script</span>
+            <span>{t.stepper.step4}</span>
           </div>
         </nav>
 
@@ -157,4 +159,13 @@ export const App: React.FC = () => {
   );
 };
 
+export const App: React.FC = () => {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
+};
+
 export default App;
+

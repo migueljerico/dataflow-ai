@@ -1,5 +1,7 @@
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional
+
+from pydantic import BaseModel
+
 
 class BusinessKPI(BaseModel):
     id: str
@@ -10,12 +12,14 @@ class BusinessKPI(BaseModel):
     subtitle: str
     category: str  # 'operaciones', 'financiero', 'calidad', 'general'
 
+
 class CategoryDistribution(BaseModel):
     category_name: str
     count: int
     percentage: float
     secondary_metric_name: Optional[str] = None
     secondary_metric_value: Optional[float] = None
+
 
 class ExecutiveAnalyticsReport(BaseModel):
     run_id: str

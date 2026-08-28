@@ -1,19 +1,20 @@
+import hashlib
 import re
 import uuid
-import hashlib
-import pandas as pd
 from datetime import datetime, timezone
 from typing import Dict, List
 
+import pandas as pd
+
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
-from app.core.number_parsing import to_numeric_series, MISSING_MARKERS
-from app.models.dataset import ProcessingStateEnum, FileTypeEnum
-from app.models.etl import TransformationPlan, TransformationStep, StepStatusEnum, ExecutionResult
-from app.transformations.registry import TransformationRegistry
+from app.core.number_parsing import MISSING_MARKERS, to_numeric_series
+from app.models.dataset import FileTypeEnum, ProcessingStateEnum
+from app.models.etl import ExecutionResult, StepStatusEnum, TransformationPlan, TransformationStep
 from app.services.dataset_service import DatasetService
 from app.services.quality_service import QualityService
 from app.services.script_generator import ScriptGeneratorService
+from app.transformations.registry import TransformationRegistry
 
 PLANS_CACHE: Dict[str, TransformationPlan] = {}
 RUNS_CACHE: Dict[str, ExecutionResult] = {}
@@ -25,6 +26,7 @@ def _count_modified_cells(series_orig: pd.Series, series_curr: pd.Series) -> int
     b = series_curr.astype(str)
     both_missing = a.isna() & b.isna()
     return int(((a != b) & ~both_missing).sum())
+
 
 def _is_percentage_or_score_column(col_name: str, raw_series: pd.Series, numeric_series: pd.Series) -> bool:
     """
@@ -38,9 +40,24 @@ def _is_percentage_or_score_column(col_name: str, raw_series: pd.Series, numeric
     col_lower = col_name.lower().strip()
     # 2. Nombres con sufijos/prefijos explícitos de porcentaje o score
     return (
-        col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score")) or
-        col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_")) or
-        col_lower in ["%", "pct", "porcentaje", "ctr", "cvr", "roi", "score", "score_calidad", "tasa_conversion", "conversion_rate", "churn_rate", "descuento_pct", "incidencias_pct"]
+        col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score"))
+        or col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_"))
+        or col_lower
+        in [
+            "%",
+            "pct",
+            "porcentaje",
+            "ctr",
+            "cvr",
+            "roi",
+            "score",
+            "score_calidad",
+            "tasa_conversion",
+            "conversion_rate",
+            "churn_rate",
+            "descuento_pct",
+            "incidencias_pct",
+        ]
     )
 
 
@@ -59,113 +76,155 @@ class ETLService:
 
             if dim == "uniqueness":
                 if not any(s.operation == "remove_duplicates" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="remove_duplicates",
-                        column=None,
-                        parameters={},
-                        reason="Eliminar filas duplicadas exactas para garantizar la unicidad del dataset.",
-                        confidence=0.95,
-                        risk="high",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="remove_duplicates",
+                            column=None,
+                            parameters={},
+                            reason="Eliminar filas duplicadas exactas para garantizar la unicidad del dataset.",
+                            confidence=0.95,
+                            risk="high",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
 
             elif dim == "consistency":
-                if "espacios" in issue.description.lower() and col and not any(s.column == col and s.operation == "trim_text" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="trim_text",
-                        column=col,
-                        parameters={"column": col},
-                        reason=f"Limpiar espacios iniciales/finales y dobles espacios en '{col}'.",
-                        confidence=0.98,
-                        risk="low",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
-                elif ("mayúsculas" in issue.description.lower() or "formato" in issue.description.lower()) and col and not any(s.column == col and s.operation == "normalize_case" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="normalize_case",
-                        column=col,
-                        parameters={"column": col, "mode": "title"},
-                        reason=f"Normalizar formato de texto en '{col}' a Title Case (preservando siglas de negocio SA, SL, KPI, etc.).",
-                        confidence=0.92,
-                        risk="low",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
+                if (
+                    "espacios" in issue.description.lower()
+                    and col
+                    and not any(s.column == col and s.operation == "trim_text" for s in steps)
+                ):
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="trim_text",
+                            column=col,
+                            parameters={"column": col},
+                            reason=f"Limpiar espacios iniciales/finales y dobles espacios en '{col}'.",
+                            confidence=0.98,
+                            risk="low",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
+                elif (
+                    ("mayúsculas" in issue.description.lower() or "formato" in issue.description.lower())
+                    and col
+                    and not any(s.column == col and s.operation == "normalize_case" for s in steps)
+                ):
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="normalize_case",
+                            column=col,
+                            parameters={"column": col, "mode": "title"},
+                            reason=f"Normalizar formato de texto en '{col}' a Title Case (preservando siglas de negocio SA, SL, KPI, etc.).",
+                            confidence=0.92,
+                            risk="low",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
 
             elif dim == "validity" and col:
-                if ("fecha" in issue.description.lower() or "datetime" in issue.description.lower()) and not any(s.column == col and s.operation == "convert_datetime" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="convert_datetime",
-                        column=col,
-                        parameters={"column": col, "target_format": "%Y-%m-%d"},
-                        reason=f"Estandarizar formato heterogéneo de fechas en '{col}' a ISO 8601 (YYYY-MM-DD).",
-                        confidence=0.95,
-                        risk="low",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
-                elif ("símbolos" in issue.description.lower() or "marcadores" in issue.description.lower() or "cuantitativa" in issue.description.lower()) and not any(s.column == col and s.operation == "convert_numeric" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="convert_numeric",
-                        column=col,
-                        parameters={"column": col},
-                        reason=f"Limpiar símbolos y marcadores de ausencia (N/A, N/D, --, -) en '{col}' convirtiendo a numérico puro float64 para Power BI.",
-                        confidence=0.95,
-                        risk="medium",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
+                if ("fecha" in issue.description.lower() or "datetime" in issue.description.lower()) and not any(
+                    s.column == col and s.operation == "convert_datetime" for s in steps
+                ):
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="convert_datetime",
+                            column=col,
+                            parameters={"column": col, "target_format": "%Y-%m-%d"},
+                            reason=f"Estandarizar formato heterogéneo de fechas en '{col}' a ISO 8601 (YYYY-MM-DD).",
+                            confidence=0.95,
+                            risk="low",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
+                elif (
+                    "símbolos" in issue.description.lower()
+                    or "marcadores" in issue.description.lower()
+                    or "cuantitativa" in issue.description.lower()
+                ) and not any(s.column == col and s.operation == "convert_numeric" for s in steps):
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="convert_numeric",
+                            column=col,
+                            parameters={"column": col},
+                            reason=f"Limpiar símbolos y marcadores de ausencia (N/A, N/D, --, -) en '{col}' convirtiendo a numérico puro float64 para Power BI.",
+                            confidence=0.95,
+                            risk="medium",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
 
             elif dim == "integrity" and col:
                 col_nums = to_numeric_series(df[col]).dropna() if col in df.columns else pd.Series()
                 col_is_pct = _is_percentage_or_score_column(col, df[col], col_nums) if col in df.columns else False
                 if col_is_pct and not any(s.column == col and s.operation == "clamp_range" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="clamp_range",
-                        column=col,
-                        parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
-                        reason=f"Acotar valores fuera de rango en '{col}' al intervalo de negocio [0.0, 100.0%].",
-                        confidence=0.94,
-                        risk="medium",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
-                elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(s.column == col and s.operation == "clamp_range" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="clamp_range",
-                        column=col,
-                        parameters={"column": col, "min_value": 0, "max_value": None},
-                        reason=f"Acotar {issue.affected_rows} valor(es) negativo(s) ilógico(s) en '{col}' estableciendo piso mínimo en 0.",
-                        confidence=0.94,
-                        risk="medium",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
-                elif ("superiores" in issue.description.lower() or "rango" in issue.description.lower() or "porcentual" in issue.description.lower()) and not any(s.column == col and s.operation == "clamp_range" for s in steps):
-                    steps.append(TransformationStep(
-                        step_id=step_id,
-                        operation="clamp_range",
-                        column=col,
-                        parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
-                        reason=f"Acotar valores fuera de rango en '{col}' al intervalo de negocio [0.0, 100.0%].",
-                        confidence=0.94,
-                        risk="medium",
-                        affected_rows_estimate=issue.affected_rows
-                    ))
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="clamp_range",
+                            column=col,
+                            parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
+                            reason=f"Acotar valores fuera de rango en '{col}' al intervalo de negocio [0.0, 100.0%].",
+                            confidence=0.94,
+                            risk="medium",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
+                elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(
+                    s.column == col and s.operation == "clamp_range" for s in steps
+                ):
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="clamp_range",
+                            column=col,
+                            parameters={"column": col, "min_value": 0, "max_value": None},
+                            reason=f"Acotar {issue.affected_rows} valor(es) negativo(s) ilógico(s) en '{col}' estableciendo piso mínimo en 0.",
+                            confidence=0.94,
+                            risk="medium",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
+                elif (
+                    "superiores" in issue.description.lower()
+                    or "rango" in issue.description.lower()
+                    or "porcentual" in issue.description.lower()
+                ) and not any(s.column == col and s.operation == "clamp_range" for s in steps):
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="clamp_range",
+                            column=col,
+                            parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
+                            reason=f"Acotar valores fuera de rango en '{col}' al intervalo de negocio [0.0, 100.0%].",
+                            confidence=0.94,
+                            risk="medium",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
 
-            elif dim == "completeness" and col and not any(s.column == col and s.operation == "fill_missing" for s in steps):
-                steps.append(TransformationStep(
-                    step_id=step_id,
-                    operation="fill_missing",
-                    column=col,
-                    parameters={"column": col, "strategy": "constant", "value": "Desconocido"},
-                    reason=f"Imputar nulos en '{col}' con valor constante por defecto.",
-                    confidence=0.85,
-                    risk="medium",
-                    affected_rows_estimate=issue.affected_rows
-                ))
+            elif (
+                dim == "completeness"
+                and col
+                and not any(s.column == col and s.operation == "fill_missing" for s in steps)
+            ):
+                steps.append(
+                    TransformationStep(
+                        step_id=step_id,
+                        operation="fill_missing",
+                        column=col,
+                        parameters={"column": col, "strategy": "constant", "value": "Desconocido"},
+                        reason=f"Imputar nulos en '{col}' con valor constante por defecto.",
+                        confidence=0.85,
+                        risk="medium",
+                        affected_rows_estimate=issue.affected_rows,
+                    )
+                )
 
         # 2. Heurística Semántica Universal de Respaldo sobre Columnas
         for col_name in df.columns:
@@ -173,107 +232,150 @@ class ETLService:
             col_lower = col_name.lower()
 
             is_id = (
-                col_lower.startswith("id") or
-                col_lower.endswith("_id") or
-                col_lower.startswith("cod") or
-                col_lower.endswith("_cod") or
-                "codigo" in col_lower or
-                "code" in col_lower or
-                "pedido" in col_lower or
-                "cif" in col_lower or
-                "dni" in col_lower or
-                "nif" in col_lower or
-                "sku" in col_lower or
-                "ref" in col_lower or
-                "referencia" in col_lower
+                col_lower.startswith("id")
+                or col_lower.endswith("_id")
+                or col_lower.startswith("cod")
+                or col_lower.endswith("_cod")
+                or "codigo" in col_lower
+                or "code" in col_lower
+                or "pedido" in col_lower
+                or "cif" in col_lower
+                or "dni" in col_lower
+                or "nif" in col_lower
+                or "sku" in col_lower
+                or "ref" in col_lower
+                or "referencia" in col_lower
             )
             is_quant_or_date = (
-                pd.api.types.is_numeric_dtype(df[col_name]) or
-                pd.api.types.is_datetime64_any_dtype(df[col_name]) or
-                any(k in col_lower for k in ["fecha", "date", "horas", "dias", "precio", "salario", "sueldo", "monto", "cantidad", "unidades", "llamadas", "aht", "segundos", "minutos", "stock", "descuento", "importe"])
+                pd.api.types.is_numeric_dtype(df[col_name])
+                or pd.api.types.is_datetime64_any_dtype(df[col_name])
+                or any(
+                    k in col_lower
+                    for k in [
+                        "fecha",
+                        "date",
+                        "horas",
+                        "dias",
+                        "precio",
+                        "salario",
+                        "sueldo",
+                        "monto",
+                        "cantidad",
+                        "unidades",
+                        "llamadas",
+                        "aht",
+                        "segundos",
+                        "minutos",
+                        "stock",
+                        "descuento",
+                        "importe",
+                    ]
+                )
             )
 
             # Nombres / Entidades / Categorías en mayúsculas (excluyendo IDs y numéricas)
-            if not is_id and not is_quant_or_date and not any(s.column == col_name and s.operation == "normalize_case" for s in steps):
+            if (
+                not is_id
+                and not is_quant_or_date
+                and not any(s.column == col_name and s.operation == "normalize_case" for s in steps)
+            ):
                 if any(len(x.strip()) > 2 and x.strip().isupper() for x in series_raw):
-                    steps.append(TransformationStep(
-                        step_id=f"STEP-{len(steps)+1:03d}",
-                        operation="normalize_case",
-                        column=col_name,
-                        parameters={"column": col_name, "mode": "title"},
-                        reason=f"Normalizar formato de texto en '{col_name}' a Title Case (preservando siglas como SA, SL, SLU).",
-                        confidence=0.92,
-                        risk="low",
-                        affected_rows_estimate=len(df)
-                    ))
+                    steps.append(
+                        TransformationStep(
+                            step_id=f"STEP-{len(steps)+1:03d}",
+                            operation="normalize_case",
+                            column=col_name,
+                            parameters={"column": col_name, "mode": "title"},
+                            reason=f"Normalizar formato de texto en '{col_name}' a Title Case (preservando siglas como SA, SL, SLU).",
+                            confidence=0.92,
+                            risk="low",
+                            affected_rows_estimate=len(df),
+                        )
+                    )
 
             # Espacios en blanco sobrantes
             if not any(s.column == col_name and s.operation == "trim_text" for s in steps):
                 if any(x != x.strip() or "  " in x for x in series_raw):
-                    steps.append(TransformationStep(
-                        step_id=f"STEP-{len(steps)+1:03d}",
-                        operation="trim_text",
-                        column=col_name,
-                        parameters={"column": col_name},
-                        reason=f"Limpiar espacios sobrantes en '{col_name}'.",
-                        confidence=0.95,
-                        risk="low",
-                        affected_rows_estimate=len(df)
-                    ))
+                    steps.append(
+                        TransformationStep(
+                            step_id=f"STEP-{len(steps)+1:03d}",
+                            operation="trim_text",
+                            column=col_name,
+                            parameters={"column": col_name},
+                            reason=f"Limpiar espacios sobrantes en '{col_name}'.",
+                            confidence=0.95,
+                            risk="low",
+                            affected_rows_estimate=len(df),
+                        )
+                    )
 
             # Marcadores N/D / N/A / -- o símbolos en series convertibles a numérico
             if not is_id and not any(s.column == col_name and s.operation == "convert_numeric" for s in steps):
                 has_dirty = any(
-                    v.lower().strip() in MISSING_MARKERS or
-                    bool(re.match(r"^[-_—–\s]+$", str(v))) or
-                    any(sym in v for sym in ["€", "$", "%", "usd", "eur"])
+                    v.lower().strip() in MISSING_MARKERS
+                    or bool(re.match(r"^[-_—–\s]+$", str(v)))
+                    or any(sym in v for sym in ["€", "$", "%", "usd", "eur"])
                     for v in series_raw
                 )
                 if has_dirty:
-                    steps.append(TransformationStep(
-                        step_id=f"STEP-{len(steps)+1:03d}",
-                        operation="convert_numeric",
-                        column=col_name,
-                        parameters={"column": col_name},
-                        reason=f"Convertir '{col_name}' a numérico puro float64 asignando marcadores de ausencia (N/A, N/D, --, -) a nulos (NaN) para Power BI.",
-                        confidence=0.95,
-                        risk="medium",
-                        affected_rows_estimate=len(df)
-                    ))
+                    steps.append(
+                        TransformationStep(
+                            step_id=f"STEP-{len(steps)+1:03d}",
+                            operation="convert_numeric",
+                            column=col_name,
+                            parameters={"column": col_name},
+                            reason=f"Convertir '{col_name}' a numérico puro float64 asignando marcadores de ausencia (N/A, N/D, --, -) a nulos (NaN) para Power BI.",
+                            confidence=0.95,
+                            risk="medium",
+                            affected_rows_estimate=len(df),
+                        )
+                    )
 
             # Valores numéricos fuera de rango (excluyendo IDs)
             if not is_id:
                 clean_nums = to_numeric_series(series_raw).dropna()
                 if len(clean_nums) > 0:
                     is_pct = _is_percentage_or_score_column(col_name, df[col_name], clean_nums)
-                    
+
                     # Negativos
-                    if not is_pct and (clean_nums < 0).sum() > 0 and not any(s.column == col_name and s.operation == "clamp_range" for s in steps):
+                    if (
+                        not is_pct
+                        and (clean_nums < 0).sum() > 0
+                        and not any(s.column == col_name and s.operation == "clamp_range" for s in steps)
+                    ):
                         neg_count = int((clean_nums < 0).sum())
-                        steps.append(TransformationStep(
-                            step_id=f"STEP-{len(steps)+1:03d}",
-                            operation="clamp_range",
-                            column=col_name,
-                            parameters={"column": col_name, "min_value": 0, "max_value": None},
-                            reason=f"Acotar {neg_count} valor(es) negativo(s) ilógico(s) en '{col_name}' estableciendo piso mínimo en 0.",
-                            confidence=0.94,
-                            risk="medium",
-                            affected_rows_estimate=neg_count
-                        ))
+                        steps.append(
+                            TransformationStep(
+                                step_id=f"STEP-{len(steps)+1:03d}",
+                                operation="clamp_range",
+                                column=col_name,
+                                parameters={"column": col_name, "min_value": 0, "max_value": None},
+                                reason=f"Acotar {neg_count} valor(es) negativo(s) ilógico(s) en '{col_name}' estableciendo piso mínimo en 0.",
+                                confidence=0.94,
+                                risk="medium",
+                                affected_rows_estimate=neg_count,
+                            )
+                        )
 
                     # Porcentajes fuera de rango (<0 o >100)
-                    if is_pct and ((clean_nums > 100).sum() > 0 or (clean_nums < 0).sum() > 0) and not any(s.column == col_name and s.operation == "clamp_range" for s in steps):
+                    if (
+                        is_pct
+                        and ((clean_nums > 100).sum() > 0 or (clean_nums < 0).sum() > 0)
+                        and not any(s.column == col_name and s.operation == "clamp_range" for s in steps)
+                    ):
                         out_count = int(((clean_nums > 100) | (clean_nums < 0)).sum())
-                        steps.append(TransformationStep(
-                            step_id=f"STEP-{len(steps)+1:03d}",
-                            operation="clamp_range",
-                            column=col_name,
-                            parameters={"column": col_name, "min_value": 0.0, "max_value": 100.0},
-                            reason=f"Acotar {out_count} valor(es) fuera de rango en '{col_name}' al intervalo porcentual de negocio [0.0, 100.0%].",
-                            confidence=0.94,
-                            risk="medium",
-                            affected_rows_estimate=out_count
-                        ))
+                        steps.append(
+                            TransformationStep(
+                                step_id=f"STEP-{len(steps)+1:03d}",
+                                operation="clamp_range",
+                                column=col_name,
+                                parameters={"column": col_name, "min_value": 0.0, "max_value": 100.0},
+                                reason=f"Acotar {out_count} valor(es) fuera de rango en '{col_name}' al intervalo porcentual de negocio [0.0, 100.0%].",
+                                confidence=0.94,
+                                risk="medium",
+                                affected_rows_estimate=out_count,
+                            )
+                        )
 
         plan_id = f"PLAN-{uuid.uuid4().hex[:8]}"
         plan = TransformationPlan(
@@ -282,7 +384,7 @@ class ETLService:
             summary=f"Plan de transformaciones determinista sugerido por el Data Quality Engine ({len(steps)} pasos).",
             steps=steps,
             source="rules_engine",
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
 
         metadata = DatasetService.get_dataset_metadata(dataset_id)
@@ -296,7 +398,7 @@ class ETLService:
             raise FunctionalException(
                 message=f"El plan de transformaciones '{plan_id}' no fue encontrado o ha caducado. Por favor, vuelve a generarlo antes de ejecutarlo.",
                 code="PLAN_NOT_FOUND",
-                status_code=404
+                status_code=404,
             )
         return PLANS_CACHE[plan_id]
 
@@ -308,7 +410,7 @@ class ETLService:
         raw_filepath = DatasetService.get_saved_filepath(dataset_id)
 
         with open(raw_filepath, "rb") as f:
-            input_md5 = hashlib.md5(f.read()).hexdigest()
+            input_md5 = hashlib.md5(f.read(), usedforsecurity=False).hexdigest()
 
         rows_before, cols_before = df_raw.shape
         df_current = df_raw.copy()
@@ -320,20 +422,35 @@ class ETLService:
         # Registro explícito de descarte de filas vacías si existieron
         empty_rows_purged = DatasetService.get_empty_rows_purged(dataset_id)
         if empty_rows_purged > 0:
-            audit_logs.append(f"[VALIDACIÓN OK] Operación 'drop_empty_rows': Se detectaron y descartaron {empty_rows_purged} fila(s) completamente vacías o malformadas (,,,,,,,).")
+            audit_logs.append(
+                f"[VALIDACIÓN OK] Operación 'drop_empty_rows': Se detectaron y descartaron {empty_rows_purged} fila(s) completamente vacías o malformadas (,,,,,,,)."
+            )
 
         for step in steps:
+            # GOBERNANZA ESTRICTA: Solo se ejecutan pasos con estado APPROVED o EDITED
             if step.status == StepStatusEnum.REJECTED:
-                audit_logs.append(f"[OMITIDO] Paso {step.step_id} ({step.operation}): Rechazado por el usuario.")
+                audit_logs.append(
+                    f"[OMITIDO] Paso {step.step_id} ({step.operation}): Rechazado explícitamente por el usuario."
+                )
+                continue
+
+            if step.status == StepStatusEnum.PROPOSED:
+                audit_logs.append(
+                    f"[OMITIDO] Paso {step.step_id} ({step.operation}): Omitido por permanecer en estado propuesto sin aprobación humana."
+                )
+                continue
+
+            if step.status not in (StepStatusEnum.APPROVED, StepStatusEnum.EDITED):
+                audit_logs.append(
+                    f"[OMITIDO] Paso {step.step_id} ({step.operation}): Estado no ejecutable ('{step.status}')."
+                )
                 continue
 
             try:
-                transformation = TransformationRegistry.get(step.operation)
-                if not transformation:
-                    raise FunctionalException(
-                        message=f"Operación '{step.operation}' no permitida en el registro.",
-                        code="UNAUTHORIZED_OPERATION"
-                    )
+                # Validar operación registrada y conformidad de parámetros contra el schema
+                transformation = TransformationRegistry.validate_operation_and_parameters(
+                    step.operation, df_current, step.parameters
+                )
                 target_col = step.column or step.parameters.get("column")
 
                 # Snapshot pre-transformación para cálculo real de modificaciones
@@ -348,23 +465,31 @@ class ETLService:
                 # Cálculo de auditoría con datos reales
                 if step.operation == "remove_duplicates":
                     dropped = rows_prior - len(df_current)
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'remove_duplicates': {dropped} fila(s) duplicada(s) eliminada(s) ({len(df_current)} registros únicos).")
-                
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación 'remove_duplicates': {dropped} fila(s) duplicada(s) eliminada(s) ({len(df_current)} registros únicos)."
+                    )
+
                 elif step.operation == "convert_datetime" and target_col:
                     nulls_after = df_current[target_col].isna().sum()
                     nulls_before = series_orig.isna().sum() if series_orig is not None else 0
                     invalid_dates = max(0, nulls_after - nulls_before)
                     converted = len(df_current) - nulls_after
                     if invalid_dates > 0:
-                        audit_logs.append(f"[VALIDACIÓN OK] Operación 'convert_datetime' en '{target_col}': {converted} fechas estandarizadas a ISO 8601 (%Y-%m-%d) sin inversión de día/mes. Se identificaron y descartaron {invalid_dates} fecha(s) con formato inválido irrecuperable (invalid_date).")
+                        audit_logs.append(
+                            f"[VALIDACIÓN OK] Operación 'convert_datetime' en '{target_col}': {converted} fechas estandarizadas a ISO 8601 (%Y-%m-%d) sin inversión de día/mes. Se identificaron y descartaron {invalid_dates} fecha(s) con formato inválido irrecuperable (invalid_date)."
+                        )
                     else:
-                        audit_logs.append(f"[VALIDACIÓN OK] Operación 'convert_datetime' en '{target_col}': {converted} fechas estandarizadas a ISO 8601 (%Y-%m-%d) con 0 pérdidas de datos y discriminación estricta de formatos.")
+                        audit_logs.append(
+                            f"[VALIDACIÓN OK] Operación 'convert_datetime' en '{target_col}': {converted} fechas estandarizadas a ISO 8601 (%Y-%m-%d) con 0 pérdidas de datos y discriminación estricta de formatos."
+                        )
 
                 elif step.operation == "clamp_range" and target_col:
                     min_val = step.parameters.get("min_value")
                     max_val = step.parameters.get("max_value")
-                    range_str = f"[{min_val if min_val is not None else '-inf'}, {max_val if max_val is not None else 'inf'}]"
-                    
+                    range_str = (
+                        f"[{min_val if min_val is not None else '-inf'}, {max_val if max_val is not None else 'inf'}]"
+                    )
+
                     if series_orig is not None:
                         orig_clean = to_numeric_series(series_orig)
                         curr_clean = pd.to_numeric(df_current[target_col], errors="coerce")
@@ -373,31 +498,41 @@ class ETLService:
                     else:
                         modified = len(df_current)
 
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'clamp_range' en '{target_col}': {modified} valor(es) acotados al rango de negocio {range_str}.")
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación 'clamp_range' en '{target_col}': {modified} valor(es) acotados al rango de negocio {range_str}."
+                    )
 
                 elif step.operation == "convert_numeric" and target_col:
                     if series_orig is not None:
                         modified = _count_modified_cells(series_orig, df_current[target_col])
                     else:
                         modified = len(df_current)
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'convert_numeric' en '{target_col}': {modified} celda(s) convertidas a float64 (símbolos, separadores europeos/americanos y marcadores N/D asignados a NaN).")
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación 'convert_numeric' en '{target_col}': {modified} celda(s) convertidas a float64 (símbolos, separadores europeos/americanos y marcadores N/D asignados a NaN)."
+                    )
 
                 elif step.operation == "normalize_case" and target_col:
                     if series_orig is not None:
                         modified = _count_modified_cells(series_orig, df_current[target_col])
                     else:
                         modified = len(df_current)
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'normalize_case' en '{target_col}': {modified} registro(s) normalizados a formato homogéneo (preservando siglas de negocio).")
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación 'normalize_case' en '{target_col}': {modified} registro(s) normalizados a formato homogéneo (preservando siglas de negocio)."
+                    )
 
                 elif step.operation == "trim_text" and target_col:
                     if series_orig is not None:
                         modified = _count_modified_cells(series_orig, df_current[target_col])
                     else:
                         modified = len(df_current)
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación 'trim_text' en '{target_col}': {modified} celda(s) limpiadas de espacios sobrantes.")
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación 'trim_text' en '{target_col}': {modified} celda(s) limpiadas de espacios sobrantes."
+                    )
 
                 else:
-                    audit_logs.append(f"[VALIDACIÓN OK] Operación '{step.operation}' aplicada en '{target_col or 'dataset'}'.")
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación '{step.operation}' aplicada en '{target_col or 'dataset'}'."
+                    )
 
             except Exception as e:
                 errors.append(f"Error al ejecutar paso {step.step_id} ({step.operation}): {str(e)}")
@@ -413,14 +548,11 @@ class ETLService:
             df_current.to_excel(clean_filepath, index=False)
 
         with open(clean_filepath, "rb") as f:
-            output_md5 = hashlib.md5(f.read()).hexdigest()
+            output_md5 = hashlib.md5(f.read(), usedforsecurity=False).hexdigest()
 
         # Generar script reproducible
         script_content = ScriptGeneratorService.generate_script(
-            source_filename=metadata.filename,
-            file_type=metadata.file_type.value,
-            steps=applied_steps,
-            run_id=run_id
+            source_filename=metadata.filename, file_type=metadata.file_type.value, steps=applied_steps, run_id=run_id
         )
         script_filename = f"pipeline_{run_id}.py"
         script_filepath = settings.UPLOAD_DIR / script_filename
@@ -449,7 +581,7 @@ class ETLService:
             script_url=f"/api/v1/runs/{run_id}/download-script",
             audit_logs=audit_logs,
             errors=errors,
-            warnings=warnings
+            warnings=warnings,
         )
 
         metadata.status = ProcessingStateEnum.COMPLETED
@@ -461,7 +593,5 @@ class ETLService:
         if run_id in RUNS_CACHE:
             return RUNS_CACHE[run_id]
         raise FunctionalException(
-            message=f"La ejecución '{run_id}' no fue encontrada.",
-            code="RUN_NOT_FOUND",
-            status_code=404
+            message=f"La ejecución '{run_id}' no fue encontrada.", code="RUN_NOT_FOUND", status_code=404
         )

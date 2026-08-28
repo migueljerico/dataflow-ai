@@ -1,11 +1,14 @@
-from enum import Enum
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
+
 
 class FileTypeEnum(str, Enum):
     CSV = "csv"
     XLSX = "xlsx"
+
 
 class ProcessingStateEnum(str, Enum):
     UPLOADED = "uploaded"
@@ -17,12 +20,13 @@ class ProcessingStateEnum(str, Enum):
     APPROVED = "approved"
     EXECUTING = "executing"
     COMPLETED = "completed"
-    
+
     # Error states
     VALIDATION_FAILED = "validation_failed"
     PROFILING_FAILED = "profiling_failed"
     PLAN_INVALID = "plan_invalid"
     EXECUTION_FAILED = "execution_failed"
+
 
 class DatasetMetadata(BaseModel):
     dataset_id: str = Field(..., description="Identificador único del dataset")
@@ -36,18 +40,21 @@ class DatasetMetadata(BaseModel):
     status: ProcessingStateEnum = Field(default=ProcessingStateEnum.UPLOADED, description="Estado actual del pipeline")
     warnings: List[str] = Field(default_factory=list, description="Advertencias durante la validación")
 
+
 class ErrorResponse(BaseModel):
     error: bool = True
     code: str
     message: str
     details: Dict[str, Any] = {}
 
+
 class DatasetFromUrlRequest(BaseModel):
     url: str = Field(
         ...,
         description="URL pública directa al archivo CSV o XLSX para importar",
-        examples=["https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"]
+        examples=["https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"],
     )
+
 
 class OpenDatasetItem(BaseModel):
     id: str = Field(..., description="ID del dataset en el portal Open Data")
@@ -59,9 +66,8 @@ class OpenDatasetItem(BaseModel):
     size_bytes: Optional[int] = Field(default=None, description="Tamaño del archivo en bytes si está disponible")
     tags: List[str] = Field(default_factory=list, description="Etiquetas temáticas (ej. Economía, Transporte)")
 
+
 class OpenDataSearchResponse(BaseModel):
     total: int
     results: List[OpenDatasetItem]
     source: str = Field(default="CKAN Public Portal", description="Fuente de los metadatos")
-
-

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { DatasetMetadata, SampleDataset, OpenDatasetItem } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { FileDropzone } from './upload/FileDropzone';
 import { UrlImporter } from './upload/UrlImporter';
 import { OpenDataExplorer } from './upload/OpenDataExplorer';
@@ -50,6 +51,7 @@ const EXAMPLE_URLS = [
 ];
 
 export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('file');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statusTimer1Ref = useRef<number | null>(null);
@@ -59,6 +61,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState<string>('');
   const [samples, setSamples] = useState<SampleDataset[]>([]);
+
 
   // Estado de Open Data (Fase 3)
   const [openDataSearchQuery, setOpenDataSearchQuery] = useState<string>('');
@@ -207,7 +210,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
       <div className="card" style={{ marginBottom: '24px' }}>
         <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <h2 className="card-title">
-            <Upload size={20} className="text-primary" /> Ingesta de Dataset Empresarial
+            <Upload size={20} className="text-primary" /> {t.upload.title}
           </h2>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <span className="badge badge-blue">
@@ -241,7 +244,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             onClick={() => { setActiveTab('file'); setError(null); }}
             disabled={loading}
           >
-            <Upload size={16} /> Subir Archivo Local
+            <Upload size={16} /> {t.stepper.step1}
           </button>
           <button
             type="button"
@@ -255,7 +258,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             onClick={() => { setActiveTab('url'); setError(null); }}
             disabled={loading}
           >
-            <Globe size={16} /> Pegar Enlace Web (URL)
+            <Globe size={16} /> {t.upload.orRemote}
           </button>
           <button
             type="button"
@@ -269,7 +272,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             onClick={() => { setActiveTab('opendata'); setError(null); }}
             disabled={loading}
           >
-            <Database size={16} /> Explorar Open Data (CKAN)
+            <Database size={16} /> {t.upload.openDataBtn}
           </button>
         </div>
 
@@ -283,7 +286,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
-            aria-label="Zona de arrastre para subir archivo"
+            aria-label={t.upload.dropzoneMain}
             style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             <input
@@ -299,13 +302,14 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
               <FileSpreadsheet size={48} className="text-primary" style={{ margin: '0 auto' }} />
             </div>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '8px' }}>
-              Arrastra tu archivo CSV o XLSX aquí, o haz clic para examinar
+              {t.upload.dropzoneMain}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-              Soporta formatos estandarizados de ventas, operaciones, RRHH o Contact Center.
+              {t.upload.formatNotice}
             </p>
           </div>
         )}
+
 
         {/* Pestaña 2: Carga por Enlace Web (URL) */}
         {activeTab === 'url' && (
@@ -637,10 +641,14 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
       <div className="card">
         <div className="card-header">
           <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={18} className="text-primary" /> ¿No tienes un archivo a mano? Prueba con 1 clic un caso real:
+            <Sparkles size={18} className="text-primary" /> {t.upload.sampleDataTitle}
           </h3>
-          <span className="badge badge-emerald">Datos Sintéticos Listos</span>
+          <span className="badge badge-emerald">Ready</span>
         </div>
+
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '14px' }}>
+          {t.upload.sampleDataDesc}
+        </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
           {samples.length > 0 ? (
@@ -675,15 +683,16 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
                   style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem', padding: '6px 12px' }}
                   disabled={loading}
                 >
-                  <Play size={14} /> Cargar Caso Demo
+                  <Play size={14} /> {s.title}
                 </button>
               </div>
             ))
           ) : (
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Cargando casos demo...</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading samples...</div>
           )}
         </div>
       </div>
     </div>
   );
 };
+

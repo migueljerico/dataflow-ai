@@ -1,7 +1,9 @@
-from enum import Enum
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from enum import Enum
+from typing import Any, List, Optional
+
 from pydantic import BaseModel, Field
+
 
 class ColumnTypeEnum(str, Enum):
     NUMERIC = "numeric"
@@ -9,6 +11,7 @@ class ColumnTypeEnum(str, Enum):
     TEXT = "text"
     BOOLEAN = "boolean"
     CATEGORICAL = "categorical"
+
 
 class SemanticHintEnum(str, Enum):
     ID = "id"
@@ -21,6 +24,7 @@ class SemanticHintEnum(str, Enum):
     NAME = "name"
     UNKNOWN = "unknown"
 
+
 class ColumnProfile(BaseModel):
     column_name: str = Field(..., description="Nombre de la columna")
     inferred_type: ColumnTypeEnum = Field(..., description="Tipo inferido por el profiling")
@@ -29,16 +33,17 @@ class ColumnProfile(BaseModel):
     null_percentage: float = Field(..., description="Porcentaje de nulos (0 a 100)")
     unique_count: int = Field(..., description="Cantidad de valores únicos distintos")
     sample_values: List[Any] = Field(default_factory=list, description="Muestra de valores representativos")
-    
+
     # Estadísticas opcionales según el tipo
     min_value: Optional[Any] = None
     max_value: Optional[Any] = None
     mean: Optional[float] = None
     median: Optional[float] = None
     std: Optional[float] = None
-    
+
     # Advertencias específicas de la columna
     warnings: List[str] = Field(default_factory=list, description="Advertencias detectadas en la columna")
+
 
 class ProfilingReport(BaseModel):
     dataset_id: str = Field(..., description="ID del dataset analizado")
@@ -49,4 +54,6 @@ class ProfilingReport(BaseModel):
     memory_estimate_bytes: int = Field(..., description="Estimación de uso de memoria RAM")
     columns: List[ColumnProfile] = Field(default_factory=list, description="Perfil detallado de cada columna")
     global_warnings: List[str] = Field(default_factory=list, description="Advertencias globales del dataset")
-    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Fecha de generación")
+    generated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), description="Fecha de generación"
+    )

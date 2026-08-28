@@ -4,6 +4,34 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.3.0] — 2026-08-28
+
+### 🛡️ Auditoría Técnica, Gobernanza Estricta, Selector de Idioma (ES/EN) y Hardening Integral
+
+> **Auditoría Técnica y Hardening Profesional (14 Fases):** Implementación de gobernanza determinista estricta (*"La IA propone. El usuario decide. Python ejecuta."*), formalización de contratos y validación de schemas de parámetros en el Transformation Registry, soporte completo para números y fechas en formato español / europeo, selector bilingüe de idiomas (Español 🇪🇸 / English 🇬🇧 estilo ZCodeProject), persistencia desacoplada (`storage.py`), middleware de trazabilidad `X-Request-ID`, mitigación Bandit (B324) y blindaje de CI/CD gates.
+
+#### 🇪🇸 Transformaciones Excel en Castellano e Internacionalización
+- **Selector de Idioma (Header):** Selector bilingüe interactivo (Español 🇪🇸 / English 🇬🇧) con persistencia en `localStorage` (`dataflow_app_language`), sincronización con `document.documentElement.lang` y diccionarios completos en `frontend/src/i18n/index.ts`.
+- **Soporte Numérico Europeo:** Inferencia y parseo de números con coma decimal (`1.234,56 €`, `12,5%`, `0,75`), fechas `DD/MM/AAAA` e ISO 8601, y preservación de siglas societarias españolas (`SL`, `SA`, `SLU`, `CIF`, `NIF`, `DNI`, `IVA`).
+- **Tests de Excel en Español:** Suite dedicada `backend/tests/test_spanish_excel_transformations.py` y `frontend/src/context/LanguageContext.test.tsx`.
+
+#### 🏛️ Gobernanza y Transformation Registry (Fases 1 a 4)
+- **Gobernanza Human-in-the-Loop:** Bloqueo de ejecución para pasos no aprobados (`PROPOSED`, `REJECTED`). Solo pasos explícitamente aprobados o editados por el usuario (`APPROVED`, `EDITED`) son procesados por el motor en `etl_service.py`.
+- **Schemas Declarativos:** Clase base `BaseTransformation` extendida con `allowed_parameters`, `parameter_schema`, `risk`, `reversible` y `requires_human_approval`.
+- **Validación Estricta:** `TransformationRegistry.validate_operation_and_parameters()` valida operaciones y rechaza parámetros no autorizados con `UNAUTHORIZED_PARAMETER`.
+- **Catálogo de Operaciones:** `TransformationRegistry.get_catalog_manifest()` expone el manifiesto completo de las 11 operaciones disponibles.
+
+#### 🔒 Seguridad, Observabilidad y Persistencia (Fases 5 a 7)
+- **Mitigación Bandit (B324):** Actualizado `hashlib.md5(..., usedforsecurity=False)` en `etl_service.py` para cumplir con estándares FIPS / SAST.
+- **Middleware de Trazabilidad:** `request_id_middleware` activado en `main.py` inyectando encabezado `X-Request-ID` en respuestas HTTP y correlación en logs estructurados.
+- **Persistencia Desacoplada:** Creado módulo `backend/app/core/storage.py` con interfaz `StorageBackend` y backend local `LocalStorageBackend` con limpieza de archivos y límite de retención.
+
+#### 🧪 Testing y CI/CD Hardening (Fases 8 a 14)
+- **105 Tests Automatizados (100% Passing):** 96 tests existentes + 5 tests de gobernanza (`test_governance_hardening.py`) + 4 tests de Excel español (`test_spanish_excel_transformations.py`) en backend, más 9 tests en frontend (Vitest).
+- **CI/CD Quality Gates:** Convertidos los pasos de linters (`ruff check --line-length 120 --ignore B008`), formateador (`black --check --line-length 120`), análisis de seguridad SAST (`bandit -r app -q -ll`), tests unitarios y builds (`tsc --noEmit`, `vitest`, `vite build`) en gates estrictos y bloqueantes en `.github/workflows/ci.yml`.
+
+---
+
 ## [1.2.4] — 2026-08-27
 
 ### 🔒 Muse Spark 1.2 Contributor — Dependabot + Protección de Rama + P1/P2/P3

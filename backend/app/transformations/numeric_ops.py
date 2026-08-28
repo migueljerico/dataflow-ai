@@ -1,14 +1,21 @@
+from typing import Any, Dict, Tuple
+
 import pandas as pd
-import numpy as np
-from typing import Dict, Any, Tuple
-from app.transformations.base import BaseTransformation
 from app.core.exceptions import FunctionalException
 from app.core.number_parsing import to_numeric_series
+from app.transformations.base import BaseTransformation
+
 
 class ConvertNumericTransformation(BaseTransformation):
     operation_name = "convert_numeric"
     description = "Limpia símbolos de moneda/porcentaje y texto N/D o N/A, convirtiendo la columna a número float/int."
     risk = "medium"
+    reversible = False
+    allowed_parameters = ["column"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna numérica a convertir"}
+    }
+    requires_human_approval = True
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
@@ -36,6 +43,13 @@ class RoundNumericTransformation(BaseTransformation):
     operation_name = "round_numeric"
     description = "Redondea una columna numérica a N decimales."
     risk = "low"
+    reversible = True
+    allowed_parameters = ["column", "decimals"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna a redondear"},
+        "decimals": {"type": "integer", "required": False, "default": 2, "description": "Número de decimales (>=0)"},
+    }
+    requires_human_approval = False
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
@@ -43,7 +57,9 @@ class RoundNumericTransformation(BaseTransformation):
         if not col or col not in df.columns:
             raise FunctionalException(message=f"La columna '{col}' no existe en el dataset.", code="INVALID_COLUMN")
         if not isinstance(decimals, int) or decimals < 0:
-            raise FunctionalException(message="El parámetro 'decimals' debe ser un número entero >= 0.", code="INVALID_PARAMETER")
+            raise FunctionalException(
+                message="El parámetro 'decimals' debe ser un número entero >= 0.", code="INVALID_PARAMETER"
+            )
 
     def apply(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> Tuple[pd.DataFrame, int]:
         self.validate_parameters(df, parameters)
@@ -64,11 +80,29 @@ class ClampRangeTransformation(BaseTransformation):
     operation_name = "clamp_range"
     description = "Corrige y limita valores numéricos fuera de rango de negocio (e.g. valores negativos a 0 o scores > 100 a 100)."
     risk = "medium"
+    reversible = False
+    allowed_parameters = ["column", "min_value", "max_value"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna a acotar"},
+        "min_value": {"type": "number", "required": False, "description": "Límite inferior opcional"},
+        "max_value": {"type": "number", "required": False, "description": "Límite superior opcional"},
+    }
+    requires_human_approval = True
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
         if not col or col not in df.columns:
             raise FunctionalException(message=f"La columna '{col}' no existe en el dataset.", code="INVALID_COLUMN")
+        min_val = parameters.get("min_value")
+        max_val = parameters.get("max_value")
+        if min_val is not None and not isinstance(min_val, (int, float)):
+            raise FunctionalException(message="El parámetro 'min_value' debe ser numérico.", code="INVALID_PARAMETER")
+        if max_val is not None and not isinstance(max_val, (int, float)):
+            raise FunctionalException(message="El parámetro 'max_value' debe ser numérico.", code="INVALID_PARAMETER")
+        if min_val is not None and max_val is not None and min_val > max_val:
+            raise FunctionalException(
+                message="'min_value' no puede ser mayor que 'max_value'.", code="INVALID_PARAMETER"
+            )
 
     def apply(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> Tuple[pd.DataFrame, int]:
         self.validate_parameters(df, parameters)

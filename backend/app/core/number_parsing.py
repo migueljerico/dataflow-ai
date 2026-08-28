@@ -10,6 +10,7 @@ Convenciones soportadas tras limpiar símbolos (€, $, %, USD, EUR) y espacios:
 - Americano: 1,234.56 / 1,234,567.89                    ->  punto decimal, coma de millares
 - Marcadores de ausencia (N/D, N/A, --, -, null, ...)       ->  None
 """
+
 import re
 from typing import Any, Optional
 
@@ -17,8 +18,27 @@ import numpy as np
 import pandas as pd
 
 MISSING_MARKERS = {
-    "n/d", "n/a", "nd", "na", "-", "--", "---", "–", "—",
-    "null", "none", "nan", "undefined", "", "n.a.", "n.d.", "s/n", "s/d", "nil", "n_a", "n_d"
+    "n/d",
+    "n/a",
+    "nd",
+    "na",
+    "-",
+    "--",
+    "---",
+    "–",
+    "—",
+    "null",
+    "none",
+    "nan",
+    "undefined",
+    "",
+    "n.a.",
+    "n.d.",
+    "s/n",
+    "s/d",
+    "nil",
+    "n_a",
+    "n_d",
 }
 
 _SYMBOLS_RE = re.compile(r"[€$%\s\u00a0]")

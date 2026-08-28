@@ -1,6 +1,7 @@
-from enum import Enum
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -8,11 +9,13 @@ def utc_now() -> datetime:
     """Datetime UTC consciente de zona (datetime.utcnow está deprecado)."""
     return datetime.now(timezone.utc)
 
+
 class StepStatusEnum(str, Enum):
     PROPOSED = "proposed"
     APPROVED = "approved"
     EDITED = "edited"
     REJECTED = "rejected"
+
 
 class TransformationStep(BaseModel):
     step_id: str = Field(..., description="ID único del paso")
@@ -25,6 +28,7 @@ class TransformationStep(BaseModel):
     affected_rows_estimate: int = Field(default=0, description="Estimación de filas afectadas")
     status: StepStatusEnum = Field(default=StepStatusEnum.PROPOSED, description="Estado de revisión humana")
 
+
 class TransformationPlan(BaseModel):
     plan_id: str = Field(..., description="ID del plan")
     dataset_id: str = Field(..., description="ID del dataset asociado")
@@ -32,7 +36,10 @@ class TransformationPlan(BaseModel):
     steps: List[TransformationStep] = Field(default_factory=list, description="Lista de pasos ordenados")
     source: str = Field(default="rules_engine", description="Origen del plan: rules_engine o ai_assistant")
     created_at: datetime = Field(default_factory=utc_now, description="Fecha de creación")
-    warnings: List[str] = Field(default_factory=list, description="Advertencias del plan (p. ej. operaciones IA descartadas por guardrails)")
+    warnings: List[str] = Field(
+        default_factory=list, description="Advertencias del plan (p. ej. operaciones IA descartadas por guardrails)"
+    )
+
 
 class ExecutionResult(BaseModel):
     run_id: str = Field(..., description="ID de la ejecución")
@@ -51,6 +58,8 @@ class ExecutionResult(BaseModel):
     clean_filename: str
     download_url: str
     script_url: str
-    audit_logs: List[str] = Field(default_factory=list, description="Log detallado de validación y trazabilidad de cambios por paso")
+    audit_logs: List[str] = Field(
+        default_factory=list, description="Log detallado de validación y trazabilidad de cambios por paso"
+    )
     errors: List[str] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)

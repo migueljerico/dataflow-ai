@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Smartphone, X, Share2, PlusSquare, Check } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const InstallPwaModal: React.FC<Props> = ({
   isInstallable,
   isIOS,
 }) => {
+  const { t } = useLanguage();
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export const InstallPwaModal: React.FC<Props> = ({
             cursor: 'pointer',
             padding: '4px',
           }}
-          aria-label="Cerrar"
+          aria-label={t.pwaModal.close}
         >
           <X size={20} aria-hidden="true" />
         </button>
@@ -99,16 +101,16 @@ export const InstallPwaModal: React.FC<Props> = ({
           </div>
           <div>
             <h3 id="pwa-modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Instalar DataFlow AI en tu Móvil
+              {t.pwaModal.title}
             </h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Aplicación Web Progresiva (PWA) de alto rendimiento
+              PWA
             </p>
           </div>
         </div>
 
         <p style={{ fontSize: '0.875rem', color: 'var(--text-main)', marginBottom: '16px', lineHeight: 1.5 }}>
-          Instala DataFlow AI como una app nativa en tu pantalla de inicio para abrirla a pantalla completa, sin barras de navegación y con carga ultra rápida.
+          {t.pwaModal.desc}
         </p>
 
         {isIOS ? (
@@ -127,15 +129,11 @@ export const InstallPwaModal: React.FC<Props> = ({
             }}
           >
             <div style={{ fontWeight: 600, color: 'var(--primary)' }}>
-              Instrucciones para iPhone / iPad (Safari):
+              iOS Safari:
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Share2 size={18} aria-hidden="true" style={{ color: 'var(--primary)', flexShrink: 0 }} />
-              <span>1. Toca el botón <strong>Compartir</strong> en la barra de Safari.</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <PlusSquare size={18} aria-hidden="true" style={{ color: 'var(--accent-emerald)', flexShrink: 0 }} />
-              <span>2. Selecciona <strong>"Añadir a pantalla de inicio"</strong>.</span>
+              <span>{t.pwaModal.iosInstructions}</span>
             </div>
           </div>
         ) : (
@@ -154,17 +152,14 @@ export const InstallPwaModal: React.FC<Props> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-emerald)' }}>
-              <Check size={16} aria-hidden="true" /> <strong>Acceso Instantáneo:</strong> Icono directo en tu escritorio móvil.
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)' }}>
-              <Check size={16} aria-hidden="true" /> <strong>Experiencia Inmersiva:</strong> Interfaz limpia sin barras del navegador.
+              <Check size={16} aria-hidden="true" /> <strong>Web App:</strong> Installable on Desktop & Mobile.
             </div>
           </div>
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button className="btn btn-outline" onClick={onClose}>
-            Entendido
+            {t.pwaModal.close}
           </button>
           {!isIOS && isInstallable && onInstallPrompt && (
             <button
@@ -174,7 +169,7 @@ export const InstallPwaModal: React.FC<Props> = ({
                 onClose();
               }}
             >
-              <Smartphone size={16} /> Instalar Ahora
+              <Smartphone size={16} /> {t.pwaModal.installNow}
             </button>
           )}
         </div>
@@ -182,3 +177,4 @@ export const InstallPwaModal: React.FC<Props> = ({
     </div>
   );
 };
+

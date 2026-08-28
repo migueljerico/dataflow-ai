@@ -1,6 +1,7 @@
 import threading
 import time
-from typing import Dict, Any
+from typing import Any, Dict
+
 
 class TTLCache:
     def __init__(self, ttl_seconds: int = 7200, maxsize: int = 200):

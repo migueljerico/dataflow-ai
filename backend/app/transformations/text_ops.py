@@ -1,15 +1,44 @@
 import re
-import pandas as pd
-from typing import Dict, Any, Tuple
-from app.transformations.base import BaseTransformation
-from app.core.exceptions import FunctionalException
+from typing import Any, Dict, Tuple
 
-BUSINESS_ACRONYMS = {"SA", "S.A.", "SL", "S.L.", "SLU", "S.L.U.", "CIF", "NIF", "DNI", "IVA", "ID", "KPI", "SLA", "AHT", "CRM", "ERP", "USA", "UE", "IA", "AI"}
+import pandas as pd
+from app.core.exceptions import FunctionalException
+from app.transformations.base import BaseTransformation
+
+BUSINESS_ACRONYMS = {
+    "SA",
+    "S.A.",
+    "SL",
+    "S.L.",
+    "SLU",
+    "S.L.U.",
+    "CIF",
+    "NIF",
+    "DNI",
+    "IVA",
+    "ID",
+    "KPI",
+    "SLA",
+    "AHT",
+    "CRM",
+    "ERP",
+    "USA",
+    "UE",
+    "IA",
+    "AI",
+}
+
 
 class TrimTextTransformation(BaseTransformation):
     operation_name = "trim_text"
     description = "Elimina espacios en blanco al inicio, final y espacios dobles consecutivos en columnas de texto."
     risk = "low"
+    reversible = True
+    allowed_parameters = ["column"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna de texto a limpiar"}
+    }
+    requires_human_approval = False
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
@@ -37,8 +66,23 @@ class TrimTextTransformation(BaseTransformation):
 
 class NormalizeCaseTransformation(BaseTransformation):
     operation_name = "normalize_case"
-    description = "Normaliza el formato de texto a Title Case (preservando siglas como SA, SL, KPI, etc.), Lowercase o Uppercase."
+    description = (
+        "Normaliza el formato de texto a Title Case (preservando siglas como SA, SL, KPI, etc.), Lowercase o Uppercase."
+    )
     risk = "low"
+    reversible = True
+    allowed_parameters = ["column", "mode"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna a normalizar"},
+        "mode": {
+            "type": "string",
+            "required": False,
+            "default": "title",
+            "enum": ["title", "lower", "upper"],
+            "description": "Modo de normalización ('title', 'lower', 'upper')",
+        },
+    }
+    requires_human_approval = False
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
@@ -46,7 +90,9 @@ class NormalizeCaseTransformation(BaseTransformation):
         if not col or col not in df.columns:
             raise FunctionalException(message=f"La columna '{col}' no existe en el dataset.", code="INVALID_COLUMN")
         if mode not in ["title", "lower", "upper"]:
-            raise FunctionalException(message=f"Modo '{mode}' no soportado. Usa 'title', 'lower' o 'upper'.", code="INVALID_PARAMETER")
+            raise FunctionalException(
+                message=f"Modo '{mode}' no soportado. Usa 'title', 'lower' o 'upper'.", code="INVALID_PARAMETER"
+            )
 
     @staticmethod
     def _to_smart_title_case(val: Any) -> Any:
@@ -90,6 +136,17 @@ class NormalizeCategoryTransformation(BaseTransformation):
     operation_name = "normalize_category"
     description = "Estandariza valores categóricos mapeando variaciones a una etiqueta canónica."
     risk = "low"
+    reversible = True
+    allowed_parameters = ["column", "mappings"]
+    parameter_schema = {
+        "column": {"type": "string", "required": True, "description": "Nombre de la columna categórica"},
+        "mappings": {
+            "type": "object",
+            "required": True,
+            "description": "Diccionario de equivalencias {antiguo_valor: nuevo_valor}",
+        },
+    }
+    requires_human_approval = False
 
     def validate_parameters(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> None:
         col = parameters.get("column")
@@ -97,7 +154,9 @@ class NormalizeCategoryTransformation(BaseTransformation):
         if not col or col not in df.columns:
             raise FunctionalException(message=f"La columna '{col}' no existe en el dataset.", code="INVALID_COLUMN")
         if not isinstance(mappings, dict) or not mappings:
-            raise FunctionalException(message="Se requiere un diccionario 'mappings' con las equivalencias.", code="INVALID_PARAMETER")
+            raise FunctionalException(
+                message="Se requiere un diccionario 'mappings' con las equivalencias.", code="INVALID_PARAMETER"
+            )
 
     def apply(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> Tuple[pd.DataFrame, int]:
         self.validate_parameters(df, parameters)

@@ -1,9 +1,11 @@
-import os
 import json
+import os
+from typing import Any, Dict, List, Optional
+
 import httpx
-from typing import List, Dict, Any, Optional
-from app.ai_providers.base import LLMProvider, AISuggestionResponse, AIOperationSuggestion
+from app.ai_providers.base import AISuggestionResponse, LLMProvider
 from app.core.exceptions import FunctionalException
+
 
 class GeminiProvider(LLMProvider):
     provider_name = "gemini"
@@ -19,12 +21,11 @@ class GeminiProvider(LLMProvider):
         filename: str,
         columns_schema: List[Dict[str, Any]],
         quality_issues: List[Dict[str, Any]],
-        sample_rows: List[Dict[str, Any]]
+        sample_rows: List[Dict[str, Any]],
     ) -> AISuggestionResponse:
         if not self.api_key:
             raise FunctionalException(
-                message="No se ha configurado la API Key de Google Gemini (GEMINI_API_KEY).",
-                code="AI_API_KEY_MISSING"
+                message="No se ha configurado la API Key de Google Gemini (GEMINI_API_KEY).", code="AI_API_KEY_MISSING"
             )
 
         prompt = f"""
@@ -65,7 +66,7 @@ Reglas estrictas de negocio y gobernanza:
         }
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"response_mime_type": "application/json"}
+            "generationConfig": {"response_mime_type": "application/json"},
         }
 
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -74,7 +75,7 @@ Reglas estrictas de negocio y gobernanza:
                 raise FunctionalException(
                     message="Error de comunicación con el servicio de IA de Gemini.",
                     code="AI_PROVIDER_ERROR",
-                    details={"model": self.model, "status_code": res.status_code, "response": res.text[:500]}
+                    details={"model": self.model, "status_code": res.status_code, "response": res.text[:500]},
                 )
 
             data = res.json()
@@ -93,8 +94,8 @@ Reglas estrictas de negocio y gobernanza:
                 details={
                     "model": self.model,
                     "block_reason": (data.get("promptFeedback") or {}).get("blockReason"),
-                    "finish_reason": candidates[0].get("finishReason") if candidates else None
-                }
+                    "finish_reason": candidates[0].get("finishReason") if candidates else None,
+                },
             )
 
         try:
@@ -103,7 +104,7 @@ Reglas estrictas de negocio y gobernanza:
             raise FunctionalException(
                 message="La respuesta del Copiloto de IA no es un JSON válido.",
                 code="AI_INVALID_RESPONSE",
-                details={"model": self.model, "parse_error": str(exc), "raw_prefix": raw_json_str[:300]}
-            )
+                details={"model": self.model, "parse_error": str(exc), "raw_prefix": raw_json_str[:300]},
+            ) from exc
 
         return AISuggestionResponse(**parsed_dict)

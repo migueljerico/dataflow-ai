@@ -1,8 +1,9 @@
-import httpx
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
-from app.models.dataset import OpenDatasetItem, OpenDataSearchResponse
+import httpx
+
+from app.models.dataset import OpenDataSearchResponse, OpenDatasetItem
 
 logger = logging.getLogger("dataflow.opendata")
 
@@ -15,7 +16,7 @@ FEATURED_OPEN_DATASETS: List[OpenDatasetItem] = [
         organization="Banco Mundial / Open Data Hub",
         resource_url="https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv",
         format="CSV",
-        tags=["Economía", "Macroeconomía", "Finanzas"]
+        tags=["Economía", "Macroeconomía", "Finanzas"],
     ),
     OpenDatasetItem(
         id="mobility-carshare-operations",
@@ -24,7 +25,7 @@ FEATURED_OPEN_DATASETS: List[OpenDatasetItem] = [
         organization="Dpto. de Movilidad y Transportes",
         resource_url="https://raw.githubusercontent.com/plotly/datasets/master/carshare_data.csv",
         format="CSV",
-        tags=["Movilidad", "Transporte", "Operaciones"]
+        tags=["Movilidad", "Transporte", "Operaciones"],
     ),
     OpenDatasetItem(
         id="global-population-demographics",
@@ -33,7 +34,7 @@ FEATURED_OPEN_DATASETS: List[OpenDatasetItem] = [
         organization="División de Estadística / UN Data",
         resource_url="https://raw.githubusercontent.com/datasets/population/master/data/population.csv",
         format="CSV",
-        tags=["Demografía", "Población", "Estadística"]
+        tags=["Demografía", "Población", "Estadística"],
     ),
     OpenDatasetItem(
         id="commercial-restaurant-transactions",
@@ -42,7 +43,7 @@ FEATURED_OPEN_DATASETS: List[OpenDatasetItem] = [
         organization="Open Business Intelligence Hub",
         resource_url="https://raw.githubusercontent.com/mwaskom/seaborn-data/master/tips.csv",
         format="CSV",
-        tags=["Ventas", "Hostelería", "Comercio"]
+        tags=["Ventas", "Hostelería", "Comercio"],
     ),
     OpenDatasetItem(
         id="air-quality-emissions",
@@ -51,8 +52,8 @@ FEATURED_OPEN_DATASETS: List[OpenDatasetItem] = [
         organization="Agencia de Medio Ambiente / Open Earth",
         resource_url="https://raw.githubusercontent.com/datasets/co2-fossil-by-nation/master/data/fossil-fuel-co2-emissions-by-nation.csv",
         format="CSV",
-        tags=["Medioambiente", "Sostenibilidad", "Clima"]
-    )
+        tags=["Medioambiente", "Sostenibilidad", "Clima"],
+    ),
 ]
 
 CKAN_API_ENDPOINT = "https://catalog.data.gov/api/3/action/package_search"
@@ -92,7 +93,7 @@ class OpenDataService:
                     resp = await client.get(
                         CKAN_API_ENDPOINT,
                         params={"q": clean_q, "rows": 15},
-                        headers={"User-Agent": "DataFlow-AI/1.2 (Open Data Explorer)"}
+                        headers={"User-Agent": "DataFlow-AI/1.2 (Open Data Explorer)"},
                     )
                     if resp.status_code == 200:
                         data = resp.json()
@@ -107,7 +108,11 @@ class OpenDataService:
                             org_info = pkg.get("organization") or {}
                             org_name = org_info.get("title") or org_info.get("name") or "Portal Open Data"
 
-                            pkg_tags = [t.get("display_name") or t.get("name") for t in pkg.get("tags", []) if isinstance(t, dict)]
+                            pkg_tags = [
+                                t.get("display_name") or t.get("name")
+                                for t in pkg.get("tags", [])
+                                if isinstance(t, dict)
+                            ]
                             clean_tags = [t for t in pkg_tags if t][:3]
 
                             # Buscar recursos con formato CSV o XLSX
@@ -130,7 +135,7 @@ class OpenDataService:
                                                 resource_url=res_url,
                                                 format="CSV" if is_csv else "XLSX",
                                                 size_bytes=res.get("size"),
-                                                tags=clean_tags or ["Open Data"]
+                                                tags=clean_tags or ["Open Data"],
                                             )
                                         )
                                     break  # Tomar el primer recurso CSV válido por paquete
@@ -138,7 +143,5 @@ class OpenDataService:
                 logger.warning(f"Consulta a CKAN API no disponible ({str(e)}). Usando catálogo curado.")
 
         return OpenDataSearchResponse(
-            total=len(results[:limit]),
-            results=results[:limit],
-            source="CKAN Public Portal & Curated Open Hub"
+            total=len(results[:limit]), results=results[:limit], source="CKAN Public Portal & Curated Open Hub"
         )

@@ -5,22 +5,22 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from app.models.etl import TransformationPlan, TransformationStep
-from app.models.dataset import ProcessingStateEnum
-from app.transformations.registry import TransformationRegistry
 from app.ai_providers.base import LLMProvider
-from app.ai_providers.mock_provider import MockProvider
 from app.ai_providers.gemini_provider import GeminiProvider
+from app.ai_providers.mock_provider import MockProvider
+from app.models.dataset import ProcessingStateEnum
+from app.models.etl import TransformationPlan, TransformationStep
 from app.services.dataset_service import DatasetService
+from app.services.etl_service import PLANS_CACHE
 from app.services.profiler_service import ProfilerService
 from app.services.quality_service import QualityService
-from app.services.etl_service import PLANS_CACHE
+from app.transformations.registry import TransformationRegistry
 
 # Patrones PII para enmascaramiento de muestras enviadas al LLM (minimización RGPD)
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE_RE = re.compile(r"(\+34[\s.-]?)?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}")
 
-#Hints semánticos sensibles -> máscara aplicada al valor completo de la muestra
+# Hints semánticos sensibles -> máscara aplicada al valor completo de la muestra
 PII_HINT_MASKS = {
     "name": "[NOMBRE]",
     "email": "[EMAIL]",
@@ -82,9 +82,7 @@ class AIService:
 
     @staticmethod
     async def propose_ai_plan(
-        dataset_id: str,
-        provider_name: str = "mock",
-        api_key: Optional[str] = None
+        dataset_id: str, provider_name: str = "mock", api_key: Optional[str] = None
     ) -> TransformationPlan:
         provider = AIService.get_provider(provider_name, api_key=api_key)
         metadata = DatasetService.get_dataset_metadata(dataset_id)
@@ -97,7 +95,7 @@ class AIService:
                 "name": col.column_name,
                 "type": col.inferred_type.value,
                 "semantic_hint": col.semantic_hint.value,
-                "null_count": col.null_count
+                "null_count": col.null_count,
             }
             for col in profiling.columns
         ]
@@ -107,7 +105,7 @@ class AIService:
                 "column": issue.column,
                 "dimension": issue.dimension.value,
                 "severity": issue.severity.value,
-                "description": issue.description
+                "description": issue.description,
             }
             for issue in quality.issues
         ]
@@ -120,7 +118,7 @@ class AIService:
             filename=metadata.filename,
             columns_schema=columns_schema,
             quality_issues=quality_issues,
-            sample_rows=sample_rows
+            sample_rows=sample_rows,
         )
 
         # GUARDRAILS DE IA: filtrar operaciones no reconocidas en el registro,
@@ -135,16 +133,18 @@ class AIService:
                 )
                 continue
 
-            valid_steps.append(TransformationStep(
-                step_id=f"AI-STEP-{idx:03d}",
-                operation=op,
-                column=sug.column,
-                parameters=sug.parameters,
-                reason=sug.reason,
-                confidence=sug.confidence,
-                risk=sug.risk,
-                affected_rows_estimate=0
-            ))
+            valid_steps.append(
+                TransformationStep(
+                    step_id=f"AI-STEP-{idx:03d}",
+                    operation=op,
+                    column=sug.column,
+                    parameters=sug.parameters,
+                    reason=sug.reason,
+                    confidence=sug.confidence,
+                    risk=sug.risk,
+                    affected_rows_estimate=0,
+                )
+            )
 
         plan_id = f"AI-PLAN-{uuid.uuid4().hex[:8]}"
         plan = TransformationPlan(
@@ -154,7 +154,7 @@ class AIService:
             steps=valid_steps,
             source=f"ai_copilot_{provider.provider_name}",
             created_at=datetime.now(timezone.utc),
-            warnings=plan_warnings
+            warnings=plan_warnings,
         )
 
         metadata.status = ProcessingStateEnum.PLAN_PROPOSED

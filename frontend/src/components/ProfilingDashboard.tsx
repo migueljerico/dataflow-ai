@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShieldCheck, Table, AlertTriangle, Sparkles } from 'lucide-react';
 import { ProfilingReport, QualityReport, DatasetMetadata } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   metadata: DatasetMetadata;
@@ -17,6 +18,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
   onGeneratePlan,
   loadingPlan,
 }) => {
+  const { t } = useLanguage();
   const score = quality.quality_score;
 
   const getScoreColor = (val: number) => {
@@ -37,26 +39,27 @@ export const ProfilingDashboard: React.FC<Props> = ({
             <span className="score-num" style={{ color: getScoreColor(score.overall_score) }}>
               {score.overall_score}
             </span>
-            <span className="score-label">Score / 100</span>
+            <span className="score-label">{t.profiling.qualityScore}</span>
           </div>
         </div>
 
         <div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '8px' }}>
-            Diagnóstico de Calidad de Datos — {metadata.filename}
+            {t.profiling.title} — {metadata.filename}
           </h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '0.9rem' }}>
             {score.explanation}
           </p>
 
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <span className="badge badge-blue">Filas: {profiling.row_count.toLocaleString()}</span>
-            <span className="badge badge-blue">Columnas: {profiling.column_count}</span>
-            <span className="badge badge-amber">Duplicados: {profiling.duplicates_count} ({profiling.duplicates_percentage}%)</span>
-            <span className="badge badge-rose">Problemas detectados: {quality.issues_count}</span>
+            <span className="badge badge-blue">Rows: {profiling.row_count.toLocaleString()}</span>
+            <span className="badge badge-blue">Cols: {profiling.column_count}</span>
+            <span className="badge badge-amber">Duplicates: {profiling.duplicates_count} ({profiling.duplicates_percentage}%)</span>
+            <span className="badge badge-rose">Issues: {quality.issues_count}</span>
           </div>
         </div>
       </div>
+
 
       {/* Tarjetas de las 5 Dimensiones con Lenguaje Empresarial Claro */}
       <div className="dimensions-grid">
@@ -120,7 +123,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">
-            <Table size={20} className="text-primary" aria-hidden="true" /> Catálogo y Perfilado Estructural de Columnas
+            <Table size={20} className="text-primary" aria-hidden="true" /> {t.profiling.columnsAnalysis}
           </h3>
           <div className="mobile-stack" style={{ gap: '10px', flexWrap: 'wrap' }}>
             <button
@@ -129,7 +132,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
               aria-busy={loadingPlan}
               onClick={() => onGeneratePlan('rules')}
             >
-              Motor de Reglas Determinista
+              {t.profiling.proposeRulesBtn}
             </button>
             <button
               className="btn btn-primary"
@@ -137,7 +140,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
               aria-busy={loadingPlan}
               onClick={() => onGeneratePlan('mock')}
             >
-              <Sparkles size={16} aria-hidden="true" /> Generar Plan con Copiloto IA
+              <Sparkles size={16} aria-hidden="true" /> {t.profiling.proposeAiBtn}
             </button>
           </div>
         </div>
@@ -147,15 +150,16 @@ export const ProfilingDashboard: React.FC<Props> = ({
               <caption className="sr-only" style={{position:'absolute',left:-9999}}>Perfilado de columnas del dataset</caption>
             <thead>
               <tr>
-                <th scope="col">Columna</th>
-                <th scope="col">Tipo Inferido</th>
-                <th scope="col">Sugerencia Semántica</th>
-                <th scope="col">Nulos (%)</th>
-                <th scope="col">Únicos</th>
-                <th scope="col">Muestra de Valores</th>
-                <th scope="col">Advertencias</th>
+                <th scope="col">{t.profiling.colName}</th>
+                <th scope="col">{t.profiling.colType}</th>
+                <th scope="col">{t.profiling.colSemantic}</th>
+                <th scope="col">{t.profiling.colNulls}</th>
+                <th scope="col">{t.profiling.colUnique}</th>
+                <th scope="col">Sample</th>
+                <th scope="col">Warnings</th>
               </tr>
             </thead>
+
             <tbody>
               {profiling.columns.map((col) => (
                 <tr key={col.column_name}>

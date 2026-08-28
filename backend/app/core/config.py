@@ -3,9 +3,10 @@ import os
 from pathlib import Path
 from typing import List
 
+
 class Settings:
     PROJECT_NAME: str = "DataFlow AI"
-    VERSION: str = "1.2.4"
+    VERSION: str = "1.3.0"
     API_V1_STR: str = "/api/v1"
 
     # File limits
@@ -35,5 +36,6 @@ class Settings:
         configured = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
         self.BACKEND_CORS_ORIGINS: List[str] = configured or self.DEFAULT_CORS_ORIGINS
         os.makedirs(self.UPLOAD_DIR, exist_ok=True)
+
 
 settings = Settings()

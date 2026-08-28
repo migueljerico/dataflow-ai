@@ -1,24 +1,21 @@
-import os
-import shutil
 import uuid
-import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, UploadFile, File, status, HTTPException, Query
-from fastapi.responses import FileResponse
+from typing import List, Optional
 
+import pandas as pd
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
 from app.models.dataset import (
-    DatasetMetadata, 
-    DatasetFromUrlRequest, 
-    FileTypeEnum, 
-    ProcessingStateEnum,
+    DatasetFromUrlRequest,
+    DatasetMetadata,
+    FileTypeEnum,
+    OpenDataSearchResponse,
     OpenDatasetItem,
-    OpenDataSearchResponse
+    ProcessingStateEnum,
 )
-from app.services.dataset_service import DatasetService, DATASET_CACHE
+from app.services.dataset_service import DATASET_CACHE, DatasetService
 from app.services.open_data_service import OpenDataService
+from fastapi import APIRouter, File, Query, UploadFile, status
 
 router = APIRouter()
 
@@ -28,23 +25,24 @@ SAMPLES_MAP = {
         "title": "Contact Center & Operaciones",
         "filename": "contact_center_corrupted.csv",
         "description": "KPIs operativos (AHT, Conversión, Score de Calidad, Absentismo) con fechas mezcladas y outliers.",
-        "icon": "PhoneCall"
+        "icon": "PhoneCall",
     },
     "sales": {
         "id": "sales",
         "title": "Ventas & Comercial",
         "filename": "sales_sample_corrupted.csv",
         "description": "Transacciones comerciales con precios (€, $), fechas multi-formato, clientes en mayúsculas y duplicados.",
-        "icon": "ShoppingCart"
+        "icon": "ShoppingCart",
     },
     "people_analytics": {
         "id": "people_analytics",
         "title": "People Analytics & RRHH",
         "filename": "people_analytics_corrupted.csv",
         "description": "Plantilla, productividad, salarios y absentismo con fechas no estándar y anomalías de rango.",
-        "icon": "Users"
-    }
+        "icon": "Users",
+    },
 }
+
 
 @router.get("/samples")
 async def list_sample_datasets():
@@ -52,6 +50,7 @@ async def list_sample_datasets():
     Listar los datasets de demostración preconfigurados para pruebas rápidas con 1 clic.
     """
     return list(SAMPLES_MAP.values())
+
 
 @router.post("/samples/{sample_id}/load", response_model=DatasetMetadata, status_code=status.HTTP_201_CREATED)
 async def load_sample_dataset(sample_id: str):
@@ -62,12 +61,12 @@ async def load_sample_dataset(sample_id: str):
         raise FunctionalException(
             message=f"Dataset demo '{sample_id}' no encontrado. Opciones: {list(SAMPLES_MAP.keys())}",
             code="SAMPLE_NOT_FOUND",
-            status_code=404
+            status_code=404,
         )
 
     sample_info = SAMPLES_MAP[sample_id]
     sample_filename = sample_info["filename"]
-    
+
     candidate_paths = [
         Path(__file__).resolve().parents[4] / "data_samples" / sample_filename,
         Path(__file__).resolve().parents[3] / "data_samples" / sample_filename,
@@ -81,7 +80,7 @@ async def load_sample_dataset(sample_id: str):
         raise FunctionalException(
             message=f"El archivo demo '{sample_filename}' no existe en el servidor.",
             code="SAMPLE_FILE_MISSING",
-            status_code=404
+            status_code=404,
         )
 
     with open(sample_path, "rb") as f:
@@ -100,7 +99,9 @@ async def load_sample_dataset(sample_id: str):
 
     warnings: List[str] = []
     if empty_dropped > 0:
-        warnings.append(f"Se detectaron y eliminaron {empty_dropped} fila(s) completamente vacías o malformadas (,,,,,,,).")
+        warnings.append(
+            f"Se detectaron y eliminaron {empty_dropped} fila(s) completamente vacías o malformadas (,,,,,,,)."
+        )
         df.to_csv(saved_path, index=False, encoding="utf-8")
 
     row_count, col_count = df.shape
@@ -113,11 +114,12 @@ async def load_sample_dataset(sample_id: str):
         column_count=col_count,
         columns=[str(c) for c in df.columns],
         status=ProcessingStateEnum.VALIDATED,
-        warnings=warnings
+        warnings=warnings,
     )
 
     DATASET_CACHE[dataset_id] = metadata
     return metadata
+
 
 @router.post("/upload", response_model=DatasetMetadata, status_code=status.HTTP_201_CREATED)
 async def upload_dataset(file: UploadFile = File(...)):
@@ -125,6 +127,7 @@ async def upload_dataset(file: UploadFile = File(...)):
     Subir un dataset empresarial (CSV o XLSX) para validación de formato y estructura.
     """
     return await DatasetService.process_uploaded_file(file)
+
 
 @router.post("/from-url", response_model=DatasetMetadata, status_code=status.HTTP_201_CREATED)
 async def load_dataset_from_url(payload: DatasetFromUrlRequest):
@@ -135,6 +138,7 @@ async def load_dataset_from_url(payload: DatasetFromUrlRequest):
     """
     return await DatasetService.download_and_process_url(str(payload.url))
 
+
 @router.get("/open-data/featured", response_model=List[OpenDatasetItem])
 async def get_featured_open_datasets():
     """
@@ -142,12 +146,14 @@ async def get_featured_open_datasets():
     """
     return OpenDataService.get_featured_datasets()
 
+
 @router.get("/open-data/search", response_model=OpenDataSearchResponse)
 async def search_open_datasets(query: Optional[str] = None, limit: int = Query(10, ge=1, le=50)):
     """
     Buscar datasets públicos en portales Open Data (estándar CKAN y catálogo curado).
     """
     return await OpenDataService.search_datasets(query=query, limit=limit)
+
 
 @router.get("/{dataset_id}", response_model=DatasetMetadata)
 async def get_dataset(dataset_id: str):

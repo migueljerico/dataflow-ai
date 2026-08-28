@@ -1,12 +1,26 @@
-from typing import Dict, Optional, Any
-from app.transformations.base import BaseTransformation
-from app.transformations.text_ops import TrimTextTransformation, NormalizeCaseTransformation, NormalizeCategoryTransformation
-from app.transformations.datetime_ops import ConvertDatetimeTransformation
-from app.transformations.numeric_ops import ConvertNumericTransformation, RoundNumericTransformation, ClampRangeTransformation
-from app.transformations.missing_ops import (
-    FillMissingTransformation, RemoveDuplicatesTransformation, RenameColumnTransformation, DropColumnTransformation
-)
+from typing import Any, Dict, Optional
+
+import pandas as pd
 from app.core.exceptions import FunctionalException
+from app.transformations.base import BaseTransformation
+from app.transformations.datetime_ops import ConvertDatetimeTransformation
+from app.transformations.missing_ops import (
+    DropColumnTransformation,
+    FillMissingTransformation,
+    RemoveDuplicatesTransformation,
+    RenameColumnTransformation,
+)
+from app.transformations.numeric_ops import (
+    ClampRangeTransformation,
+    ConvertNumericTransformation,
+    RoundNumericTransformation,
+)
+from app.transformations.text_ops import (
+    NormalizeCaseTransformation,
+    NormalizeCategoryTransformation,
+    TrimTextTransformation,
+)
+
 
 class TransformationRegistry:
     _registry: Dict[str, BaseTransformation] = {
@@ -29,7 +43,7 @@ class TransformationRegistry:
             raise FunctionalException(
                 message=f"La operación de transformación '{operation_name}' no está contemplada en el catálogo permitido.",
                 code="UNREGISTERED_OPERATION",
-                details={"allowed_operations": list(cls._registry.keys())}
+                details={"allowed_operations": list(cls._registry.keys())},
             )
         return cls._registry[operation_name]
 
@@ -40,3 +54,28 @@ class TransformationRegistry:
     @classmethod
     def list_all(cls) -> Dict[str, str]:
         return {name: t.description for name, t in cls._registry.items()}
+
+    @classmethod
+    def get_catalog_manifest(cls) -> Dict[str, Dict[str, Any]]:
+        """Retorna el catálogo completo con schemas declarativos de cada operación."""
+        return {name: t.get_manifest() for name, t in cls._registry.items()}
+
+    @classmethod
+    def validate_operation_and_parameters(
+        cls, operation_name: str, df: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> BaseTransformation:
+        """Valida que la operación exista en el Registry y que sus parámetros cumplan el contrato."""
+        transformation = cls.get_transformation(operation_name)
+        # Validar que no haya parámetros no contemplados si la transformación define allowed_parameters
+        if transformation.allowed_parameters:
+            for param_key in parameters.keys():
+                if param_key.startswith("_"):  # Parámetros internos de auditoría omitidos
+                    continue
+                if param_key not in transformation.allowed_parameters:
+                    raise FunctionalException(
+                        message=f"Parámetro no permitido '{param_key}' para la operación '{operation_name}'.",
+                        code="UNAUTHORIZED_PARAMETER",
+                        details={"allowed_parameters": transformation.allowed_parameters},
+                    )
+        transformation.validate_parameters(df, parameters)
+        return transformation

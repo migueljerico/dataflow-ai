@@ -1,8 +1,9 @@
-from fastapi import APIRouter
 from app.models.analytics import ExecutiveAnalyticsReport
 from app.services.analytics_service import AnalyticsService
+from fastapi import APIRouter
 
 router = APIRouter()
+
 
 @router.get("/{run_id}", response_model=ExecutiveAnalyticsReport)
 async def get_business_analytics(run_id: str):

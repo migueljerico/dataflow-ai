@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, Play, ShieldAlert, Sliders, Sparkles } from 'lucide-react';
 import { TransformationPlan, TransformationStep } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   plan: TransformationPlan;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) => {
+  const { t } = useLanguage();
   const [steps, setSteps] = useState<TransformationStep[]>(plan.steps);
   useEffect(() => { setSteps(plan.steps); }, [plan.steps]);
 
@@ -25,10 +27,10 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
       <div className="card-header">
         <div>
           <h2 className="card-title">
-            <Sliders size={20} className="text-primary" /> Revisión Humana del Plan ETL (Human-in-the-Loop)
+            <Sliders size={20} className="text-primary" /> {t.plan.title}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>
-            Origen: <strong style={{ color: 'var(--primary)' }}>{plan.source}</strong> | Resumen: {plan.summary}
+            {t.plan.source}: <strong style={{ color: 'var(--primary)' }}>{plan.source}</strong> | {t.plan.summary}: {plan.summary}
           </p>
         </div>
         <button
@@ -36,9 +38,10 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
           disabled={executing || approvedCount === 0}
           onClick={() => onExecutePlan(steps)}
         >
-          <Play size={16} /> {executing ? 'Ejecutando en Python...' : `Ejecutar Plan (${approvedCount} Pasos)`}
+          <Play size={16} /> {executing ? t.plan.executingBtn : `${t.plan.executeBtn} (${approvedCount})`}
         </button>
       </div>
+
 
       {plan.warnings && plan.warnings.length > 0 && (
         <div
@@ -98,7 +101,7 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                     style={{ padding: '6px 12px', fontSize: '0.8rem' }}
                     onClick={() => toggleStepStatus(step.step_id, 'approved')}
                   >
-                    <CheckCircle2 size={14} /> Aprobar
+                    <CheckCircle2 size={14} /> {t.plan.approveBtn}
                   </button>
                   <button
                     className={`btn ${!isApproved ? 'btn-outline' : 'btn-outline'}`}
@@ -110,19 +113,19 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                     }}
                     onClick={() => toggleStepStatus(step.step_id, 'rejected')}
                   >
-                    <XCircle size={14} /> Rechazar
+                    <XCircle size={14} /> {t.plan.rejectBtn}
                   </button>
                 </div>
               </div>
 
               <p style={{ fontSize: '0.875rem', color: 'var(--text-main)', margin: '8px 0', lineHeight: 1.5 }}>
-                <strong>Motivo:</strong> {step.reason}
+                <strong>{t.plan.reason}:</strong> {step.reason}
               </p>
 
               <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap', marginTop: '8px' }}>
-                <span>Confianza IA/Reglas: {(step.confidence * 100).toFixed(0)}%</span>
-                <span>Filas estimadas: {step.affected_rows_estimate}</span>
-                <span style={{ wordBreak: 'break-word' }}>Parámetros: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
+                <span>{t.plan.confidence}: {(step.confidence * 100).toFixed(0)}%</span>
+                <span>{t.plan.estimatedRows}: {step.affected_rows_estimate}</span>
+                <span style={{ wordBreak: 'break-word' }}>{t.plan.parameters}: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
               </div>
             </div>
           );
@@ -131,3 +134,4 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
     </div>
   );
 };
+

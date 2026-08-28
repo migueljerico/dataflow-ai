@@ -1,17 +1,18 @@
 import re
-import pandas as pd
-import numpy as np
+import warnings
 from datetime import datetime, timezone
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List
 
+import numpy as np
+import pandas as pd
+
+from app.core.number_parsing import MISSING_MARKERS, to_numeric_series
 from app.models.dataset import ProcessingStateEnum
-from app.models.profiling import (
-    ProfilingReport, ColumnProfile, ColumnTypeEnum, SemanticHintEnum
-)
-from app.core.number_parsing import to_numeric_series, MISSING_MARKERS
+from app.models.profiling import ColumnProfile, ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.services.dataset_service import DatasetService
 
 PROFILING_CACHE: Dict[str, ProfilingReport] = {}
+
 
 def _safe_float(val: Any) -> Any:
     if val is None or pd.isna(val):
@@ -21,6 +22,7 @@ def _safe_float(val: Any) -> Any:
         return None if np.isnan(f) or np.isinf(f) else f
     except (ValueError, TypeError):
         return None
+
 
 def _safe_sample_values(sample_vals: List[Any]) -> List[Any]:
     cleaned = []
@@ -38,47 +40,93 @@ def _safe_sample_values(sample_vals: List[Any]) -> List[Any]:
             cleaned.append(str(v))
     return cleaned
 
-import warnings
 
 class ProfilerService:
+
     @staticmethod
     def _is_id_or_code(col_name: str, non_null_str: pd.Series) -> bool:
         col_lower = col_name.lower().strip()
 
         # Si el nombre de la columna es explícitamente una fecha (ej. 'fecha', 'fecha_factura', 'date_created'), NO es ID
         is_date_named = (
-            col_lower.startswith(("fecha", "date", "fec_")) or
-            col_lower.endswith(("_fecha", "_date")) or
-            col_lower in ["fecha", "date", "fec", "created_at", "updated_at", "timestamp"]
+            col_lower.startswith(("fecha", "date", "fec_"))
+            or col_lower.endswith(("_fecha", "_date"))
+            or col_lower in ["fecha", "date", "fec", "created_at", "updated_at", "timestamp"]
         )
         if is_date_named and not col_lower.startswith(("id_", "cod_", "pk_", "fk_")):
             return False
 
         # 1. Nombres y prefijos/sufijos explícitos de identificador o código
         if (
-            col_lower.startswith(("id", "cod", "ref", "num_", "pk_", "fk_", "cpostal", "cp_")) or
-            col_lower.endswith(("_id", "_cod", "_code", "_ref", "_num", "_pk", "_fk", "_ine", "_cp")) or
-            col_lower in ["id", "cod", "code", "codigo", "ref", "referencia", "cpostal", "cp", "cif", "nif", "nie", "dni", "iban", "sku", "ean", "matricula", "tramo", "distrito", "seccion", "num_factura", "id_factura", "cod_factura", "num_pedido", "id_pedido", "cod_pedido"] or
-            any(k in col_lower for k in [
-                "codigo", "code", "cpostal", "cod_postal", "codigo_postal", "cod_ine", 
-                "seccion_censal", "identificador", "cif", "nif", "nie", "dni", "iban", 
-                "sku", "ean", "matricula", "expediente", "tramo", "tracking"
-            ])
+            col_lower.startswith(("id", "cod", "ref", "num_", "pk_", "fk_", "cpostal", "cp_"))
+            or col_lower.endswith(("_id", "_cod", "_code", "_ref", "_num", "_pk", "_fk", "_ine", "_cp"))
+            or col_lower
+            in [
+                "id",
+                "cod",
+                "code",
+                "codigo",
+                "ref",
+                "referencia",
+                "cpostal",
+                "cp",
+                "cif",
+                "nif",
+                "nie",
+                "dni",
+                "iban",
+                "sku",
+                "ean",
+                "matricula",
+                "tramo",
+                "distrito",
+                "seccion",
+                "num_factura",
+                "id_factura",
+                "cod_factura",
+                "num_pedido",
+                "id_pedido",
+                "cod_pedido",
+            ]
+            or any(
+                k in col_lower
+                for k in [
+                    "codigo",
+                    "code",
+                    "cpostal",
+                    "cod_postal",
+                    "codigo_postal",
+                    "cod_ine",
+                    "seccion_censal",
+                    "identificador",
+                    "cif",
+                    "nif",
+                    "nie",
+                    "dni",
+                    "iban",
+                    "sku",
+                    "ean",
+                    "matricula",
+                    "expediente",
+                    "tramo",
+                    "tracking",
+                ]
+            )
         ):
             return True
 
         # 2. Muestras con ceros a la izquierda en cadenas numéricas (ej. códigos postales '08001' o INE '01004')
         sample = non_null_str.head(30)
         has_leading_zeros = any(
-            val.strip().startswith("0") and len(val.strip()) > 1 and val.strip().isdigit()
-            for val in sample
+            val.strip().startswith("0") and len(val.strip()) > 1 and val.strip().isdigit() for val in sample
         )
         if has_leading_zeros:
             return True
 
         # 3. Patrones alfanuméricos típicos de códigos (deben contener al menos una letra alfabética para no confundir con fechas tipo '2026-01-05')
         has_alphanumeric_code = any(
-            bool(re.search(r"[A-Za-z]", val.strip())) and bool(re.match(r"^[A-Za-z0-9]{1,8}[-_][A-Za-z0-9]{1,}$", val.strip()))
+            bool(re.search(r"[A-Za-z]", val.strip()))
+            and bool(re.match(r"^[A-Za-z0-9]{1,8}[-_][A-Za-z0-9]{1,}$", val.strip()))
             for val in sample
         )
         if has_alphanumeric_code:
@@ -112,15 +160,33 @@ class ProfilerService:
             return SemanticHintEnum.PERCENTAGE
 
         has_explicit_pct_name = (
-            col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score")) or
-            col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_")) or
-            col_lower in ["%", "pct", "porcentaje", "ctr", "cvr", "roi", "score", "score_calidad", "tasa_conversion", "conversion_rate", "churn_rate", "descuento_pct", "incidencias_pct"]
+            col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score"))
+            or col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_"))
+            or col_lower
+            in [
+                "%",
+                "pct",
+                "porcentaje",
+                "ctr",
+                "cvr",
+                "roi",
+                "score",
+                "score_calidad",
+                "tasa_conversion",
+                "conversion_rate",
+                "churn_rate",
+                "descuento_pct",
+                "incidencias_pct",
+            ]
         )
         if has_explicit_pct_name:
             return SemanticHintEnum.PERCENTAGE
 
         # 5. Currency / Dinero
-        if any(keyword in col_lower for keyword in ["precio", "importe", "coste", "salario", "sueldo", "monto", "price", "amount", "revenue"]):
+        if any(
+            keyword in col_lower
+            for keyword in ["precio", "importe", "coste", "salario", "sueldo", "monto", "price", "amount", "revenue"]
+        ):
             return SemanticHintEnum.CURRENCY
         if any(symbol in val for val in non_null_str.head(20) for symbol in ["€", "$", "USD", "EUR"]):
             return SemanticHintEnum.CURRENCY
@@ -132,11 +198,28 @@ class ProfilerService:
             return SemanticHintEnum.DATE
 
         # 7. Name / Entity
-        if any(k in col_lower for k in ["nombre", "name", "cliente", "empleado", "agente", "comercial", "contacto", "persona", "usuario"]):
+        if any(
+            k in col_lower
+            for k in ["nombre", "name", "cliente", "empleado", "agente", "comercial", "contacto", "persona", "usuario"]
+        ):
             return SemanticHintEnum.NAME
 
         # 8. Location
-        if any(k in col_lower for k in ["pais", "ciudad", "provincia", "region", "location", "country", "city", "municipio", "comunidad", "barrio"]):
+        if any(
+            k in col_lower
+            for k in [
+                "pais",
+                "ciudad",
+                "provincia",
+                "region",
+                "location",
+                "country",
+                "city",
+                "municipio",
+                "comunidad",
+                "barrio",
+            ]
+        ):
             return SemanticHintEnum.LOCATION
 
         return SemanticHintEnum.UNKNOWN
@@ -220,11 +303,13 @@ class ProfilerService:
         global_warnings: List[str] = []
 
         if duplicates_count > 0:
-            global_warnings.append(f"Se detectaron {duplicates_count} filas exactas duplicadas ({duplicates_pct}% del dataset).")
+            global_warnings.append(
+                f"Se detectaron {duplicates_count} filas exactas duplicadas ({duplicates_pct}% del dataset)."
+            )
 
         for col_name in df.columns:
             series = df[col_name]
-            clean_series = series.replace(r'^\s*$', np.nan, regex=True)
+            clean_series = series.replace(r"^\s*$", np.nan, regex=True)
             null_count = int(clean_series.isna().sum())
             null_pct = round((null_count / row_count) * 100, 2) if row_count > 0 else 0.0
             unique_count = int(clean_series.nunique())
@@ -267,7 +352,7 @@ class ProfilerService:
                 mean=mean_val,
                 median=median_val,
                 std=std_val,
-                warnings=col_warnings
+                warnings=col_warnings,
             )
             column_profiles.append(profile)
 
@@ -280,7 +365,7 @@ class ProfilerService:
             memory_estimate_bytes=memory_bytes,
             columns=column_profiles,
             global_warnings=global_warnings,
-            generated_at=datetime.now(timezone.utc)
+            generated_at=datetime.now(timezone.utc),
         )
 
         metadata.status = ProcessingStateEnum.PROFILED

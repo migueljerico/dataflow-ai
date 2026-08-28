@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Database, Sparkles, ShieldCheck, Key, Smartphone } from 'lucide-react';
 import { ApiKeyModal } from './ApiKeyModal';
 import { InstallPwaModal } from './InstallPwaModal';
+import { LanguageSelector } from './LanguageSelector';
+import { useLanguage } from '../context/LanguageContext';
 import { getApiKey } from '../utils/security';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -10,6 +12,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const Header: React.FC = () => {
+  const { t } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -64,12 +67,14 @@ export const Header: React.FC = () => {
             <Database size={22} aria-hidden="true" />
           </div>
           <div>
-            <h1 className="brand-title">DataFlow AI</h1>
-            <p className="brand-tagline">From raw business data to clean, trusted and actionable insights</p>
+            <h1 className="brand-title">{t.brand.title}</h1>
+            <p className="brand-tagline">{t.brand.tagline}</p>
           </div>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <LanguageSelector />
+
           {!isStandalone && (
             <button
               onClick={handleInstallClick}
@@ -87,10 +92,10 @@ export const Header: React.FC = () => {
                 borderRadius: '6px',
                 cursor: 'pointer'
               }}
-              title="Instala DataFlow AI en tu móvil o escritorio"
+              title={t.header.installTitle}
             >
               <Smartphone size={14} aria-hidden="true" />
-              <span>Instalar App</span>
+              <span>{t.header.installApp}</span>
             </button>
           )}
 
@@ -110,24 +115,25 @@ export const Header: React.FC = () => {
               borderRadius: '6px',
               cursor: 'pointer'
             }}
-            title="Configura tu API Key de Google Gemini para usar la IA Copilot"
+            title={t.header.apiKeyTitle}
           >
             <Key size={14} aria-hidden="true" style={{ color: hasApiKey ? 'var(--accent-emerald)' : 'var(--primary)' }} />
             {hasApiKey ? (
-              <span>Gemini: <strong style={{ color: 'var(--accent-emerald)' }}>Activo</strong></span>
+              <span><strong style={{ color: 'var(--accent-emerald)' }}>{t.header.apiKeyActive}</strong></span>
             ) : (
-              <span>API Key</span>
+              <span>{t.header.apiKey}</span>
             )}
           </button>
 
-          <span className="badge badge-emerald hide-on-mobile" title="Cumplimiento estricto de privacidad: procesamiento efímero y minimización de datos">
-            <ShieldCheck size={13} /> Privacidad RGPD
+          <span className="badge badge-emerald hide-on-mobile" title={t.header.gdprTitle}>
+            <ShieldCheck size={13} /> {t.header.gdprPrivacy}
           </span>
           <span className="badge badge-primary hide-on-mobile">
-            <Sparkles size={12} /> Copiloto ETL
+            <Sparkles size={12} /> {t.header.etlCopilot}
           </span>
         </div>
       </header>
+
 
       <ApiKeyModal
         isOpen={isModalOpen}

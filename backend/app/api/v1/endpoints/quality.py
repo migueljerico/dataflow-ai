@@ -1,8 +1,9 @@
-from fastapi import APIRouter
 from app.models.quality import QualityReport
 from app.services.quality_service import QualityService
+from fastapi import APIRouter
 
 router = APIRouter()
+
 
 @router.get("/{dataset_id}/quality", response_model=QualityReport)
 async def get_quality(dataset_id: str):

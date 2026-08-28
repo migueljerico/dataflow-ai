@@ -1,10 +1,11 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.2.4  
-**Fecha de actualización:** 27 de agosto de 2026  
+**Versión:** 1.3.0  
+**Fecha de actualización:** 28 de agosto de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
-**Stack:** Python 3.11 · FastAPI · Pandas · React 18 · TypeScript · Vite · Docker
+**Stack:** Python 3.11 · FastAPI · Pandas · React 19 · TypeScript · Vite · Docker
+
 
 ---
 

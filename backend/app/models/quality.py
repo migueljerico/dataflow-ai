@@ -1,7 +1,9 @@
-from enum import Enum
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from enum import Enum
+from typing import Any, List, Optional
+
 from pydantic import BaseModel, Field
+
 
 class QualityDimensionEnum(str, Enum):
     COMPLETENESS = "completeness"
@@ -10,11 +12,13 @@ class QualityDimensionEnum(str, Enum):
     VALIDITY = "validity"
     INTEGRITY = "integrity"
 
+
 class SeverityEnum(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
 
 class QualityIssue(BaseModel):
     issue_id: str = Field(..., description="ID único de la anomalía de calidad")
@@ -27,11 +31,13 @@ class QualityIssue(BaseModel):
     evidence_sample: List[Any] = Field(default_factory=list, description="Muestra de valores con error")
     suggested_action: str = Field(..., description="Transformación o acción sugerida")
 
+
 class DimensionBreakdown(BaseModel):
     score: float = Field(..., description="Puntuación de 0 a 100")
     weight: float = Field(..., description="Ponderación en la fórmula global")
     issues_count: int = Field(..., description="Cantidad de problemas detectados en la dimensión")
     summary: str = Field(..., description="Resumen explícito de la dimensión")
+
 
 class QualityScore(BaseModel):
     overall_score: float = Field(..., description="Quality Score global (0 a 100)")
@@ -41,6 +47,7 @@ class QualityScore(BaseModel):
     uniqueness: DimensionBreakdown
     integrity: DimensionBreakdown
     explanation: str = Field(..., description="Explicación detallada de la puntuación obtenida")
+
 
 class QualityReport(BaseModel):
     dataset_id: str = Field(..., description="ID del dataset")
