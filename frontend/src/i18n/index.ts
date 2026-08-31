@@ -140,6 +140,42 @@ export interface Translations {
     beforeAfterTitle: string;
     cleanedFile: string;
   };
+  analytics: {
+    title: string;
+    subtitle: string;
+    powerBiBadge: string;
+    tabKpis: string;
+    tabClusters: string;
+    tabOutliers: string;
+    executiveSummaryTitle: string;
+    recommendationsTitle: string;
+    segmentationTitle: string;
+    clusterScatterTitle: string;
+    clusterScatterDesc: string;
+    xAxis: string;
+    yAxis: string;
+    clustersLegend: string;
+    clusterProfileTable: string;
+    outlierTitle: string;
+    outlierDesc: string;
+    selectColumn: string;
+    viewModeBoxplot: string;
+    viewModeScatter: string;
+    detectedOutliers: string;
+    outlierStats: {
+      min: string;
+      q1: string;
+      median: string;
+      q3: string;
+      max: string;
+      iqr: string;
+      lowerBound: string;
+      upperBound: string;
+      rate: string;
+    };
+    noClusterData: string;
+    noOutlierData: string;
+  };
   apiKeyModal: {
     title: string;
     desc: string;
@@ -270,6 +306,42 @@ export const translations: Partial<Record<Language, Translations>> = {
       beforeAfterTitle: 'Comparativa de Calidad Antes / Después',
       cleanedFile: 'Fichero limpio generado',
     },
+    analytics: {
+      title: 'Business Analytics & KPIs Ejecutivos',
+      subtitle: 'Métricas de valor calculadas con pandas sobre el dataset depurado para soporte en la toma de decisiones.',
+      powerBiBadge: 'Insights Listos para Power BI',
+      tabKpis: 'KPIs & Resumen Directivo',
+      tabClusters: 'Segmentación de Clusters (Scatter 2D)',
+      tabOutliers: 'Detección de Outliers (Boxplots)',
+      executiveSummaryTitle: 'Resumen Ejecutivo para Dirección',
+      recommendationsTitle: 'Recomendaciones de Negocio',
+      segmentationTitle: 'Segmentación / Distribución Principal',
+      clusterScatterTitle: 'Diagrama de Dispersión 2D de Clusters',
+      clusterScatterDesc: 'Visualización interactiva de observaciones segmentadas por similitud euclidiana y centroides calculados.',
+      xAxis: 'Eje X (Horizontal)',
+      yAxis: 'Eje Y (Vertical)',
+      clustersLegend: 'Grupos / Clusters',
+      clusterProfileTable: 'Perfil y Medias por Cluster',
+      outlierTitle: 'Distribución y Detección de Valores Atípicos (Outliers)',
+      outlierDesc: 'Análisis estadístico basado en Rango Intercuartílico (IQR) y Z-Score sobre variables numéricas.',
+      selectColumn: 'Variable a analizar:',
+      viewModeBoxplot: 'Diagrama Box Plot',
+      viewModeScatter: 'Gráfico de Dispersión',
+      detectedOutliers: 'Outliers Detectados',
+      outlierStats: {
+        min: 'Mínimo',
+        q1: 'Cuartil Q1 (25%)',
+        median: 'Mediana (Q2)',
+        q3: 'Cuartil Q3 (75%)',
+        max: 'Máximo',
+        iqr: 'Rango IQR',
+        lowerBound: 'Límite Inferior',
+        upperBound: 'Límite Superior',
+        rate: 'Tasa Anomalías',
+      },
+      noClusterData: 'No hay datos numéricos suficientes para generar el gráfico de clusters.',
+      noOutlierData: 'No se detectaron variables numéricas para calcular diagramas de outliers.',
+    },
     apiKeyModal: {
       title: 'Configuración de Google Gemini API Key',
       desc: 'Introduce tu clave de API personal (BYOK) para habilitar el Copiloto IA. Tu clave se almacena de forma segura en tu navegador y nunca se guarda en el servidor.',
@@ -397,6 +469,42 @@ export const translations: Partial<Record<Language, Translations>> = {
       businessInsightsTitle: 'Business Analytics & Calculated KPIs',
       beforeAfterTitle: 'Quality Comparison Before / After',
       cleanedFile: 'Generated clean file',
+    },
+    analytics: {
+      title: 'Business Analytics & Executive KPIs',
+      subtitle: 'Value metrics calculated with pandas over the clean dataset to support decision making.',
+      powerBiBadge: 'Power BI Ready Insights',
+      tabKpis: 'KPIs & Executive Summary',
+      tabClusters: 'Cluster Segmentation (2D Scatter)',
+      tabOutliers: 'Outlier Detection (Boxplots)',
+      executiveSummaryTitle: 'Executive Summary for Leadership',
+      recommendationsTitle: 'Business Recommendations',
+      segmentationTitle: 'Key Segmentation / Distribution',
+      clusterScatterTitle: '2D Cluster Scatter Plot',
+      clusterScatterDesc: 'Interactive visualization of records clustered by Euclidean similarity with calculated centroids.',
+      xAxis: 'X-Axis (Horizontal)',
+      yAxis: 'Y-Axis (Vertical)',
+      clustersLegend: 'Groups / Clusters',
+      clusterProfileTable: 'Cluster Profile & Feature Averages',
+      outlierTitle: 'Outlier Detection & Distribution (Boxplots)',
+      outlierDesc: 'Statistical analysis based on Interquartile Range (IQR) and Z-Score across numeric variables.',
+      selectColumn: 'Variable to analyze:',
+      viewModeBoxplot: 'Box Plot Chart',
+      viewModeScatter: 'Scatter Strip Chart',
+      detectedOutliers: 'Detected Outliers',
+      outlierStats: {
+        min: 'Minimum',
+        q1: 'Quartile Q1 (25%)',
+        median: 'Median (Q2)',
+        q3: 'Quartile Q3 (75%)',
+        max: 'Maximum',
+        iqr: 'IQR Range',
+        lowerBound: 'Lower Bound',
+        upperBound: 'Upper Bound',
+        rate: 'Anomaly Rate',
+      },
+      noClusterData: 'Not enough numeric variables to generate cluster visualization.',
+      noOutlierData: 'No numeric variables found to calculate outlier boxplots.',
     },
     apiKeyModal: {
       title: 'Google Gemini API Key Configuration',

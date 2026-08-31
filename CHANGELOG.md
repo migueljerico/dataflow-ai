@@ -4,6 +4,33 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.6.0] — 2026-08-31
+
+### 🌌 Visualización Gráfica de Clusters (Scatter 2D) y Diagramas Boxplot de Outliers en Business Analytics
+
+> **Visualización Analítica Avanzada e Interactiva:** Incorporación de capacidades completas de exploración visual de datos en el módulo de **Business Analytics**, integrando diagramas de dispersión 2D de clusters interactivos y diagramas de caja (Boxplots) y dispersión de outliers. El sistema calcula de forma determinista en Python/Pandas los centroides, perfiles de variables y el resumen de 5 números estadísticos (Min, Q1, Mediana, Q3, Max, Bigotes IQR y Media), renderizando gráficos nativos en SVG accesibles, responsivos y con tooltips interactivos.
+
+#### 🌌 Backend: Motor Analítico de Clusters y Outliers
+- **Modelos Pydantic de Visualización (`models/analytics.py`):** Definición de `ClusterPoint`, `ClusterSummaryItem`, `ClusterVisualization`, `BoxPlotData`, `OutlierScatterPoint` y `OutlierVisualization`, extendiendo `ExecutiveAnalyticsReport`.
+- **Cálculo de Clusters (`AnalyticsService._build_cluster_visualization`):** Detección automática o cálculo de segmentación K-Means determinista, extracción de centroides, cálculo de medias por característica y muestreo balanceado de coordenadas 2D.
+- **Estadísticas de Outliers (`AnalyticsService._build_outlier_visualization`):** Generación del resumen de 5 números por variable numérica, cálculo de límites superior/inferior ($Q_1 - 1.5\text{IQR}$, $Q_3 + 1.5\text{IQR}$), detección de puntos atípicos y correlación con banderas booleanas `_is_outlier`.
+- **Cobertura de Tests (`test_analytics.py`):** Nuevos tests unitarios y de integración para validar la consistencia matemática de los diagramas de caja, la estructura de clusters y la persistencia de transformaciones.
+
+#### 📊 Frontend: Interfaz por Pestañas y Renderizado SVG Nativo
+- **Navegación por Pestañas en `BusinessInsights.tsx`:** 
+  - **KPIs & Resumen Directivo:** Métricas clave, resumen narrativo para dirección, desglose por categorías y recomendaciones estratégicas.
+  - **Segmentación de Clusters (Scatter 2D):** Gráfico de dispersión 2D interactivo con coordenadas continuas, paleta de colores accesible para hasta 8 clusters, visualización de centroides, filtros interactivos por grupo, tooltips flotantes al pasar el cursor y tabla de medias por característica.
+  - **Detección de Outliers (Boxplots & Dispersión):** Selector de variables numéricas, diagrama Box Plot con cajas IQR, líneas de mediana/media, bigotes y puntos extremos anómalos destacados en color rosa, con modo conmutable a gráfico de dispersión por filas y bandas de tolerancia.
+- **Internacionalización (i18n):** Traducción completa al español e inglés de todas las etiquetas, descripciones, métricas y controles visuales.
+- **Suite de Pruebas Frontend:** 4 nuevos tests exhaustivos en `BusinessInsights.test.tsx` verificando renderizado de pestañas, interactividad, selectores y conmutación de vistas (30 tests totales en Vitest).
+
+#### 🧪 Testing y Verificación Integral (159 Tests Totales)
+- **129 Tests Backend + 30 Tests Frontend:** 100% pasando sin errores.
+- **Linters y SAST Verificados:** Ruff (0 errores), Black (0 diffs), Bandit (0 vulnerabilidades), TypeScript estricto (0 errores), Vite build verificado.
+- **Atribución del Modelo:** Gemini 3.7 Flash (High).
+
+---
+
 ## [1.5.0] — 2026-08-31
 
 ### 🚩 Selector de Idiomas Vectorial (13 Banderas SVG) y Transformaciones Avanzadas (Outliers IQR/Z-Score & Clustering)

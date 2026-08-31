@@ -171,6 +171,67 @@ export interface CategoryDistribution {
   secondary_metric_value?: number;
 }
 
+export interface ClusterPoint {
+  row_index: number;
+  x: number;
+  y: number;
+  cluster_id: number;
+  label?: string;
+}
+
+export interface ClusterSummaryItem {
+  cluster_id: number;
+  label: string;
+  count: number;
+  percentage: number;
+  center_x?: number;
+  center_y?: number;
+  feature_averages: Record<string, number>;
+}
+
+export interface ClusterVisualization {
+  cluster_column: string;
+  x_column: string;
+  y_column: string;
+  available_numeric_columns: string[];
+  total_points: number;
+  clusters: ClusterSummaryItem[];
+  points: ClusterPoint[];
+}
+
+export interface BoxPlotData {
+  column: string;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  lower_whisker: number;
+  upper_whisker: number;
+  iqr: number;
+  mean: number;
+  std: number;
+  outliers_count: number;
+  outlier_percentage: number;
+  sample_outliers: number[];
+}
+
+export interface OutlierScatterPoint {
+  row_index: number;
+  x_value: number;
+  y_value: number;
+  is_outlier: boolean;
+  label?: string;
+}
+
+export interface OutlierVisualization {
+  columns: BoxPlotData[];
+  active_column: string;
+  scatter_points?: OutlierScatterPoint[];
+  total_outliers_detected: number;
+  detection_method: string;
+}
+
 export interface ExecutiveAnalyticsReport {
   run_id: string;
   dataset_name: string;
@@ -179,6 +240,8 @@ export interface ExecutiveAnalyticsReport {
   executive_summary: string;
   strategic_recommendations: string[];
   category_breakdown?: CategoryDistribution[];
+  cluster_visualization?: ClusterVisualization;
+  outlier_visualization?: OutlierVisualization;
 }
 
 export interface OpenDatasetItem {

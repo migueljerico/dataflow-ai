@@ -64,3 +64,86 @@ def test_people_analytics_end_to_end_and_business_insights():
     # Absentismo acumulado real con clamp a 0 (3 días vs 0 días con -3 cancelando)
     assert kpis["kpi-total-abs"]["numeric_value"] == 3.0
     assert "3 días" in kpis["kpi-total-abs"]["value"]
+
+    # 5. Validar Visualización de Clusters
+    assert analytics_data["cluster_visualization"] is not None
+    cluster_viz = analytics_data["cluster_visualization"]
+    assert cluster_viz["total_points"] == 6
+    assert len(cluster_viz["clusters"]) > 0
+    assert len(cluster_viz["points"]) == 6
+    assert cluster_viz["x_column"] in cluster_viz["available_numeric_columns"]
+    assert cluster_viz["y_column"] in cluster_viz["available_numeric_columns"]
+
+    # 6. Validar Visualización de Outliers (Boxplots)
+    assert analytics_data["outlier_visualization"] is not None
+    outlier_viz = analytics_data["outlier_visualization"]
+    assert len(outlier_viz["columns"]) > 0
+    for box in outlier_viz["columns"]:
+        assert box["min"] <= box["q1"] <= box["median"] <= box["q3"] <= box["max"]
+        assert box["lower_whisker"] <= box["upper_whisker"]
+        assert box["iqr"] >= 0
+    assert len(outlier_viz["scatter_points"]) == 6
+
+
+def test_explicit_kmeans_and_outlier_flag_in_analytics():
+    # 1. Cargar sales sample
+    load_res = client.post("/api/v1/datasets/samples/sales/load")
+    assert load_res.status_code == 201
+    dataset_id = load_res.json()["dataset_id"]
+
+    # 2. Proponer y enriquecer plan con clustering explícito y detección de outliers flag
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    assert plan_res.status_code == 201
+    plan_data = plan_res.json()
+    plan_id = plan_data["plan_id"]
+    steps = plan_data["steps"]
+
+    # Añadir paso explícito de cluster_kmeans
+    steps.append(
+        {
+            "step_id": "step-kmeans-test",
+            "operation": "cluster_kmeans",
+            "column": None,
+            "parameters": {"columns": ["Precio_Unidad", "Cantidad"], "n_clusters": 2, "output_column": "cluster_id"},
+            "reason": "Segmentación comercial por precio y cantidad",
+            "confidence": 0.95,
+            "risk": "low",
+            "affected_rows_estimate": 10,
+            "status": "approved",
+        }
+    )
+
+    # Añadir paso explícito de detect_outliers_iqr con flag
+    steps.append(
+        {
+            "step_id": "step-outliers-flag-test",
+            "operation": "detect_outliers_iqr",
+            "column": "Precio_Unidad",
+            "parameters": {"column": "Precio_Unidad", "multiplier": 1.5, "action": "flag"},
+            "reason": "Marcar outliers de precio con columna booleana",
+            "confidence": 0.95,
+            "risk": "medium",
+            "affected_rows_estimate": 10,
+            "status": "approved",
+        }
+    )
+
+    # 3. Ejecutar
+    approve_res = client.post(f"/api/v1/plans/{plan_id}/approve", json={"steps": steps})
+    assert approve_res.status_code == 200
+    run_id = approve_res.json()["run_id"]
+
+    # 4. Obtener Analytics
+    analytics_res = client.get(f"/api/v1/analytics/{run_id}")
+    assert analytics_res.status_code == 200
+    data = analytics_res.json()
+
+    # Validar cluster_visualization con columna explícita
+    assert data["cluster_visualization"] is not None
+    assert data["cluster_visualization"]["cluster_column"] == "cluster_id"
+    assert len(data["cluster_visualization"]["clusters"]) == 2
+
+    # Validar outlier_visualization
+    assert data["outlier_visualization"] is not None
+    assert any(b["column"] == "Precio_Unidad" for b in data["outlier_visualization"]["columns"])
+

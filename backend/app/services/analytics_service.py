@@ -1,12 +1,23 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from app.core.exceptions import FunctionalException
 from app.core.storage import get_storage
-from app.models.analytics import BusinessKPI, CategoryDistribution, ExecutiveAnalyticsReport
+from app.models.analytics import (
+    BoxPlotData,
+    BusinessKPI,
+    CategoryDistribution,
+    ClusterPoint,
+    ClusterSummaryItem,
+    ClusterVisualization,
+    ExecutiveAnalyticsReport,
+    OutlierScatterPoint,
+    OutlierVisualization,
+)
 from app.services.etl_service import ETLService
+from app.transformations.cluster_ops import _kmeans_numpy
 
 ANALYTICS_CACHE: Dict[str, ExecutiveAnalyticsReport] = {}
 
@@ -352,6 +363,9 @@ class AnalyticsService:
                 "Crear jerarquías dimensionales para profundizar en el análisis por categorías.",
             ]
 
+        cluster_viz = AnalyticsService._build_cluster_visualization(df)
+        outlier_viz = AnalyticsService._build_outlier_visualization(df)
+
         report = ExecutiveAnalyticsReport(
             run_id=run_id,
             dataset_name=run_result.clean_filename,
@@ -360,7 +374,260 @@ class AnalyticsService:
             executive_summary=executive_summary,
             strategic_recommendations=recommendations,
             category_breakdown=breakdown,
+            cluster_visualization=cluster_viz,
+            outlier_visualization=outlier_viz,
         )
 
         ANALYTICS_CACHE[run_id] = report
         return report
+
+    @staticmethod
+    def _build_cluster_visualization(df: pd.DataFrame) -> Optional[ClusterVisualization]:
+        if df.empty or len(df) < 2:
+            return None
+
+        # Identificar columnas numéricas puras
+        num_cols = []
+        for col in df.columns:
+            # Excluir columnas con flag booleana de outliers
+            if col.endswith("_is_outlier"):
+                continue
+            s_num = pd.to_numeric(df[col], errors="coerce")
+            if s_num.dropna().count() >= 2 and s_num.nunique() > 1:
+                num_cols.append(col)
+
+        if not num_cols:
+            return None
+
+        # Buscar si ya existe una columna de cluster
+        cluster_col_name = None
+        for col in df.columns:
+            col_l = col.lower()
+            if col_l in ["cluster_id", "cluster", "cluster_label", "segmento", "cluster_kmeans"] or (
+                "cluster" in col_l and not col_l.endswith("_is_outlier")
+            ):
+                cluster_col_name = col
+                break
+
+        df_copy = df.copy()
+        if cluster_col_name and cluster_col_name in df_copy.columns:
+            try:
+                cluster_series = df_copy[cluster_col_name].astype(int)
+            except Exception:
+                cluster_series = df_copy[cluster_col_name].astype(str)
+                # Mapear a enteros deterministas
+                unique_labels = sorted(cluster_series.unique().tolist())
+                label_map = {lbl: idx for idx, lbl in enumerate(unique_labels)}
+                cluster_series = cluster_series.map(label_map)
+        else:
+            # Si hay al menos 2 columnas numéricas y >= 3 filas, generar segmentación determinista K-Means (K=3)
+            if len(num_cols) >= 2 and len(df_copy) >= 3:
+                k_val = min(3, len(df_copy))
+                feat_matrix = []
+                for c in num_cols:
+                    s_vals = pd.to_numeric(df_copy[c], errors="coerce")
+                    med = float(s_vals.median()) if pd.notna(s_vals.median()) else 0.0
+                    feat_matrix.append(s_vals.fillna(med).values)
+                X = np.column_stack(feat_matrix).astype(np.float64)
+                if X.shape[0] > 1:
+                    means = np.mean(X, axis=0)
+                    stds = np.std(X, axis=0, ddof=0)
+                    stds[stds == 0] = 1.0
+                    X = (X - means) / stds
+                labels = _kmeans_numpy(X, n_clusters=k_val, max_iter=100, random_state=42)
+                cluster_col_name = "cluster_id"
+                cluster_series = pd.Series(labels, index=df_copy.index)
+                df_copy["cluster_id"] = cluster_series
+            else:
+                return None
+
+        # Excluir la columna de cluster de los ejes disponibles
+        available_numeric = [c for c in num_cols if c != cluster_col_name]
+        if len(available_numeric) >= 2:
+            x_col = available_numeric[0]
+            y_col = available_numeric[1]
+        elif len(available_numeric) == 1:
+            x_col = available_numeric[0]
+            y_col = available_numeric[0]
+        else:
+            return None
+
+        # Calcular resúmenes por cluster
+        clusters_summary: List[ClusterSummaryItem] = []
+        unique_clusters = sorted([int(c) for c in cluster_series.dropna().unique().tolist()])
+
+        for cid in unique_clusters:
+            mask = cluster_series == cid
+            sub_df = df_copy[mask]
+            count = len(sub_df)
+            pct = round((count / len(df_copy)) * 100, 1) if len(df_copy) > 0 else 0.0
+
+            x_s = pd.to_numeric(sub_df[x_col], errors="coerce").dropna()
+            y_s = pd.to_numeric(sub_df[y_col], errors="coerce").dropna()
+            cx = round(float(x_s.mean()), 2) if not x_s.empty else None
+            cy = round(float(y_s.mean()), 2) if not y_s.empty else None
+
+            feat_avgs: Dict[str, float] = {}
+            for col in available_numeric:
+                c_s = pd.to_numeric(sub_df[col], errors="coerce").dropna()
+                if not c_s.empty:
+                    feat_avgs[col] = round(float(c_s.mean()), 2)
+
+            clusters_summary.append(
+                ClusterSummaryItem(
+                    cluster_id=cid,
+                    label=f"Cluster {cid}",
+                    count=count,
+                    percentage=pct,
+                    center_x=cx,
+                    center_y=cy,
+                    feature_averages=feat_avgs,
+                )
+            )
+
+        # Muestrear puntos para el scatter plot (hasta 250 puntos)
+        sample_df = df_copy.sample(n=min(250, len(df_copy)), random_state=42) if len(df_copy) > 250 else df_copy
+
+        # Columna de etiqueta textual o nombre si existe
+        text_cols = [
+            c for c in df_copy.columns if c not in num_cols and not c.endswith("_is_outlier") and c != cluster_col_name
+        ]
+        label_col = text_cols[0] if text_cols else None
+
+        points: List[ClusterPoint] = []
+        x_median = float(df_copy[x_col].median()) if pd.notna(df_copy[x_col].median()) else 0.0
+        y_median = float(df_copy[y_col].median()) if pd.notna(df_copy[y_col].median()) else 0.0
+
+        for idx, row in sample_df.iterrows():
+            xv = pd.to_numeric(pd.Series([row[x_col]]), errors="coerce").iloc[0]
+            yv = pd.to_numeric(pd.Series([row[y_col]]), errors="coerce").iloc[0]
+            if pd.isna(xv):
+                xv = x_median
+            if pd.isna(yv):
+                yv = y_median
+            cid = int(cluster_series.loc[idx])
+            lbl = str(row[label_col]) if label_col and pd.notna(row[label_col]) else f"Fila #{int(idx) + 1}"
+            points.append(
+                ClusterPoint(
+                    row_index=int(idx),
+                    x=round(float(xv), 2),
+                    y=round(float(yv), 2),
+                    cluster_id=cid,
+                    label=lbl,
+                )
+            )
+
+        return ClusterVisualization(
+            cluster_column=cluster_col_name,
+            x_column=x_col,
+            y_column=y_col,
+            available_numeric_columns=available_numeric,
+            total_points=len(df_copy),
+            clusters=clusters_summary,
+            points=points,
+        )
+
+    @staticmethod
+    def _build_outlier_visualization(df: pd.DataFrame) -> Optional[OutlierVisualization]:
+        if df.empty or len(df) < 2:
+            return None
+
+        boxplots: List[BoxPlotData] = []
+        total_outliers = 0
+
+        # Identificar columnas numéricas
+        for col in df.columns:
+            if col.endswith("_is_outlier") or col.lower() in ["cluster_id", "cluster"]:
+                continue
+            s_num = pd.to_numeric(df[col], errors="coerce").dropna()
+            if len(s_num) < 2 or s_num.nunique() <= 1:
+                continue
+
+            q1 = float(s_num.quantile(0.25))
+            median = float(s_num.median())
+            q3 = float(s_num.quantile(0.75))
+            iqr = q3 - q1
+            min_v = float(s_num.min())
+            max_v = float(s_num.max())
+
+            lower_whisker = max(min_v, q1 - 1.5 * iqr)
+            upper_whisker = min(max_v, q3 + 1.5 * iqr)
+            mean_v = float(s_num.mean())
+            std_v = float(s_num.std(ddof=1)) if len(s_num) > 1 else 0.0
+
+            # Identificar outliers por IQR
+            outliers_mask = (s_num < lower_whisker) | (s_num > upper_whisker)
+
+            # Si existe la columna flag explícita generada previamente, combinarla
+            flag_col = f"{col}_is_outlier"
+            if flag_col in df.columns:
+                flag_mask = df[flag_col].astype(bool).fillna(False)
+                outliers_mask = outliers_mask | flag_mask.loc[s_num.index]
+
+            outliers_s = s_num[outliers_mask]
+            outliers_cnt = int(len(outliers_s))
+            outliers_pct = round((outliers_cnt / len(s_num)) * 100, 1) if len(s_num) > 0 else 0.0
+            total_outliers += outliers_cnt
+
+            sample_outs = [round(float(v), 2) for v in outliers_s.head(10).tolist()]
+
+            boxplots.append(
+                BoxPlotData(
+                    column=col,
+                    min=round(min_v, 2),
+                    q1=round(q1, 2),
+                    median=round(median, 2),
+                    q3=round(q3, 2),
+                    max=round(max_v, 2),
+                    lower_whisker=round(lower_whisker, 2),
+                    upper_whisker=round(upper_whisker, 2),
+                    iqr=round(iqr, 2),
+                    mean=round(mean_v, 2),
+                    std=round(std_v, 2),
+                    outliers_count=outliers_cnt,
+                    outlier_percentage=outliers_pct,
+                    sample_outliers=sample_outs,
+                )
+            )
+
+        if not boxplots:
+            return None
+
+        # Elegir columna activa: la que tenga mayor número de outliers, o la primera
+        active_box = max(boxplots, key=lambda b: b.outliers_count)
+        active_col = active_box.column
+
+        # Muestrear puntos para el scatter de outliers (hasta 250 puntos)
+        sample_df = df.sample(n=min(250, len(df)), random_state=42) if len(df) > 250 else df
+        text_cols = [c for c in df.columns if not c.endswith("_is_outlier") and c != active_col]
+        label_col = text_cols[0] if text_cols else None
+
+        scatter_points: List[OutlierScatterPoint] = []
+        flag_col = f"{active_col}_is_outlier"
+
+        for idx, row in sample_df.iterrows():
+            y_val = pd.to_numeric(pd.Series([row[active_col]]), errors="coerce").iloc[0]
+            if pd.isna(y_val):
+                continue
+            is_out = bool(y_val < active_box.lower_whisker or y_val > active_box.upper_whisker)
+            if flag_col in row and bool(row[flag_col]):
+                is_out = True
+
+            lbl = str(row[label_col]) if label_col and pd.notna(row[label_col]) else f"Fila #{int(idx) + 1}"
+            scatter_points.append(
+                OutlierScatterPoint(
+                    row_index=int(idx),
+                    x_value=float(idx) + 1.0,
+                    y_value=round(float(y_val), 2),
+                    is_outlier=is_out,
+                    label=lbl,
+                )
+            )
+
+        return OutlierVisualization(
+            columns=boxplots,
+            active_column=active_col,
+            scatter_points=scatter_points,
+            total_outliers_detected=total_outliers,
+            detection_method="IQR (1.5x) / Z-Score (>3.0)",
+        )
