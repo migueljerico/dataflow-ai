@@ -59,7 +59,7 @@ test.describe('Business Analytics Tabs & Interactive Visualizations E2E', () => 
 
     // Verificar secciones de Power BI (DAX, M) y Excel
     await expect(page.getByText(/microsoft power bi/i)).toBeVisible();
-    await expect(page.getByText(/medidas dax recomendadas/i)).toBeVisible();
+    await expect(page.getByText(/medida dax sugerida/i)).toBeVisible();
     await expect(page.getByText(/power query m/i)).toBeVisible();
     await expect(page.getByText(/microsoft excel/i)).toBeVisible();
     await expect(page.getByText(/fórmulas de validación regionalizadas/i)).toBeVisible();
