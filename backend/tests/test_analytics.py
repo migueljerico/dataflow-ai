@@ -179,4 +179,3 @@ def test_export_executive_analytics_html_report():
     export_ar = client.get(f"/api/v1/analytics/{run_id}/export?lang=ar")
     assert export_ar.status_code == 200
     assert 'dir="rtl"' in export_ar.text
-

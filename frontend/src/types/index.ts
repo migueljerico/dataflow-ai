@@ -140,6 +140,8 @@ export interface ExecutionResult {
   clean_filename: string;
   download_url: string;
   script_url: string;
+  parquet_filename?: string;
+  parquet_url?: string;
   audit_logs?: string[];
   errors: string[];
   warnings: string[];

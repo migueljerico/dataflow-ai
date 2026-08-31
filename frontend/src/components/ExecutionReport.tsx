@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FileCode, CheckCircle, ArrowRight, ShieldCheck, FileCheck2 } from 'lucide-react';
+import { Download, FileCode, Database, CheckCircle, ArrowRight, FileCheck2 } from 'lucide-react';
 import { ExecutionResult } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { BusinessInsights } from './BusinessInsights';
@@ -117,6 +117,24 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
         >
           <Download size={18} aria-hidden="true" /> {t.report.downloadDataset} ({result.clean_filename})
         </a>
+
+        {result.parquet_url && (
+          <a
+            href={result.parquet_url}
+            download
+            className="btn btn-outline"
+            style={{
+              textDecoration: 'none',
+              padding: '10px 18px',
+              textAlign: 'center',
+              flex: 1,
+              borderColor: 'var(--primary)',
+              color: 'var(--primary)',
+            }}
+          >
+            <Database size={18} aria-hidden="true" /> {t.report.downloadParquet} ({result.parquet_filename || 'clean.parquet'})
+          </a>
+        )}
 
         <a
           href={result.script_url}

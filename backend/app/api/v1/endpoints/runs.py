@@ -88,3 +88,34 @@ async def download_reproducible_script(run_id: str):
         )
 
     return FileResponse(path=target_file, filename=f"pipeline_{run_id}.py", media_type="text/plain")
+
+
+@router.get("/{run_id}/parquet")
+@router.get("/{run_id}/download-parquet")
+@router.get("/{run_id}/download/parquet")
+async def download_parquet_dataset(run_id: str):
+    """
+    Descargar el dataset limpio serializado en formato nativo Apache Parquet columnar
+    para analítica de alto rendimiento (Power BI, DuckDB, Spark, etc.).
+    """
+    result = ETLService.get_run_result(run_id)
+    storage = get_storage()
+    parquet_name = result.parquet_filename or f"clean_{result.dataset_id}.parquet"
+    candidates = [
+        f"{run_id}_{parquet_name}",
+        parquet_name,
+    ]
+    target_file = None
+    for key in candidates:
+        if storage.exists(key):
+            target_file = storage.get_path(key)
+            break
+
+    if not target_file or not target_file.exists():
+        raise FunctionalException(
+            message="El archivo Apache Parquet no está disponible para descarga.",
+            code="PARQUET_NOT_FOUND",
+            status_code=404,
+        )
+
+    return FileResponse(path=target_file, filename=parquet_name, media_type="application/vnd.apache.parquet")

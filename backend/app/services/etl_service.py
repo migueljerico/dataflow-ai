@@ -3,6 +3,7 @@ import io
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List
 
 import pandas as pd
@@ -556,6 +557,14 @@ class ETLService:
         storage.save_file(clean_key, clean_bytes)
         output_md5 = hashlib.md5(clean_bytes, usedforsecurity=False).hexdigest()
 
+        # Generar y almacenar dataset limpio en formato nativo Apache Parquet (columnar de alto rendimiento)
+        base_stem = Path(metadata.filename).stem
+        parquet_filename = f"clean_{base_stem}.parquet"
+        parquet_key = f"{run_id}_{parquet_filename}"
+        parquet_buf = io.BytesIO()
+        df_current.to_parquet(parquet_buf, index=False, engine="pyarrow")
+        storage.save_file(parquet_key, parquet_buf.getvalue())
+
         # Generar y almacenar script reproducible
         script_content = ScriptGeneratorService.generate_script(
             source_filename=metadata.filename, file_type=metadata.file_type.value, steps=applied_steps, run_id=run_id
@@ -583,6 +592,8 @@ class ETLService:
             clean_filename=clean_filename,
             download_url=f"/api/v1/runs/{run_id}/download",
             script_url=f"/api/v1/runs/{run_id}/download-script",
+            parquet_filename=parquet_filename,
+            parquet_url=f"/api/v1/runs/{run_id}/download-parquet",
             audit_logs=audit_logs,
             errors=errors,
             warnings=warnings,

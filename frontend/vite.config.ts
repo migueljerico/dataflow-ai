@@ -23,4 +23,11 @@ export default defineConfig({
       },
     },
   },
+  // @ts-expect-error vitest config
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['e2e/**', 'node_modules/**'],
+  },
 });

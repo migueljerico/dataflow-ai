@@ -4,6 +4,32 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.8.0] — 2026-08-31
+
+### 🏹 Exportación Nativa a Apache Parquet / Arrow y Suite de Pruebas E2E Automatizadas con Playwright
+
+> **Serialización Columnar de Alto Rendimiento y Calidad E2E en Navegadores Reales:** Incorporación de exportación nativa de datasets limpios en formato Apache Parquet (`.parquet`) impulsado por `PyArrow` para interoperabilidad directa con Data Lakes, Power BI, DuckDB y Apache Spark; adición de endpoints dedicados `/api/v1/runs/{run_id}/download-parquet` y botones de descarga directos en el informe de ejecución; generación de snippets reproducibles para Parquet en scripts de Python; y despliegue de una suite completa de pruebas End-to-End (E2E) con **Playwright** en navegador Chromium headless que valida flujos completos de carga, perfilado, revisión de planes, descargas multiformato y conmutación de 13 idiomas con layout bidireccional (LTR/RTL).
+
+#### 🏹 Backend: Serialización y Endpoints Apache Parquet
+- **Soporte Nativo PyArrow (`requirements.txt` & `ETLService.execute_plan`):** Serialización vectorial y columnar automática del dataset limpio generado tras la ejecución del pipeline determinista.
+- **Endpoints REST Columnar (`GET /api/v1/runs/{run_id}/download-parquet`):** Descarga directa con MIME type `application/vnd.apache.parquet` y alias compatibles (`/parquet`, `/download/parquet`).
+- **Generador de Scripts Reproducibles (`ScriptGeneratorService`):** Inclusión de snippet opcional para exportación en Parquet (`df_clean.to_parquet('clean_dataset.parquet', index=False)`).
+- **Cobertura de Tests Unitarios e Integración (`test_parquet_export.py`):** Validación de magic bytes `PAR1`, paridad de dimensiones/tipos y deserialización completa con pandas.
+
+#### 🎭 Frontend & E2E: Pruebas con Playwright y Botón Parquet
+- **Configuración de Playwright (`playwright.config.ts`):** Orquestación automatizada de servidores web (FastAPI backend + Vite dev server) y ejecución headless en Chromium.
+- **Suite de Idiomas y Layout RTL (`e2e/language-switching.spec.ts`):** Comprobación en navegador de conmutación dinámica en español, inglés, francés, alemán, árabe, etc., y validación del atributo `dir="rtl"`.
+- **Suite de Flujos y Exportaciones (`e2e/export-flows.spec.ts`):** Validación E2E del ciclo completo de datos y descarga íntegra de los 4 artefactos (CSV, Parquet, Script Python, Reporte HTML).
+- **Suite de Business Analytics (`e2e/analytics-tabs.spec.ts`):** Navegación por pestañas (KPIs, Clusters 2D, Outliers Boxplot, Integración Power BI / Excel) e interactividad de gráficos SVG.
+- **Botón de Descarga Parquet en `ExecutionReport.tsx`:** Botón accesible con icono de base de datos e internacionalización completa en los 13 idiomas.
+
+#### 🧪 Testing y Verificación Integral (167 Tests Totales)
+- **132 Tests Backend (Pytest) + 32 Tests Frontend (Vitest) + 3 Suites E2E (Playwright):** 100% pasando en verde.
+- **Linters y SAST Verificados:** Ruff (0 errores), Black (0 diferencias), Bandit SAST (0 vulnerabilidades), TypeScript estricto (0 errores), Vite build verificado (0 errores).
+- **Atribución del Modelo:** Gemini 3.7 Flash (High).
+
+---
+
 ## [1.7.0] — 2026-08-31
 
 ### 📑 Exportación Ejecutiva HTML/PDF con Gráficos Vectoriales SVG, Feature Selection K-Means e Integración Power BI / Excel en 13 Idiomas

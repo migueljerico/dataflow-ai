@@ -235,6 +235,10 @@ class ScriptGeneratorService:
                 "        df.to_excel(output_filepath, index=False)",
                 '    print(f"Clean dataset saved to {output_filepath}")',
                 "",
+                "    # Exportación opcional a Apache Parquet columnar (alto rendimiento):",
+                '    # parquet_output = output_filepath.rsplit(".", 1)[0] + ".parquet"',
+                "    # df.to_parquet(parquet_output, index=False)",
+                "",
                 'if __name__ == "__main__":',
                 f"    run_etl_pipeline({filename_literal}, {clean_literal})",
             ]

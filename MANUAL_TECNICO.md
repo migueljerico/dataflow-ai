@@ -1,10 +1,10 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.7.0  
+**Versión:** 1.8.0  
 **Fecha de actualización:** 31 de agosto de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
-**Stack:** Python 3.11 · FastAPI · Pandas · React 19 · TypeScript · Vite · Docker
+**Stack:** Python 3.11/3.14 · FastAPI · Pandas · PyArrow · React 19 · TypeScript · Vite · Playwright · Docker
 
 
 ---
@@ -549,10 +549,11 @@ Ubicación: `backend/tests/`
 | `test_plan_governance.py` | 2 | Gobierno estricto: rechazo de planes inexistentes (`404`) y ejecución únicamente de pasos aprobados. |
 | `test_ai_provider.py` | 1 | Generación de sugerencias IA y guardrails de catálogo. |
 | `test_etl.py` | 3 | Ejecución del motor determinista sobre transformaciones individuales y pipelines combinados. |
-| `test_analytics.py` | 2 | Cálculo de KPIs ejecutivos de negocio y reporte para Dirección. |
+| `test_analytics.py` | 4 | Cálculo de KPIs ejecutivos, clusters 2D, boxplots y exportación de reportes ejecutivos en HTML5. |
+| `test_parquet_export.py` | 2 | Exportación columnar nativa a Apache Parquet, validación de magic bytes PAR1 y descarga REST. |
 | `test_dataset4_verification.py` | 6 | Verificación de marcadores de ausencia, preservación de mayúsculas en identificadores y no corrupción de conteos. |
 
-**Total:** 96 tests automatizados — 100% pasando en verde. Aislamiento garantizado mediante fixtures de `conftest.py` con directorios temporales.
+**Total:** 132 tests backend + 32 tests frontend (Vitest) + 3 suites E2E (Playwright) — 100% pasando en verde.
 
 ---
 

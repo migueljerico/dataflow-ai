@@ -58,6 +58,12 @@ class ExecutionResult(BaseModel):
     clean_filename: str
     download_url: str
     script_url: str
+    parquet_filename: Optional[str] = Field(
+        None, description="Nombre del archivo limpio serializado en Apache Parquet columnar"
+    )
+    parquet_url: Optional[str] = Field(
+        None, description="URL directa de descarga del dataset limpio en formato Apache Parquet"
+    )
     audit_logs: List[str] = Field(
         default_factory=list, description="Log detallado de validación y trazabilidad de cambios por paso"
     )
