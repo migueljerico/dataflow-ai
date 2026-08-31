@@ -127,6 +127,128 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                 <span>{t.plan.estimatedRows}: {step.affected_rows_estimate}</span>
                 <span style={{ wordBreak: 'break-word' }}>{t.plan.parameters}: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
               </div>
+
+              {/* Panel de Feature Selection para K-Means */}
+              {step.operation === 'cluster_kmeans' && (
+                <div
+                  style={{
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sliders size={15} /> {t.clusteringConfig?.title || 'Configuración de Segmentación K-Means'}
+                  </h4>
+
+                  {/* Selector de Columnas */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      {t.clusteringConfig?.selectNumericCols || 'Variables numéricas a incluir:'}
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {Array.from(
+                        new Set([
+                          ...((step.parameters.columns as string[]) || []),
+                          ...steps.map((s) => s.column).filter((c): c is string => Boolean(c)),
+                        ])
+                      ).map((colName) => {
+                        const activeCols = (step.parameters.columns as string[]) || [];
+                        const isSelected = activeCols.includes(colName);
+                        return (
+                          <label
+                            key={colName}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-input)',
+                              border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
+                              cursor: 'pointer',
+                              fontSize: '0.775rem',
+                              fontWeight: isSelected ? 600 : 400,
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const newCols = e.target.checked
+                                  ? [...activeCols, colName]
+                                  : activeCols.filter((c) => c !== colName);
+                                setSteps((prev) =>
+                                  prev.map((s) =>
+                                    s.step_id === step.step_id
+                                      ? { ...s, parameters: { ...s.parameters, columns: newCols } }
+                                      : s
+                                  )
+                                );
+                              }}
+                            />
+                            {colName}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Número de Clusters K y Opciones */}
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                        {t.clusteringConfig?.kClusters || 'Clusters (K):'}
+                      </label>
+                      <input
+                        type="number"
+                        min={2}
+                        max={10}
+                        value={(step.parameters.n_clusters as number) || 3}
+                        onChange={(e) => {
+                          const kVal = Math.max(2, Math.min(10, parseInt(e.target.value, 10) || 3));
+                          setSteps((prev) =>
+                            prev.map((s) =>
+                              s.step_id === step.step_id
+                                ? { ...s, parameters: { ...s.parameters, n_clusters: kVal } }
+                                : s
+                            )
+                          );
+                        }}
+                        style={{
+                          width: '60px',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-input)',
+                          color: 'var(--text-main)',
+                          fontSize: '0.8rem',
+                        }}
+                      />
+                    </div>
+
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.775rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(step.parameters.scale_features ?? true)}
+                        onChange={(e) => {
+                          const scale = e.target.checked;
+                          setSteps((prev) =>
+                            prev.map((s) =>
+                              s.step_id === step.step_id
+                                ? { ...s, parameters: { ...s.parameters, scale_features: scale } }
+                                : s
+                            )
+                          );
+                        }}
+                      />
+                      {t.clusteringConfig?.scaleFeatures || 'Escalado Z-Score estándar'}
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

@@ -147,3 +147,36 @@ def test_explicit_kmeans_and_outlier_flag_in_analytics():
     assert data["outlier_visualization"] is not None
     assert any(b["column"] == "Precio_Unidad" for b in data["outlier_visualization"]["columns"])
 
+
+def test_export_executive_analytics_html_report():
+    # 1. Cargar contact_center sample
+    load_res = client.post("/api/v1/datasets/samples/contact_center/load")
+    assert load_res.status_code == 201
+    dataset_id = load_res.json()["dataset_id"]
+
+    # 2. Proponer y ejecutar plan
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    assert plan_res.status_code == 201
+    plan_data = plan_res.json()
+    steps = plan_data["steps"]
+
+    approve_res = client.post(f"/api/v1/plans/{plan_data['plan_id']}/approve", json={"steps": steps})
+    assert approve_res.status_code == 200
+    run_id = approve_res.json()["run_id"]
+
+    # 3. Exportar HTML en español
+    export_res = client.get(f"/api/v1/analytics/{run_id}/export?lang=es")
+    assert export_res.status_code == 200
+    assert "text/html" in export_res.headers["content-type"]
+    assert f'filename="reporte_ejecutivo_{run_id}.html"' in export_res.headers["content-disposition"]
+    html = export_res.text
+    assert "<!DOCTYPE html>" in html
+    assert "<svg" in html
+    assert "Reporte Ejecutivo" in html
+    assert "@media print" in html
+
+    # 4. Exportar HTML en árabe (RTL)
+    export_ar = client.get(f"/api/v1/analytics/{run_id}/export?lang=ar")
+    assert export_ar.status_code == 200
+    assert 'dir="rtl"' in export_ar.text
+

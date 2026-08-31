@@ -203,4 +203,32 @@ describe('BusinessInsights component', () => {
       expect(screen.getByText('Fallo al conectar con el servidor')).toBeInTheDocument();
     });
   });
+
+  it('renders executive report export button and allows switching to Power BI / Excel integration tab', async () => {
+    vi.spyOn(api, 'getBusinessAnalytics').mockResolvedValue(mockReport);
+
+    render(
+      <LanguageProvider>
+        <BusinessInsights runId="run-test-123" />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Facturación Total Estimada')).toBeInTheDocument();
+    });
+
+    // Verificar botón de exportación
+    const exportBtn = screen.getByRole('link', { name: /Exportar Reporte Ejecutivo/i });
+    expect(exportBtn).toBeInTheDocument();
+    expect(exportBtn).toHaveAttribute('href', expect.stringContaining('/api/v1/analytics/run-test-123/export?lang=es'));
+
+    // Cambiar a pestaña de Integración Power BI / Excel
+    const integrationTab = screen.getByRole('tab', { name: /Integración Power BI \/ Excel/i });
+    fireEvent.click(integrationTab);
+
+    expect(screen.getByText(/Guía de Integración y Fórmulas para Power BI y Excel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Microsoft Power BI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Microsoft Excel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Total_Registros = COUNTROWS/i)).toBeInTheDocument();
+  });
 });

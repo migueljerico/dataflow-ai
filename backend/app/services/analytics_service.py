@@ -631,3 +631,483 @@ class AnalyticsService:
             total_outliers_detected=total_outliers,
             detection_method="IQR (1.5x) / Z-Score (>3.0)",
         )
+
+    @staticmethod
+    def _render_cluster_svg(cluster_viz: ClusterVisualization) -> str:
+        if not cluster_viz or not cluster_viz.points:
+            return "<div style='text-align:center;padding:20px;color:#64748b;'>No hay datos de clusters</div>"
+
+        colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4", "#f97316", "#14b8a6"]
+        xs = [p.x for p in cluster_viz.points]
+        ys = [p.y for p in cluster_viz.points]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+
+        pad_x = (max_x - min_x) * 0.1 or 1.0
+        pad_y = (max_y - min_y) * 0.1 or 1.0
+        d_min_x, d_max_x = min_x - pad_x, max_x + pad_x
+        d_min_y, d_max_y = min_y - pad_y, max_y + pad_y
+
+        w, h = 680, 360
+        m_top, m_right, m_bottom, m_left = 30, 30, 45, 60
+        plot_w = w - m_left - m_right
+        plot_h = h - m_top - m_bottom
+
+        def scale_x(v: float) -> float:
+            return m_left + ((v - d_min_x) / (d_max_x - d_min_x or 1.0)) * plot_w
+
+        def scale_y(v: float) -> float:
+            return h - m_bottom - ((v - d_min_y) / (d_max_y - d_min_y or 1.0)) * plot_h
+
+        svg_parts = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" style="width:100%;max-width:680px;height:auto;display:block;margin:0 auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">',
+            f'<line x1="{m_left}" y1="{m_top}" x2="{m_left}" y2="{h - m_bottom}" stroke="#cbd5e1" stroke-width="1.5"/>',
+            f'<line x1="{m_left}" y1="{h - m_bottom}" x2="{w - m_right}" y2="{h - m_bottom}" stroke="#cbd5e1" stroke-width="1.5"/>',
+        ]
+
+        # Guías de cuadrícula
+        for pct in [0.25, 0.5, 0.75]:
+            gy = m_top + plot_h * pct
+            gx = m_left + plot_w * pct
+            svg_parts.append(
+                f'<line x1="{m_left}" y1="{gy}" x2="{w - m_right}" y2="{gy}" stroke="#e2e8f0" stroke-dasharray="4 4"/>'
+            )
+            svg_parts.append(
+                f'<line x1="{gx}" y1="{m_top}" x2="{gx}" y2="{h - m_bottom}" stroke="#e2e8f0" stroke-dasharray="4 4"/>'
+            )
+
+        # Etiquetas de ejes
+        x_label = cluster_viz.x_column or "X"
+        y_label = cluster_viz.y_column or "Y"
+        svg_parts.append(
+            f'<text x="{m_left + plot_w / 2}" y="{h - 12}" text-anchor="middle" fill="#64748b" font-size="12" font-family="system-ui,sans-serif" font-weight="600">{x_label} →</text>'
+        )
+        svg_parts.append(
+            f'<text x="16" y="{m_top + plot_h / 2}" text-anchor="middle" fill="#64748b" font-size="12" font-family="system-ui,sans-serif" font-weight="600" transform="rotate(-90 16 {m_top + plot_h / 2})">{y_label} →</text>'
+        )
+
+        # Valores extremos
+        svg_parts.append(
+            f'<text x="{m_left}" y="{h - m_bottom + 16}" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="monospace">{d_min_x:.1f}</text>'
+        )
+        svg_parts.append(
+            f'<text x="{w - m_right}" y="{h - m_bottom + 16}" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="monospace">{d_max_x:.1f}</text>'
+        )
+        svg_parts.append(
+            f'<text x="{m_left - 8}" y="{h - m_bottom}" fill="#94a3b8" font-size="10" text-anchor="end" dominant-baseline="middle" font-family="monospace">{d_min_y:.1f}</text>'
+        )
+        svg_parts.append(
+            f'<text x="{m_left - 8}" y="{m_top}" fill="#94a3b8" font-size="10" text-anchor="end" dominant-baseline="middle" font-family="monospace">{d_max_y:.1f}</text>'
+        )
+
+        # Puntos de datos
+        for p in cluster_viz.points:
+            px = scale_x(p.x)
+            py = scale_y(p.y)
+            c = colors[p.cluster_id % len(colors)]
+            svg_parts.append(
+                f'<circle cx="{px:.1f}" cy="{py:.1f}" r="4.5" fill="{c}" fill-opacity="0.8" stroke="#ffffff" stroke-width="1"><title>{p.label} (Cluster {p.cluster_id})</title></circle>'
+            )
+
+        # Centroides
+        for c_item in cluster_viz.clusters:
+            if c_item.center_x is not None and c_item.center_y is not None:
+                cx = scale_x(c_item.center_x)
+                cy = scale_y(c_item.center_y)
+                c_color = colors[c_item.cluster_id % len(colors)]
+                svg_parts.append(
+                    f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="11" fill="{c_color}" fill-opacity="0.3" stroke="{c_color}" stroke-width="2"/>'
+                )
+                svg_parts.append(
+                    f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="4" fill="#ffffff" stroke="{c_color}" stroke-width="2"/>'
+                )
+
+        svg_parts.append("</svg>")
+        return "".join(svg_parts)
+
+    @staticmethod
+    def _render_boxplot_svg(box: BoxPlotData, outlier_viz: OutlierVisualization) -> str:
+        if not box:
+            return "<div style='text-align:center;padding:20px;color:#64748b;'>No hay datos de outliers</div>"
+
+        w, h = 680, 260
+        m_top, m_right, m_bottom, m_left = 30, 40, 50, 40
+        plot_w = w - m_left - m_right
+
+        span = (box.max - box.min) or 1.0
+        pad = span * 0.08
+        d_min = box.min - pad
+        d_max = box.max + pad
+
+        def scale_x(v: float) -> float:
+            return m_left + ((v - d_min) / (d_max - d_min or 1.0)) * plot_w
+
+        box_y = m_top + 40
+        box_h = 70
+        mid_y = box_y + box_h / 2
+
+        x_lw = scale_x(box.lower_whisker)
+        x_uw = scale_x(box.upper_whisker)
+        x_q1 = scale_x(box.q1)
+        x_med = scale_x(box.median)
+        x_q3 = scale_x(box.q3)
+
+        svg_parts = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" style="width:100%;max-width:680px;height:auto;display:block;margin:0 auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">',
+            # Eje horizontal
+            f'<line x1="{m_left}" y1="{h - m_bottom}" x2="{w - m_right}" y2="{h - m_bottom}" stroke="#cbd5e1" stroke-width="1.5"/>',
+            # Bigotes (líneas punteadas/sólidas)
+            f'<line x1="{x_lw:.1f}" y1="{mid_y:.1f}" x2="{x_q1:.1f}" y2="{mid_y:.1f}" stroke="#3b82f6" stroke-width="2" stroke-dasharray="3 3"/>',
+            f'<line x1="{x_q3:.1f}" y1="{mid_y:.1f}" x2="{x_uw:.1f}" y2="{mid_y:.1f}" stroke="#3b82f6" stroke-width="2" stroke-dasharray="3 3"/>',
+            # Topes de bigotes
+            f'<line x1="{x_lw:.1f}" y1="{mid_y - 20:.1f}" x2="{x_lw:.1f}" y2="{mid_y + 20:.1f}" stroke="#3b82f6" stroke-width="2.5"/>',
+            f'<line x1="{x_uw:.1f}" y1="{mid_y - 20:.1f}" x2="{x_uw:.1f}" y2="{mid_y + 20:.1f}" stroke="#3b82f6" stroke-width="2.5"/>',
+            # Caja IQR (Q1 a Q3)
+            f'<rect x="{x_q1:.1f}" y="{box_y:.1f}" width="{max(2, x_q3 - x_q1):.1f}" height="{box_h:.1f}" fill="#3b82f6" fill-opacity="0.18" stroke="#3b82f6" stroke-width="2" rx="4"/>',
+            # Mediana (Q2)
+            f'<line x1="{x_med:.1f}" y1="{box_y:.1f}" x2="{x_med:.1f}" y2="{box_y + box_h:.1f}" stroke="#10b981" stroke-width="3.5"/>',
+            # Etiquetas numéricas principales
+            f'<text x="{x_q1:.1f}" y="{box_y - 8}" text-anchor="middle" fill="#64748b" font-size="10" font-family="monospace">Q1: {box.q1:.1f}</text>',
+            f'<text x="{x_med:.1f}" y="{box_y + box_h + 18}" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700" font-family="monospace">Med: {box.median:.1f}</text>',
+            f'<text x="{x_q3:.1f}" y="{box_y - 8}" text-anchor="middle" fill="#64748b" font-size="10" font-family="monospace">Q3: {box.q3:.1f}</text>',
+        ]
+
+        # Puntos Outliers
+        if outlier_viz and outlier_viz.scatter_points:
+            for sp in outlier_viz.scatter_points:
+                if sp.is_outlier:
+                    ox = scale_x(sp.y_value)
+                    svg_parts.append(
+                        f'<circle cx="{ox:.1f}" cy="{mid_y:.1f}" r="5" fill="#f43f5e" stroke="#ffffff" stroke-width="1.5"><title>Outlier: {sp.y_value:.2f} ({sp.label})</title></circle>'
+                    )
+
+        # Nombre de variable en eje
+        svg_parts.append(
+            f'<text x="{m_left + plot_w / 2}" y="{h - 12}" text-anchor="middle" fill="#334155" font-size="12" font-weight="600" font-family="system-ui,sans-serif">Variable: {box.column} (IQR: {box.iqr:.2f} | Outliers: {box.outliers_count})</text>'
+        )
+
+        svg_parts.append("</svg>")
+        return "".join(svg_parts)
+
+    @staticmethod
+    def generate_html_report(run_id: str, lang: str = "es") -> str:
+        report = AnalyticsService.generate_report(run_id)
+        run_result = ETLService.get_run_result(run_id)
+
+        # Renderizar SVGs
+        cluster_svg = (
+            AnalyticsService._render_cluster_svg(report.cluster_visualization)
+            if report.cluster_visualization
+            else "<p>N/A</p>"
+        )
+        active_box = None
+        if report.outlier_visualization and report.outlier_visualization.columns:
+            active_box = next(
+                (
+                    b
+                    for b in report.outlier_visualization.columns
+                    if b.column == report.outlier_visualization.active_column
+                ),
+                report.outlier_visualization.columns[0],
+            )
+        outlier_svg = (
+            AnalyticsService._render_boxplot_svg(active_box, report.outlier_visualization)
+            if active_box
+            else "<p>N/A</p>"
+        )
+
+        is_rtl = lang in ["ar", "ur"]
+        direction = "rtl" if is_rtl else "ltr"
+
+        # KPIs HTML
+        kpi_cards = []
+        for k in report.kpis:
+            kpi_cards.append(f"""
+            <div class="kpi-card">
+                <div class="kpi-title">{k.title}</div>
+                <div class="kpi-val">{k.value}</div>
+                <div class="kpi-sub">{k.subtitle}</div>
+            </div>
+            """)
+        kpi_html = "".join(kpi_cards)
+
+        # Recomendaciones HTML
+        recs_html = "".join(f"<li>{r}</li>" for r in report.strategic_recommendations)
+
+        # Filas tabla clusters
+        cluster_rows = []
+        if report.cluster_visualization and report.cluster_visualization.clusters:
+            colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"]
+            for idx, c in enumerate(report.cluster_visualization.clusters):
+                col_hex = colors[idx % len(colors)]
+                row_avgs = (
+                    "".join(f"<td>{v:.2f}</td>" for v in c.feature_averages.values())
+                    if c.feature_averages
+                    else "<td>—</td>"
+                )
+                cluster_rows.append(f"""
+                    <tr>
+                        <td style="font-weight:600;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{col_hex};margin-right:6px;"></span>{c.label}</td>
+                        <td>{c.count}</td>
+                        <td>{c.percentage}%</td>
+                        {row_avgs}
+                    </tr>
+                    """)
+        cluster_table_html = "".join(cluster_rows)
+        cluster_cols_header = "".join(
+            f"<th>Media ({c})</th>"
+            for c in (report.cluster_visualization.available_numeric_columns if report.cluster_visualization else [])
+        )
+
+        html_template = f"""<!DOCTYPE html>
+<html lang="{lang}" dir="{direction}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataFlow AI — Reporte Ejecutivo de Business Analytics</title>
+    <style>
+        :root {{
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 24px;
+        }}
+        .container {{
+            max-width: 960px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }}
+        .header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }}
+        .logo-title h1 {{
+            font-size: 1.5rem;
+            color: var(--primary-dark);
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        .logo-title p {{
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }}
+        .meta-badges {{
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }}
+        .badge {{
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #eff6ff;
+            color: var(--primary);
+            border: 1px solid #bfdbfe;
+        }}
+        .badge-success {{ background: #ecfdf5; color: var(--success); border-color: #a7f3d0; }}
+        .btn-print {{
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .btn-print:hover {{ background: var(--primary-dark); }}
+        .exec-summary {{
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-left: 4px solid var(--success);
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }}
+        .exec-summary h3 {{
+            font-size: 1rem;
+            color: #166534;
+            margin-bottom: 6px;
+        }}
+        .exec-summary p {{
+            font-size: 0.925rem;
+            color: #14532d;
+            line-height: 1.6;
+        }}
+        .kpis-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }}
+        .kpi-card {{
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }}
+        .kpi-title {{ font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }}
+        .kpi-val {{ font-size: 1.5rem; font-weight: 800; color: var(--primary-dark); margin: 4px 0; }}
+        .kpi-sub {{ font-size: 0.75rem; color: var(--text-muted); }}
+        .section {{
+            margin-bottom: 32px;
+            page-break-inside: avoid;
+        }}
+        .section-title {{
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-bottom: 14px;
+        }}
+        .chart-box {{
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 12px;
+        }}
+        th, td {{
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }}
+        th {{ background: #f1f5f9; font-weight: 600; }}
+        .recs-list {{
+            padding-left: 20px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-main);
+        }}
+        .recs-list li {{ margin-bottom: 6px; }}
+        .footer {{
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            margin-top: 32px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 8px;
+        }}
+        @media print {{
+            body {{ background: white; padding: 0; }}
+            .container {{ box-shadow: none; border: none; padding: 0; max-width: 100%; }}
+            .btn-print {{ display: none; }}
+            .section {{ page-break-inside: avoid; }}
+            @page {{ size: A4 portrait; margin: 1.5cm; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-title">
+                <h1>⚡ DataFlow AI — Reporte Ejecutivo</h1>
+                <p>Business Analytics, Segmentación K-Means y Control Estadístico</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="meta-badges">
+                    <span class="badge">Run: {run_id}</span>
+                    <span class="badge badge-success">Clean Records: {run_result.rows_after}</span>
+                </div>
+                <button class="btn-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
+            </div>
+        </div>
+
+        <div class="exec-summary">
+            <h3>📌 Resumen Directivo y Conclusiones</h3>
+            <p>{report.executive_summary}</p>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">📊 Métricas Clave y KPIs</h2>
+            <div class="kpis-grid">
+                {kpi_html}
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">🌐 Segmentación de Clusters 2D (K-Means)</h2>
+            <div class="chart-box">
+                {cluster_svg}
+            </div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cluster</th>
+                            <th>Registros</th>
+                            <th>Porcentaje</th>
+                            {cluster_cols_header}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {cluster_table_html}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">🎯 Detección de Outliers y Distribución (Box Plot)</h2>
+            <div class="chart-box">
+                {outlier_svg}
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">💡 Recomendaciones Estratégicas</h2>
+            <ol class="recs-list">
+                {recs_html}
+            </ol>
+        </div>
+
+        <div class="footer">
+            <span>DataFlow AI v1.7.0 · Gobernanza Determinista (Python/Pandas)</span>
+            <span>MD5 Salida: <code>{run_result.output_hash_md5}</code></span>
+        </div>
+    </div>
+</body>
+</html>"""
+        return html_template

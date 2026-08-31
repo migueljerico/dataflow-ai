@@ -154,5 +154,9 @@ export const api = {
   getBusinessAnalytics: async (runId: string): Promise<ExecutiveAnalyticsReport> => {
     const res = await fetch(`${API_BASE}/analytics/${runId}`);
     return handleResponse<ExecutiveAnalyticsReport>(res);
-  }
+  },
+
+  getExecutiveReportExportUrl: (runId: string, lang: string = 'es'): string => {
+    return `${API_BASE}/analytics/${runId}/export?lang=${encodeURIComponent(lang)}`;
+  },
 };

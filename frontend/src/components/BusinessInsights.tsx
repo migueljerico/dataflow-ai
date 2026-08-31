@@ -10,6 +10,11 @@ import {
   BarChart2,
   Maximize2,
   Filter,
+  FileDown,
+  Printer,
+  Copy,
+  Check,
+  Layers,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { ExecutiveAnalyticsReport, ClusterVisualization, BoxPlotData, OutlierVisualization } from '../types';
@@ -31,14 +36,17 @@ const CLUSTER_COLORS = [
 ];
 
 export const BusinessInsights: React.FC<Props> = ({ runId }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [report, setReport] = useState<ExecutiveAnalyticsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'kpis' | 'clusters' | 'outliers'>('kpis');
+  const [activeTab, setActiveTab] = useState<'kpis' | 'clusters' | 'outliers' | 'integration'>('kpis');
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
   // Estados de visualización de Clusters
   const [selectedClusterFilter, setSelectedClusterFilter] = useState<number | null>(null);
+  const [selectedClusterXCol, setSelectedClusterXCol] = useState<string>('');
+  const [selectedClusterYCol, setSelectedClusterYCol] = useState<string>('');
   const [hoveredClusterPoint, setHoveredClusterPoint] = useState<{
     x: number;
     y: number;
@@ -69,6 +77,10 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
           setReport(data);
           if (data.outlier_visualization && data.outlier_visualization.active_column) {
             setSelectedOutlierCol(data.outlier_visualization.active_column);
+          }
+          if (data.cluster_visualization) {
+            setSelectedClusterXCol(data.cluster_visualization.x_column);
+            setSelectedClusterYCol(data.cluster_visualization.y_column);
           }
         }
       } catch (err: unknown) {
@@ -135,9 +147,28 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
             {t.analytics?.subtitle || 'Métricas de valor calculadas con pandas sobre el dataset depurado.'}
           </p>
         </div>
-        <span className="badge badge-emerald">
-          <Sparkles size={12} /> {t.analytics?.powerBiBadge || 'Insights Listos para Power BI'}
-        </span>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <a
+            href={api.getExecutiveReportExportUrl(runId, language)}
+            download={`reporte_ejecutivo_${runId}.html`}
+            className="btn btn-primary"
+            style={{ textDecoration: 'none', padding: '8px 14px', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FileDown size={16} /> {t.export?.btnExportHtml || 'Exportar Reporte Ejecutivo'}
+          </a>
+          <button
+            className="btn btn-outline"
+            onClick={() => window.open(api.getExecutiveReportExportUrl(runId, language), '_blank')}
+            style={{ padding: '8px 12px', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            title={t.export?.btnExportPdf || 'Imprimir / Guardar en PDF'}
+          >
+            <Printer size={16} />
+          </button>
+          <span className="badge badge-emerald">
+            <Sparkles size={12} /> {t.analytics?.powerBiBadge || 'Power BI Ready'}
+          </span>
+        </div>
       </div>
 
       {/* Selector de Pestañas Analíticas */}
@@ -180,6 +211,16 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
           style={{ fontSize: '0.85rem', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <Target size={16} /> {t.analytics?.tabOutliers || 'Detección de Outliers (Boxplots)'}
+        </button>
+
+        <button
+          role="tab"
+          aria-selected={activeTab === 'integration'}
+          onClick={() => setActiveTab('integration')}
+          className={`btn ${activeTab === 'integration' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ fontSize: '0.85rem', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Layers size={16} /> {t.analytics?.tabIntegration || 'Integración Power BI / Excel'}
         </button>
       </div>
 
@@ -373,6 +414,71 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                 </div>
               </div>
 
+              {/* Selector Dinámico de Ejes de Proyección 2D */}
+              {clusterViz.available_numeric_columns && clusterViz.available_numeric_columns.length >= 2 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    flexWrap: 'wrap',
+                    backgroundColor: 'var(--bg-input)',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                      {t.analytics?.xAxis || 'Eje X'}:
+                    </span>
+                    <select
+                      value={selectedClusterXCol || clusterViz.x_column}
+                      onChange={(e) => setSelectedClusterXCol(e.target.value)}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.775rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-main)',
+                        color: 'var(--text-main)',
+                      }}
+                    >
+                      {clusterViz.available_numeric_columns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                      {t.analytics?.yAxis || 'Eje Y'}:
+                    </span>
+                    <select
+                      value={selectedClusterYCol || clusterViz.y_column}
+                      onChange={(e) => setSelectedClusterYCol(e.target.value)}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.775rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-main)',
+                        color: 'var(--text-main)',
+                      }}
+                    >
+                      {clusterViz.available_numeric_columns.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               {/* Leyenda y Filtro de Clusters */}
               <div
                 style={{
@@ -530,7 +636,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                         fontSize="11"
                         fontWeight="600"
                       >
-                        {clusterViz.x_column} →
+                        {selectedClusterXCol || clusterViz.x_column} →
                       </text>
                       <text
                         x={16}
@@ -541,7 +647,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                         fontWeight="600"
                         transform={`rotate(-90 16 ${margin.top + plotH / 2})`}
                       >
-                        {clusterViz.y_column} →
+                        {selectedClusterYCol || clusterViz.y_column} →
                       </text>
 
                       {/* Valores de extremo en ejes */}
@@ -1050,6 +1156,210 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* PESTAÑA 4: INTEGRACIÓN POWER BI / EXCEL */}
+      {activeTab === 'integration' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
+              <Layers size={18} /> {t.powerBiExcel?.title || 'Guía de Integración y Fórmulas para Power BI y Excel'}
+            </h4>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {t.powerBiExcel?.powerBiDesc || 'Conecte y modele el dataset depurado directamente en Microsoft Power BI Desktop o Servicio con medidas DAX y transformaciones M optimizadas.'}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {/* Tarjeta Microsoft Power BI */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Award size={16} /> {t.powerBiExcel?.tabPowerBi || 'Microsoft Power BI'}
+                </h5>
+                <span className="badge badge-amber">DAX + Power Query</span>
+              </div>
+
+              {/* Medida DAX */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    {t.powerBiExcel?.daxFormulaLabel || 'Medida DAX (KPI de Calidad y Conteo)'}:
+                  </span>
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => {
+                      const daxCode = `// Medidas DAX calculadas por DataFlow AI\nTotal_Registros = COUNTROWS('DataFlow_Cleaned_Dataset')\n\nRegistros_Validos = \nCALCULATE(\n    COUNTROWS('DataFlow_Cleaned_Dataset'),\n    'DataFlow_Cleaned_Dataset'[is_outlier] = FALSE()\n)\n\nScore_Calidad_Pct = \nDIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`;
+                      navigator.clipboard.writeText(daxCode);
+                      setCopiedSnippet('dax');
+                      setTimeout(() => setCopiedSnippet(null), 2000);
+                    }}
+                  >
+                    {copiedSnippet === 'dax' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
+                    {copiedSnippet === 'dax' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+                  </button>
+                </div>
+                <pre
+                  style={{
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--primary)',
+                    overflowX: 'auto',
+                    margin: 0,
+                  }}
+                >
+{`Total_Registros = COUNTROWS('DataFlow_Cleaned_Dataset')
+
+Registros_Validos = 
+CALCULATE(
+    COUNTROWS('DataFlow_Cleaned_Dataset'),
+    'DataFlow_Cleaned_Dataset'[is_outlier] = FALSE()
+)
+
+Score_Calidad_Pct = 
+DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
+                </pre>
+              </div>
+
+              {/* Consulta M (Power Query) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    {t.powerBiExcel?.mQueryLabel || 'Power Query M (Importación automática)'}:
+                  </span>
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => {
+                      const mCode = `let\n    Source = Csv.Document(File.Contents("DataFlow_Cleaned_Dataset.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),\n    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"run_id", type text}})\nin\n    #"Changed Type"`;
+                      navigator.clipboard.writeText(mCode);
+                      setCopiedSnippet('m');
+                      setTimeout(() => setCopiedSnippet(null), 2000);
+                    }}
+                  >
+                    {copiedSnippet === 'm' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
+                    {copiedSnippet === 'm' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+                  </button>
+                </div>
+                <pre
+                  style={{
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-main)',
+                    overflowX: 'auto',
+                    margin: 0,
+                  }}
+                >
+{`let
+    Source = Csv.Document(File.Contents("DataFlow_Cleaned_Dataset.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"run_id", type text}})
+in
+    #"Changed Type"`}
+                </pre>
+              </div>
+            </div>
+
+            {/* Tarjeta Microsoft Excel */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Award size={16} /> {t.powerBiExcel?.tabExcel || 'Microsoft Excel'}
+                </h5>
+                <span className="badge badge-emerald">Fórmulas Dinámicas</span>
+              </div>
+
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                {t.powerBiExcel?.excelDesc || 'Fórmulas nativas adaptadas a la configuración regional para auditoría y validación de outliers.'}
+              </p>
+
+              {/* Fórmula de Excel */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    {t.powerBiExcel?.excelFormulaLabel || 'Fórmula de Validación de Outliers (IQR)'}:
+                  </span>
+                  <button
+                    className="btn btn-outline"
+                    style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => {
+                      const excelFormula = language === 'es'
+                        ? `=SI(ESNUMERO(A2); SI(Y(A2>=MEDIANA($A$2:$A$1000)-1,5*DESVEST($A$2:$A$1000); A2<=MEDIANA($A$2:$A$1000)+1,5*DESVEST($A$2:$A$1000)); "Válido"; "Outlier"); "Texto")`
+                        : `=IF(ISNUMBER(A2), IF(AND(A2>=MEDIAN($A$2:$A$1000)-1.5*STDEV($A$2:$A$1000), A2<=MEDIAN($A$2:$A$1000)+1.5*STDEV($A$2:$A$1000)), "Valid", "Outlier"), "Text")`;
+                      navigator.clipboard.writeText(excelFormula);
+                      setCopiedSnippet('excel');
+                      setTimeout(() => setCopiedSnippet(null), 2000);
+                    }}
+                  >
+                    {copiedSnippet === 'excel' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
+                    {copiedSnippet === 'excel' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+                  </button>
+                </div>
+                <pre
+                  style={{
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-mono)',
+                    color: '#10b981',
+                    overflowX: 'auto',
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+{language === 'es'
+  ? `=SI(ESNUMERO(A2); SI(Y(A2>=MEDIANA($A$2:$A$1000)-1,5*DESVEST($A$2:$A$1000); A2<=MEDIANA($A$2:$A$1000)+1,5*DESVEST($A$2:$A$1000)); "Válido"; "Outlier"); "Texto")`
+  : `=IF(ISNUMBER(A2), IF(AND(A2>=MEDIAN($A$2:$A$1000)-1.5*STDEV($A$2:$A$1000), A2<=MEDIAN($A$2:$A$1000)+1.5*STDEV($A$2:$A$1000)), "Valid", "Outlier"), "Text")`}
+                </pre>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '6px',
+                  padding: '10px 12px',
+                  fontSize: '0.775rem',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <strong>Nota regional:</strong> {t.powerBiExcel?.decimalNote || 'Ajuste los separadores de coma (,) o punto y coma (;) según la configuración regional de su sistema operativo.'}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -4,6 +4,34 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.7.0] — 2026-08-31
+
+### 📑 Exportación Ejecutiva HTML/PDF con Gráficos Vectoriales SVG, Feature Selection K-Means e Integración Power BI / Excel en 13 Idiomas
+
+> **Reportes Ejecutivos Listos para Dirección, Segmentación Interactiva y Soporte Global Multi-Idioma:** Incorporación del generador de reportes ejecutivos descargables en formato HTML5 autocontenido y optimizado para impresión/PDF (`@media print` A4) con gráficos vectoriales SVG de clusters y diagramas de caja (Boxplots) incrustados; panel de **Feature Selection** interactivo en la revisión Human-in-the-Loop para la parametrización de variables, $K$ clusters y normalización Z-score en `cluster_kmeans`; selectores dinámicos de ejes de proyección 2D ($X$ e $Y$) en la interfaz de Business Analytics; guía completa de integración con Microsoft Power BI (medidas DAX y consultas Power Query M) y Microsoft Excel con fórmulas de validación regionalizadas; e **internacionalización integral en 13 idiomas** (`es`, `en`, `zh`, `hi`, `fr`, `ar`, `bn`, `pt`, `id`, `ur`, `ru`, `de`, `ja`) con soporte bidireccional LTR/RTL.
+
+#### 📑 Backend: Motor de Exportación y Renderizado SVG Autocontenido
+- **Generador de Reporte Ejecutivo (`AnalyticsService.generate_html_report`):** Generación de documentos HTML5 modernos, responsivos y autocontenidos (sin dependencias externas ni CDN) con estilos de impresión `@media print` en tamaño A4 para conversión instantánea a PDF corporativo.
+- **Renderizado de Gráficos Vectoriales SVG (`_render_cluster_svg` y `_render_boxplot_svg`):** Generación en Python puro de gráficos vectoriales SVG con cuadrículas, centroides normalizados, escalas de ejes, diagramas de caja con bigotes IQR, líneas de mediana en verde y puntos de outliers destacados en rojo.
+- **Endpoint REST de Exportación (`GET /api/v1/analytics/{run_id}/export`):** Endpoint con cabecera `Content-Disposition: attachment; filename="reporte_ejecutivo_{run_id}.html"` y soporte para el parámetro de idioma `?lang=...`.
+- **Cobertura de Tests Unitarios (`test_export_executive_analytics_html_report`):** Validación exhaustiva de descarga de reportes, estructura HTML, presencia de SVGs vectoriales y soporte RTL para idiomas como árabe.
+
+#### 🌐 Frontend: Internacionalización en 13 Idiomas, Feature Selection y Pestaña de Integración
+- **Diccionarios de Internacionalización Completos (`i18n/index.ts`):** Traducción íntegra y de alta calidad para los 13 idiomas soportados (`es`, `en`, `zh`, `hi`, `fr`, `ar`, `bn`, `pt`, `id`, `ur`, `ru`, `de`, `ja`), con diccionarios dedicados para `export`, `clusteringConfig` y `powerBiExcel`.
+- **Feature Selection Interactivo en `PlanReview.tsx`:** Panel de configuración para pasos `cluster_kmeans` que permite seleccionar interactivamente variables numéricas con checkboxes, ajustar el número de clusters $K \in [2, 10]$ y alternar la estandarización Z-score antes de la aprobación humana.
+- **Selectores Dinámicos de Ejes 2D en `BusinessInsights.tsx`:** Desplegables de eje $X$ y eje $Y$ para explorar interactivamente múltiples proyecciones bidimensionales del espacio de características del dataset.
+- **Pestaña de Integración Power BI y Excel (`tabIntegration`):** 
+  - **Microsoft Power BI:** Medidas DAX de calidad y conteo, y script de importación en Power Query M con botón de copia al portapapeles con 1 clic.
+  - **Microsoft Excel:** Fórmulas dinámicas regionalizadas adaptadas al idioma activo (soporte de separadores de lista `;` vs `,`) y notas de configuración regional.
+- **Botones de Exportación Directa e Imprimible:** Enlace directo de descarga del reporte HTML y botón de apertura en pestaña nueva para impresión a PDF con `window.print()`.
+
+#### 🧪 Testing y Verificación Integral (161 Tests Totales)
+- **130 Tests Backend + 31 Tests Frontend:** 100% pasando sin advertencias críticas.
+- **Linters y SAST Verificados:** Ruff (0 errores), Black (0 diferencias), Bandit SAST (0 vulnerabilidades), TypeScript estricto (0 errores), Vite build verificado (0 errores).
+- **Atribución del Modelo:** Gemini 3.7 Flash (High).
+
+---
+
 ## [1.6.0] — 2026-08-31
 
 ### 🌌 Visualización Gráfica de Clusters (Scatter 2D) y Diagramas Boxplot de Outliers en Business Analytics
