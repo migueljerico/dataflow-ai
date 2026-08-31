@@ -48,10 +48,7 @@ def test_search_open_datasets_ckan_integration_mock():
                     "id": "traffic-madrid-2026",
                     "title": "Aforos de Tráfico Urbano",
                     "notes": "Intensidad y velocidad media de vehículos en puntos de control.",
-                    "organization": {
-                        "title": "Ayuntamiento de Madrid",
-                        "name": "ayto-madrid"
-                    },
+                    "organization": {"title": "Ayuntamiento de Madrid", "name": "ayto-madrid"},
                     "tags": [{"name": "tráfico"}, {"name": "movilidad"}],
                     "resources": [
                         {
@@ -59,12 +56,12 @@ def test_search_open_datasets_ckan_integration_mock():
                             "name": "aforos_2026.csv",
                             "format": "CSV",
                             "url": "https://opendata.madrid.es/data/aforos_2026.csv",
-                            "size": 1048576
+                            "size": 1048576,
                         }
-                    ]
+                    ],
                 }
-            ]
-        }
+            ],
+        },
     }
 
     mock_resp = MagicMock()

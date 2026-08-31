@@ -6,14 +6,16 @@ memoria vacías, de modo que:
 - No se acumulan archivos residuales en backend/uploads/ en cada ejecución.
 - No hay fugas de estado entre tests (planes, datasets, runs de otros tests).
 """
+
 import pytest
 
 from app.core.config import settings
+from app.core.storage import reset_storage
+from app.services.analytics_service import ANALYTICS_CACHE
 from app.services.dataset_service import DATASET_CACHE, EMPTY_ROWS_PURGED_CACHE
 from app.services.etl_service import PLANS_CACHE, RUNS_CACHE
 from app.services.profiler_service import PROFILING_CACHE
 from app.services.quality_service import QUALITY_CACHE
-from app.services.analytics_service import ANALYTICS_CACHE
 
 ALL_CACHES = (
     DATASET_CACHE,
@@ -31,11 +33,14 @@ def isolated_runtime_state(tmp_path, monkeypatch):
     upload_dir = tmp_path / "uploads"
     upload_dir.mkdir()
     monkeypatch.setattr(settings, "UPLOAD_DIR", upload_dir)
+    monkeypatch.setattr(settings, "STORAGE_BACKEND", "local")
+    reset_storage()
 
     for cache in ALL_CACHES:
         cache.clear()
 
     yield
 
+    reset_storage()
     for cache in ALL_CACHES:
         cache.clear()

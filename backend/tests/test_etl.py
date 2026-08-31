@@ -6,6 +6,7 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_full_etl_pipeline_flow():
     csv_content = (
         "Fecha,ID_Cliente,Nombre_Cliente,Producto,Cantidad,Precio_Unidad,Canal,Comercial\n"
@@ -14,7 +15,9 @@ def test_full_etl_pipeline_flow():
         "06/01/2026,CLI-002,María Gómez,Monitor 4K,1,$350.00,Tienda,Ana Belén\n"
     )
     file_bytes = io.BytesIO(csv_content.encode("utf-8"))
-    upload_res = client.post("/api/v1/datasets/upload", files={"file": ("sales_pipeline_test.csv", file_bytes, "text/csv")})
+    upload_res = client.post(
+        "/api/v1/datasets/upload", files={"file": ("sales_pipeline_test.csv", file_bytes, "text/csv")}
+    )
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
 
@@ -44,13 +47,11 @@ def test_full_etl_pipeline_flow():
 
 
 def test_clamp_range_logging_accuracy():
-    csv_content = (
-        "Nombre_Agente,AHT_Segundos,Score_Calidad\n"
-        "Ramon Sampedro,-50,85.0\n"
-        "Lucia Blanco,450,105.0\n"
-    )
+    csv_content = "Nombre_Agente,AHT_Segundos,Score_Calidad\n" "Ramon Sampedro,-50,85.0\n" "Lucia Blanco,450,105.0\n"
     file_bytes = io.BytesIO(csv_content.encode("utf-8"))
-    upload_res = client.post("/api/v1/datasets/upload", files={"file": ("contact_center_clamp_test.csv", file_bytes, "text/csv")})
+    upload_res = client.post(
+        "/api/v1/datasets/upload", files={"file": ("contact_center_clamp_test.csv", file_bytes, "text/csv")}
+    )
     dataset_id = upload_res.json()["dataset_id"]
 
     plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
@@ -84,7 +85,9 @@ def test_sales_sample_end_to_end_qa():
         ",,,,,,,\n"
     )
     file_bytes = io.BytesIO(csv_content.encode("utf-8"))
-    upload_res = client.post("/api/v1/datasets/upload", files={"file": ("sales_sample_corrupted_qa.csv", file_bytes, "text/csv")})
+    upload_res = client.post(
+        "/api/v1/datasets/upload", files={"file": ("sales_sample_corrupted_qa.csv", file_bytes, "text/csv")}
+    )
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
 

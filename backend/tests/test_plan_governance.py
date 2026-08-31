@@ -2,6 +2,7 @@
 Tests de gobierno del pipeline: los planes inexistentes deben fallar con 404
 en lugar de ejecutarse silenciosamente contra datasets arbitrarios.
 """
+
 from fastapi.testclient import TestClient
 
 from app.main import app

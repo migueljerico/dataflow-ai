@@ -1,5 +1,5 @@
-from app.core.config import settings
 from app.core.exceptions import FunctionalException
+from app.core.storage import get_storage
 from app.models.etl import ExecutionResult
 from app.services.etl_service import ETLService
 from app.services.quality_service import QualityService
@@ -44,13 +44,18 @@ async def download_clean_dataset(run_id: str):
     Descargar el dataset limpio resultante de la ejecución ETL.
     """
     result = ETLService.get_run_result(run_id)
+    storage = get_storage()
     candidates = [
-        settings.UPLOAD_DIR / f"{run_id}_{result.clean_filename}",
-        settings.UPLOAD_DIR / result.clean_filename,
+        f"{run_id}_{result.clean_filename}",
+        result.clean_filename,
     ]
-    target_file = next((p for p in candidates if p.exists()), None)
+    target_file = None
+    for key in candidates:
+        if storage.exists(key):
+            target_file = storage.get_path(key)
+            break
 
-    if not target_file:
+    if not target_file or not target_file.exists():
         raise FunctionalException(
             message="El archivo limpio no está disponible para descarga.", code="FILE_NOT_FOUND", status_code=404
         )
@@ -65,14 +70,19 @@ async def download_reproducible_script(run_id: str):
     Descargar el script de Python standalone reproducible (.py).
     """
     result = ETLService.get_run_result(run_id)
+    storage = get_storage()
     candidates = [
-        settings.UPLOAD_DIR / f"pipeline_{run_id}.py",
-        settings.UPLOAD_DIR / f"script_{run_id}.py",
-        settings.UPLOAD_DIR / f"script_{result.dataset_id}.py",
+        f"pipeline_{run_id}.py",
+        f"script_{run_id}.py",
+        f"script_{result.dataset_id}.py",
     ]
-    target_file = next((p for p in candidates if p.exists()), None)
+    target_file = None
+    for key in candidates:
+        if storage.exists(key):
+            target_file = storage.get_path(key)
+            break
 
-    if not target_file:
+    if not target_file or not target_file.exists():
         raise FunctionalException(
             message="El script de Python no está disponible.", code="SCRIPT_NOT_FOUND", status_code=404
         )

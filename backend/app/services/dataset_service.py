@@ -1,5 +1,4 @@
 import csv
-import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +11,7 @@ from fastapi import UploadFile
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
 from app.core.security_url import safe_download_url_to_file
+from app.core.storage import get_storage
 from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
 
 DATASET_CACHE: Dict[str, DatasetMetadata] = {}
@@ -95,33 +95,11 @@ class DatasetService:
     @staticmethod
     def _cleanup_old_uploads(max_age_seconds: int = 7200, max_files: int = 20) -> None:
         """
-        Limpia preventivamente archivos temporales antiguos en uploads/ para evitar
-        acumulación innecesaria en la memoria RAM (tmpfs) de Google Cloud Run.
+        Limpia preventivamente archivos temporales antiguos en el almacenamiento
+        para evitar acumulación innecesaria en memoria/tmpfs o almacenamiento persistente.
         """
         try:
-            upload_dir = settings.UPLOAD_DIR
-            if not upload_dir.exists():
-                return
-            now = time.time()
-            files = [f for f in upload_dir.iterdir() if f.is_file()]
-
-            # Eliminar archivos con más de max_age_seconds (2 horas)
-            for f in files:
-                try:
-                    if now - f.stat().st_mtime > max_age_seconds:
-                        f.unlink(missing_ok=True)
-                except OSError:
-                    pass
-
-            # Si se supera el límite de ficheros retenidos, purgar los más antiguos
-            remaining = [f for f in upload_dir.iterdir() if f.is_file()]
-            if len(remaining) > max_files:
-                remaining.sort(key=lambda x: x.stat().st_mtime)
-                for f in remaining[: len(remaining) - max_files]:
-                    try:
-                        f.unlink(missing_ok=True)
-                    except OSError:
-                        pass
+            get_storage().cleanup(max_age_seconds=max_age_seconds, max_files=max_files)
         except Exception:
             pass
 
@@ -261,10 +239,8 @@ class DatasetService:
 
         dataset_id = str(uuid.uuid4())
         safe_filename = f"{dataset_id}_{Path(filename).name}"
-        saved_path = settings.UPLOAD_DIR / safe_filename
-
-        with open(saved_path, "wb") as f:
-            f.write(content)
+        storage = get_storage()
+        saved_path = storage.save_file(safe_filename, content)
 
         return DatasetService._process_saved_dataset_file(
             saved_path=saved_path, filename=filename, file_ext=file_ext, file_size=file_size, dataset_id=dataset_id
@@ -299,12 +275,17 @@ class DatasetService:
                     raw_filename = f"{Path(raw_filename).stem}.csv"
 
             safe_filename = f"{dataset_id}_{Path(raw_filename).name}"
-            final_path = settings.UPLOAD_DIR / safe_filename
+            storage = get_storage()
+
+            with open(temp_path, "rb") as f:
+                content = f.read()
+
+            final_path = storage.save_file(safe_filename, content)
 
             if temp_path.exists():
-                temp_path.replace(final_path)
+                temp_path.unlink(missing_ok=True)
 
-            file_size = final_path.stat().st_size
+            file_size = len(content)
             return DatasetService._process_saved_dataset_file(
                 saved_path=final_path,
                 filename=raw_filename,
@@ -322,10 +303,12 @@ class DatasetService:
         if dataset_id in DATASET_CACHE:
             return DATASET_CACHE[dataset_id]
 
-        matching_files = list(settings.UPLOAD_DIR.glob(f"{dataset_id}_*"))
+        storage = get_storage()
+        matching_files = storage.list_files(prefix=f"{dataset_id}_")
         if matching_files:
-            target_file = matching_files[0]
-            orig_filename = target_file.name[len(dataset_id) + 1 :]
+            matched_name = matching_files[0]
+            target_file = storage.get_path(matched_name)
+            orig_filename = matched_name[len(dataset_id) + 1 :]
             file_ext = target_file.suffix.lower()
             file_type = FileTypeEnum.CSV if file_ext == ".csv" else FileTypeEnum.XLSX
 
@@ -364,19 +347,20 @@ class DatasetService:
     @staticmethod
     def get_saved_filepath(dataset_id: str) -> Path:
         metadata = DatasetService.get_dataset_metadata(dataset_id)
-        matching_files = list(settings.UPLOAD_DIR.glob(f"{dataset_id}_*"))
-        if matching_files:
-            return matching_files[0]
-
+        storage = get_storage()
         safe_filename = f"{dataset_id}_{Path(metadata.filename).name}"
-        target_path = settings.UPLOAD_DIR / safe_filename
-        if not target_path.exists():
-            raise FunctionalException(
-                message=f"El archivo físico del dataset '{dataset_id}' no está disponible.",
-                code="FILE_NOT_FOUND_ON_DISK",
-                status_code=404,
-            )
-        return target_path
+        if storage.exists(safe_filename):
+            return storage.get_path(safe_filename)
+
+        matching_files = storage.list_files(prefix=f"{dataset_id}_")
+        if matching_files:
+            return storage.get_path(matching_files[0])
+
+        raise FunctionalException(
+            message=f"El archivo físico del dataset '{dataset_id}' no está disponible.",
+            code="FILE_NOT_FOUND_ON_DISK",
+            status_code=404,
+        )
 
     @staticmethod
     def load_dataframe(dataset_id: str) -> pd.DataFrame:

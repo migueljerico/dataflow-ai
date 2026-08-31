@@ -1,6 +1,47 @@
-﻿import React from 'react';
+import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Globe } from 'lucide-react';
+
+const SpainFlag: React.FC = () => (
+  <svg
+    width="16"
+    height="12"
+    viewBox="0 0 640 480"
+    aria-hidden="true"
+    style={{
+      borderRadius: '2px',
+      display: 'inline-block',
+      verticalAlign: 'middle',
+      flexShrink: 0,
+      boxShadow: '0 0 1px rgba(0,0,0,0.35)',
+    }}
+  >
+    <path fill="#c60b1e" d="M0 0h640v480H0z" />
+    <path fill="#ffc400" d="M0 120h640v240H0z" />
+  </svg>
+);
+
+const UkFlag: React.FC = () => (
+  <svg
+    width="16"
+    height="12"
+    viewBox="0 0 60 30"
+    aria-hidden="true"
+    style={{
+      borderRadius: '2px',
+      display: 'inline-block',
+      verticalAlign: 'middle',
+      flexShrink: 0,
+      boxShadow: '0 0 1px rgba(0,0,0,0.35)',
+    }}
+  >
+    <path fill="#012169" d="M0 0h60v30H0z" />
+    <path stroke="#ffffff" strokeWidth="6" d="M0 0l60 30M60 0L0 30" />
+    <path stroke="#c8102e" strokeWidth="4" d="M0 0l60 30M60 0L0 30" />
+    <path stroke="#ffffff" strokeWidth="10" d="M30 0v30M0 15h60" />
+    <path stroke="#c8102e" strokeWidth="6" d="M30 0v30M0 15h60" />
+  </svg>
+);
 
 export const LanguageSelector: React.FC = () => {
   const { language, setLanguage } = useLanguage();
@@ -36,13 +77,13 @@ export const LanguageSelector: React.FC = () => {
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
+          gap: '6px',
           transition: 'all 0.15s ease',
         }}
         title="Español (ES)"
         aria-pressed={language === 'es'}
       >
-        <span>🇪🇸</span>
+        <SpainFlag />
         <span>ES</span>
       </button>
       <button
@@ -59,15 +100,16 @@ export const LanguageSelector: React.FC = () => {
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
+          gap: '6px',
           transition: 'all 0.15s ease',
         }}
         title="English (EN)"
         aria-pressed={language === 'en'}
       >
-        <span>🇬🇧</span>
+        <UkFlag />
         <span>EN</span>
       </button>
     </div>
   );
 };
+

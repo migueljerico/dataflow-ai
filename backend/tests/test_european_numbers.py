@@ -4,6 +4,7 @@ Tests del parseo numérico centralizado con separadores europeos y americanos.
 Cubre el caso de negocio documentado en el README: importes como `1.200,50 €`
 deben convertirse a 1200.50 (float64) y no perderse como NaN.
 """
+
 import io
 import math
 

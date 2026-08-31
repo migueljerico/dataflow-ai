@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
-from app.core.config import settings
 from app.core.exceptions import FunctionalException
+from app.core.storage import get_storage
 from app.models.dataset import (
     DatasetFromUrlRequest,
     DatasetMetadata,
@@ -88,10 +88,8 @@ async def load_sample_dataset(sample_id: str):
 
     dataset_id = str(uuid.uuid4())
     safe_filename = f"{dataset_id}_{sample_filename}"
-    saved_path = settings.UPLOAD_DIR / safe_filename
-
-    with open(saved_path, "wb") as f:
-        f.write(content)
+    storage = get_storage()
+    saved_path = storage.save_file(safe_filename, content)
 
     delimiter = DatasetService._detect_csv_delimiter(saved_path)
     df = pd.read_csv(saved_path, sep=delimiter, encoding="utf-8", on_bad_lines="skip")

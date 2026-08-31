@@ -1,12 +1,12 @@
 # pydantic-settings recomendado para validación futura; se mantiene compatibilidad sin dependencia extra
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 class Settings:
     PROJECT_NAME: str = "DataFlow AI"
-    VERSION: str = "1.3.0"
+    VERSION: str = "1.4.0"
     API_V1_STR: str = "/api/v1"
 
     # File limits
@@ -21,6 +21,16 @@ class Settings:
     # Storage paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
+
+    # Cloud Storage & S3 configuration
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local").lower()
+    STORAGE_BUCKET_NAME: str = os.getenv("STORAGE_BUCKET_NAME", "")
+    STORAGE_GCS_PROJECT: Optional[str] = os.getenv("STORAGE_GCS_PROJECT", None)
+    STORAGE_S3_ENDPOINT_URL: Optional[str] = os.getenv("STORAGE_S3_ENDPOINT_URL", None)
+    STORAGE_S3_REGION_NAME: str = os.getenv("STORAGE_S3_REGION_NAME", "us-east-1")
+    STORAGE_S3_ACCESS_KEY_ID: Optional[str] = os.getenv("STORAGE_S3_ACCESS_KEY_ID", None)
+    STORAGE_S3_SECRET_ACCESS_KEY: Optional[str] = os.getenv("STORAGE_S3_SECRET_ACCESS_KEY", None)
+    STORAGE_PREFIX: str = os.getenv("STORAGE_PREFIX", "dataflow/")
 
     # CORS: en desarrollo el frontend Vite hace proxy de /api, por lo que esta
     # lista es una red de seguridad. En producción (Cloud Run) se configura vía

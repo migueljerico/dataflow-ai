@@ -4,6 +4,7 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_list_and_load_demo_sample():
     # 1. List samples
     list_res = client.get("/api/v1/datasets/samples")
@@ -22,6 +23,7 @@ def test_list_and_load_demo_sample():
     assert meta["filename"] == "people_analytics_corrupted.csv"
     assert meta["column_count"] == 9
     assert meta["row_count"] > 0
+
 
 def test_people_analytics_end_to_end_and_business_insights():
     # 1. Load sample
@@ -55,7 +57,7 @@ def test_people_analytics_end_to_end_and_business_insights():
     assert analytics_res.status_code == 200
     analytics_data = analytics_res.json()
     assert analytics_data["domain"] == "people_analytics"
-    
+
     kpis = {k["id"]: k for k in analytics_data["kpis"]}
     # Productividad media real con clamp a 100% (88.2% - 88.3% vs 90.2% sin clamp)
     assert kpis["kpi-avg-prod"]["numeric_value"] in [88.2, 88.3]

@@ -1,4 +1,5 @@
 import hashlib
+import io
 import re
 import uuid
 from datetime import datetime, timezone
@@ -6,9 +7,9 @@ from typing import Dict, List
 
 import pandas as pd
 
-from app.core.config import settings
 from app.core.exceptions import FunctionalException
 from app.core.number_parsing import MISSING_MARKERS, to_numeric_series
+from app.core.storage import get_storage
 from app.models.dataset import FileTypeEnum, ProcessingStateEnum
 from app.models.etl import ExecutionResult, StepStatusEnum, TransformationPlan, TransformationStep
 from app.services.dataset_service import DatasetService
@@ -537,27 +538,30 @@ class ETLService:
             except Exception as e:
                 errors.append(f"Error al ejecutar paso {step.step_id} ({step.operation}): {str(e)}")
 
-        # Guardar dataset limpio
+        # Guardar dataset limpio mediante StorageBackend
         run_id = f"RUN-{uuid.uuid4().hex[:8]}"
         clean_filename = f"clean_{metadata.filename}"
-        clean_filepath = settings.UPLOAD_DIR / f"{run_id}_{clean_filename}"
+        clean_key = f"{run_id}_{clean_filename}"
+        storage = get_storage()
 
         if metadata.file_type == FileTypeEnum.CSV:
-            df_current.to_csv(clean_filepath, index=False, encoding="utf-8")
+            buf = io.BytesIO()
+            df_current.to_csv(buf, index=False, encoding="utf-8")
+            clean_bytes = buf.getvalue()
         else:
-            df_current.to_excel(clean_filepath, index=False)
+            buf = io.BytesIO()
+            df_current.to_excel(buf, index=False)
+            clean_bytes = buf.getvalue()
 
-        with open(clean_filepath, "rb") as f:
-            output_md5 = hashlib.md5(f.read(), usedforsecurity=False).hexdigest()
+        storage.save_file(clean_key, clean_bytes)
+        output_md5 = hashlib.md5(clean_bytes, usedforsecurity=False).hexdigest()
 
-        # Generar script reproducible
+        # Generar y almacenar script reproducible
         script_content = ScriptGeneratorService.generate_script(
             source_filename=metadata.filename, file_type=metadata.file_type.value, steps=applied_steps, run_id=run_id
         )
         script_filename = f"pipeline_{run_id}.py"
-        script_filepath = settings.UPLOAD_DIR / script_filename
-        with open(script_filepath, "w", encoding="utf-8") as f:
-            f.write(script_content)
+        storage.save_file(script_filename, script_content.encode("utf-8"))
 
         finished_at = datetime.now(timezone.utc)
         rows_after, cols_after = df_current.shape

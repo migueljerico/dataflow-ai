@@ -5,6 +5,7 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_profiling_sales_corrupted():
     csv_content = (
         "Fecha,ID_Cliente,Nombre_Cliente,Producto,Cantidad,Precio_Unidad,Canal,Comercial\n"
@@ -14,11 +15,8 @@ def test_profiling_sales_corrupted():
         ",CLI-003,Pedro Picapiedra,Teclado Mecanico,3,45.00,WEB,Carlos Ruiz\n"
     )
     file_bytes = io.BytesIO(csv_content.encode("utf-8"))
-    
-    upload_res = client.post(
-        "/api/v1/datasets/upload",
-        files={"file": ("sales_test.csv", file_bytes, "text/csv")}
-    )
+
+    upload_res = client.post("/api/v1/datasets/upload", files={"file": ("sales_test.csv", file_bytes, "text/csv")})
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
 

@@ -3,8 +3,8 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
-from app.core.config import settings
 from app.core.exceptions import FunctionalException
+from app.core.storage import get_storage
 from app.models.analytics import BusinessKPI, CategoryDistribution, ExecutiveAnalyticsReport
 from app.services.etl_service import ETLService
 
@@ -18,11 +18,16 @@ class AnalyticsService:
             return ANALYTICS_CACHE[run_id]
 
         run_result = ETLService.get_run_result(run_id)
-        candidates = [
-            settings.UPLOAD_DIR / f"{run_id}_{run_result.clean_filename}",
-            settings.UPLOAD_DIR / run_result.clean_filename,
+        storage = get_storage()
+        candidate_keys = [
+            f"{run_id}_{run_result.clean_filename}",
+            run_result.clean_filename,
         ]
-        clean_filepath = next((p for p in candidates if p.exists()), None)
+        clean_filepath = None
+        for key in candidate_keys:
+            if storage.exists(key):
+                clean_filepath = storage.get_path(key)
+                break
 
         if not clean_filepath or not clean_filepath.exists():
             raise FunctionalException(

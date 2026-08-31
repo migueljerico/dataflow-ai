@@ -4,6 +4,29 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.4.0] — 2026-08-31
+
+### ☁️ Conectores Cloud Storage (GCS / S3) y Banderas Vectoriales Desktop
+
+> **Conectores Cloud Storage Multi-Instancia y Corrección de Banderas Desktop:** Extensión completa de la arquitectura de almacenamiento desacoplado `StorageBackend` con soporte nativo para **Google Cloud Storage (GCS)** y **AWS S3 / MinIO / Cloudflare R2**, incorporando sincronización de caché local transparente para procesamiento eficiente con Pandas y OpenPyXL en despliegues distribuidos (Cloud Run, Kubernetes). Corrección visual de las banderas de España y Reino Unido en el selector de idiomas mediante componentes SVG nativos vectoriales de alta precisión para resolución 100% nítida en Windows Desktop y todas las plataformas.
+
+#### 🚩 Frontend: Selector de Idiomas y Banderas Vectoriales
+- **Banderas SVG Nativas:** Sustitución de caracteres emoji Unicode por componentes SVG nativos (`SpainFlag` y `UkFlag`) en `frontend/src/components/LanguageSelector.tsx`, resolviendo la falta de renderizado en Windows Desktop (*Segoe UI Emoji*) y asegurando fidelidad visual idéntica en Windows, macOS, Linux, iOS y Android.
+- **Accesibilidad y Microestilos:** Incorporación de atributos `aria-hidden="true"`, bordes redondeados y micro-sombras de contraste en las banderas vectoriales.
+
+#### ☁️ Backend: Conectores Cloud Storage (GCS / S3 / MinIO / R2)
+- **Interfaz `StorageBackend` Ampliada:** Soporte para operaciones de ciclo de vida completas: `save_file`, `read_file`, `delete_file`, `exists`, `get_path`, `list_files` y `cleanup`.
+- **`GCSStorageBackend`:** Conector para Google Cloud Storage con autenticación por proyecto/IAM, subida/descarga de blobs con prefijo configurable y sincronización transparente de caché local en disco/tmpfs.
+- **`S3StorageBackend`:** Conector para AWS S3 y servicios compatibles (MinIO, Cloudflare R2, LocalStack) con soporte para endpoints personalizados, credenciales explícitas o IAM roles y gestión de caché.
+- **Factory & Singleton `get_storage()`:** Conmutación dinámica del backend de almacenamiento mediante `STORAGE_BACKEND` (`local`, `gcs`, `s3`) y método `reset_storage()` para pruebas aisladas.
+- **Servicios Desacoplados:** Refactorización de `DatasetService`, `ETLService`, `AnalyticsService` y endpoints de API (`datasets.py`, `runs.py`) para delegar el 100% de operaciones de almacenamiento en `StorageBackend`.
+
+#### 🧪 Testing y Validación (122 Tests Totales)
+- **Suite `test_storage.py` (8 tests):** Cobertura exhaustiva de CRUD local, retención y límites de almacenamiento, mocks de GCS y S3, fallbacks y manejo de errores funcionales.
+- **113 Tests Backend + 9 Tests Frontend:** 100% pasando sin advertencias.
+- **Linters y SAST:** Ruff (0 errores), Black (0 diffs), Bandit (0 vulnerabilidades), TS (0 errores), Vite build (0 errores).
+
+
 ## [1.3.0] — 2026-08-28
 
 ### 🛡️ Auditoría Técnica, Gobernanza Estricta, Selector de Idioma (ES/EN) y Hardening Integral

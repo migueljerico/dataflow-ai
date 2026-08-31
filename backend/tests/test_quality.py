@@ -5,6 +5,7 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_quality_analysis_contact_center():
     csv_content = (
         "Fecha,Campana,ID_Agente,Nombre_Agente,Llamadas_Atendidas,Ventas_Conseguidas,Conversion_Pct,AHT_Segundos,Score_Calidad,Absentismo\n"
@@ -16,10 +17,7 @@ def test_quality_analysis_contact_center():
     )
     file_bytes = io.BytesIO(csv_content.encode("utf-8"))
 
-    upload_res = client.post(
-        "/api/v1/datasets/upload",
-        files={"file": ("cc_quality_test.csv", file_bytes, "text/csv")}
-    )
+    upload_res = client.post("/api/v1/datasets/upload", files={"file": ("cc_quality_test.csv", file_bytes, "text/csv")})
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
 
@@ -41,6 +39,6 @@ def test_quality_analysis_contact_center():
     assert len(issues) > 0
 
     dimensions = [i["dimension"] for i in issues]
-    assert "uniqueness" in dimensions   # Fila 1 y 2 duplicadas
+    assert "uniqueness" in dimensions  # Fila 1 y 2 duplicadas
     assert "consistency" in dimensions  # ' Retencion ' con espacios o 'retencion' minuscula
-    assert "integrity" in dimensions    # -50 segundos AHT o 105.0% Score_Calidad
+    assert "integrity" in dimensions  # -50 segundos AHT o 105.0% Score_Calidad

@@ -42,6 +42,7 @@ def _setup_stream_mock(status_code=200, headers=None, byte_chunks=None):
 # CATEGORÍA A: Rangos de IP directamente bloqueados (Metadata Cloud & Loopback)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_regression_ssrf_gcp_metadata_ip():
     """
     Caso 1 de Penetration Testing:
@@ -49,10 +50,7 @@ def test_regression_ssrf_gcp_metadata_ip():
     Resultado esperado: 400 — code: SSRF_BLOCKED_IP
     Body details: {"blocked_ip": "169.254.169.254", "host": "169.254.169.254"}
     """
-    response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://169.254.169.254/computeMetadata/v1/"}
-    )
+    response = client.post("/api/v1/datasets/from-url", json={"url": "http://169.254.169.254/computeMetadata/v1/"})
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "SSRF_BLOCKED_IP"
@@ -67,10 +65,7 @@ def test_regression_ssrf_ipv4_loopback_ip():
     Resultado esperado: 400 — code: SSRF_BLOCKED_IP
     Body details: {"blocked_ip": "127.0.0.1", "host": "127.0.0.1"}
     """
-    response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://127.0.0.1/"}
-    )
+    response = client.post("/api/v1/datasets/from-url", json={"url": "http://127.0.0.1/"})
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "SSRF_BLOCKED_IP"
@@ -82,6 +77,7 @@ def test_regression_ssrf_ipv4_loopback_ip():
 # CATEGORÍA B: Resolución de hostname a IP antes de validar (DNS Pre-resolution)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_regression_ssrf_hostname_dns_resolution_localhost():
     """
     Caso 3 de Penetration Testing:
@@ -90,10 +86,7 @@ def test_regression_ssrf_hostname_dns_resolution_localhost():
     Body details: {"blocked_ip": "127.0.0.1", "host": "localhost"}
     Confirma que se resuelve el hostname a IP antes de validar, no solo comparación de texto.
     """
-    response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://localhost/"}
-    )
+    response = client.post("/api/v1/datasets/from-url", json={"url": "http://localhost/"})
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "SSRF_BLOCKED_IP"
@@ -105,6 +98,7 @@ def test_regression_ssrf_hostname_dns_resolution_localhost():
 # CATEGORÍA C: Normalización de formatos alternativos de IP (Decimal, Hex, Octal)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_regression_ssrf_ip_decimal_notation():
     """
     Caso 4 de Penetration Testing:
@@ -113,10 +107,7 @@ def test_regression_ssrf_ip_decimal_notation():
     Body details: {"blocked_ip": "127.0.0.1", "host": "2130706433"}
     Confirma normalización de IP antes de comparar contra rangos bloqueados.
     """
-    response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://2130706433/"}
-    )
+    response = client.post("/api/v1/datasets/from-url", json={"url": "http://2130706433/"})
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "SSRF_BLOCKED_IP"
@@ -131,10 +122,7 @@ def test_regression_ssrf_ip_hexadecimal_notation():
     Resultado esperado: 400 — code: SSRF_BLOCKED_IP
     Body details: {"blocked_ip": "127.0.0.1", "host": "0x7f.0.0.1"}
     """
-    response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://0x7f.0.0.1/"}
-    )
+    response = client.post("/api/v1/datasets/from-url", json={"url": "http://0x7f.0.0.1/"})
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "SSRF_BLOCKED_IP"
@@ -149,10 +137,7 @@ def test_regression_ssrf_ip_octal_notation():
     Resultado esperado: 400 — code: SSRF_BLOCKED_IP
     Body details: {"blocked_ip": "127.0.0.1", "host": "0177.0.0.1"}
     """
-    response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://0177.0.0.1/"}
-    )
+    response = client.post("/api/v1/datasets/from-url", json={"url": "http://0177.0.0.1/"})
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "SSRF_BLOCKED_IP"
@@ -164,6 +149,7 @@ def test_regression_ssrf_ip_octal_notation():
 # CATEGORÍA D: Rechazo de credenciales embebidas (URL Userinfo Spoofing)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_regression_ssrf_embedded_credentials_disallowed():
     """
     Caso 7 de Penetration Testing:
@@ -172,8 +158,7 @@ def test_regression_ssrf_embedded_credentials_disallowed():
     Body: {} rechazo directo de credenciales embebidas en la URL.
     """
     response = client.post(
-        "/api/v1/datasets/from-url",
-        json={"url": "http://169.254.169.254@raw.githubusercontent.com/"}
+        "/api/v1/datasets/from-url", json={"url": "http://169.254.169.254@raw.githubusercontent.com/"}
     )
     assert response.status_code == 400
     data = response.json()
@@ -184,6 +169,7 @@ def test_regression_ssrf_embedded_credentials_disallowed():
 # CASO POSITIVO DE CONTROL: URL pública legítima no bloqueada
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_regression_ssrf_positive_control_legitimate_url():
     """
     Caso positivo de control verificado en producción:
@@ -191,17 +177,17 @@ def test_regression_ssrf_positive_control_legitimate_url():
     Resultado esperado: 201 — dataset_id generado, status: 'validated'
     """
     csv_sample = b"Country Name,Country Code,Year,Value\nSpain,ESP,2022,1417800000000\n"
-    
+
     with patch("app.core.security_url.httpx.AsyncClient") as mock_client_cls:
         mock_client_cls.return_value = _setup_stream_mock(
             status_code=200,
             headers={"content-type": "text/csv", "content-length": str(len(csv_sample))},
-            byte_chunks=[csv_sample]
+            byte_chunks=[csv_sample],
         )
 
         response = client.post(
             "/api/v1/datasets/from-url",
-            json={"url": "https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"}
+            json={"url": "https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"},
         )
 
         assert response.status_code == 201

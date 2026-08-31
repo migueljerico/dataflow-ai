@@ -5,6 +5,7 @@ from app.main import app
 
 client = TestClient(app)
 
+
 def test_ai_copilot_plan_generation():
     csv_content = "ID,Nombre,Importe\n1, Juan , 100.50 €\n1, Juan , 100.50 €\n"
     file_bytes = io.BytesIO(csv_content.encode("utf-8"))

@@ -1,7 +1,7 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.3.0  
-**Fecha de actualización:** 28 de agosto de 2026  
+**Versión:** 1.4.0  
+**Fecha de actualización:** 31 de agosto de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
 **Stack:** Python 3.11 · FastAPI · Pandas · React 19 · TypeScript · Vite · Docker
@@ -458,10 +458,19 @@ Base URL: `/api/v1`
 | :--- | :---: | :--- | :--- |
 | `PORT` | Cloud Run lo inyecta | `8080` | Puerto HTTP en el que escucha Uvicorn. |
 | `PROJECT_NAME` | No | `DataFlow AI` | Nombre de la aplicación en FastAPI y metadatos. |
-| `VERSION` | No | `0.2.0` | Versión semántica actual del backend. |
+| `VERSION` | No | `1.4.0` | Versión semántica actual del backend. |
 | `API_V1_STR` | No | `/api/v1` | Prefijo base para la API REST. |
-| `MAX_UPLOAD_SIZE_MB` | No | `10` | Límite máximo de tamaño para datasets subidos. |
-| `BACKEND_CORS_ORIGINS` | No | `["http://localhost:3000", "http://127.0.0.1:3000"]` | Lista JSON de orígenes autorizados para CORS en desarrollo. |
+| `MAX_FILE_SIZE_BYTES` | No | `10485760` (10 MB) | Límite máximo de tamaño para subida directa de datasets. |
+| `MAX_URL_FILE_SIZE_BYTES` | No | `20971520` (20 MB) | Límite máximo de tamaño para importación desde URL. |
+| `STORAGE_BACKEND` | No | `local` | Backend de almacenamiento: `local` (tmpfs/disco), `gcs` (Google Cloud Storage) o `s3` (AWS S3 / MinIO / R2). |
+| `STORAGE_BUCKET_NAME` | Requerido para GCS/S3 | `""` | Nombre del bucket en Google Cloud Storage o AWS S3. |
+| `STORAGE_GCS_PROJECT` | Opcional | `None` | ID de proyecto GCP para autenticación de Google Cloud Storage. |
+| `STORAGE_S3_ENDPOINT_URL` | Opcional | `None` | Endpoint personalizado para S3 (MinIO, Cloudflare R2, LocalStack). |
+| `STORAGE_S3_REGION_NAME` | No | `us-east-1` | Región AWS para el cliente S3. |
+| `STORAGE_S3_ACCESS_KEY_ID` | Opcional | `None` | Access Key ID para S3 (si no se usan roles IAM). |
+| `STORAGE_S3_SECRET_ACCESS_KEY` | Opcional | `None` | Secret Access Key para S3 (si no se usan roles IAM). |
+| `STORAGE_PREFIX` | No | `dataflow/` | Prefijo de ruta de los objetos dentro del bucket. |
+| `BACKEND_CORS_ORIGINS` | No | `["http://localhost:3000", ...]` | Lista separada por comas de orígenes autorizados para CORS. |
 | `GEMINI_MODEL` | No | `gemini-2.5-flash` | Modelo de Google Gemini utilizado para sugerencias IA. |
 | `GEMINI_API_KEY` | Opcional | `None` | Clave API global de Gemini. En producción se prioriza el modo **BYOK** (cabecera HTTP enviada por el usuario). |
 

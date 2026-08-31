@@ -48,10 +48,12 @@ def test_small_sample_with_mixed_missing_markers_inferred_as_numeric():
 
 def test_identifier_protection_from_normalize_case():
     """Verifica que las columnas identificadoras (ID_Pedido, Cod_Cliente, PED-201) NO son sugeridas para normalize_case."""
-    df = pd.DataFrame({
-        "ID_Pedido": ["PED-201", "PED-202", "PED-203"],
-        "Razon_Social": ["TALLERES ROBLES SLU", "ALMACENES PARDO S.L.U.", "COMERCIAL IGLESIAS"]
-    })
+    df = pd.DataFrame(
+        {
+            "ID_Pedido": ["PED-201", "PED-202", "PED-203"],
+            "Razon_Social": ["TALLERES ROBLES SLU", "ALMACENES PARDO S.L.U.", "COMERCIAL IGLESIAS"],
+        }
+    )
 
     # Verificar semantic hint
     hint_id = ProfilerService._detect_semantic_hint("ID_Pedido", df["ID_Pedido"], ColumnTypeEnum.TEXT)
@@ -69,7 +71,7 @@ def test_pedidos_dataset_end_to_end_clean():
     """Prueba integral del dataset de pedidos con Unidades_Stock con '--' y ID_Pedido con 'PED-201'."""
     upload_res = client.post(
         "/api/v1/datasets/upload",
-        files={"file": ("pedidos_facturacion.csv", io.BytesIO(SAMPLE_PEDIDOS_CSV.encode("utf-8")), "text/csv")}
+        files={"file": ("pedidos_facturacion.csv", io.BytesIO(SAMPLE_PEDIDOS_CSV.encode("utf-8")), "text/csv")},
     )
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
@@ -117,7 +119,15 @@ def test_pedidos_dataset_end_to_end_clean():
     assert len(clean_df) == 7
 
     # 2. ID_Pedido se mantiene exactamente en mayúsculas
-    assert clean_df["ID_Pedido"].tolist() == ["PED-201", "PED-202", "PED-203", "PED-204", "PED-205", "PED-206", "PED-207"]
+    assert clean_df["ID_Pedido"].tolist() == [
+        "PED-201",
+        "PED-202",
+        "PED-203",
+        "PED-204",
+        "PED-205",
+        "PED-206",
+        "PED-207",
+    ]
 
     # 3. Unidades_Stock es numérico y la fila 2 (PED-202) es NaN/nulo
     assert pd.isna(clean_df.loc[clean_df["ID_Pedido"] == "PED-202", "Unidades_Stock"].values[0])
@@ -140,8 +150,7 @@ def test_percentage_clamp_floor_and_ceiling():
 4,Empresa Delta,0.0%,100.0%
 """
     upload_res = client.post(
-        "/api/v1/datasets/upload",
-        files={"file": ("test_pct.csv", io.BytesIO(csv_data.encode("utf-8")), "text/csv")}
+        "/api/v1/datasets/upload", files={"file": ("test_pct.csv", io.BytesIO(csv_data.encode("utf-8")), "text/csv")}
     )
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
@@ -191,7 +200,7 @@ def test_marketing_campaigns_dataset_no_false_percentage_clamp():
 """
     upload_res = client.post(
         "/api/v1/datasets/upload",
-        files={"file": ("campanas_marketing.csv", io.BytesIO(csv_data.encode("utf-8")), "text/csv")}
+        files={"file": ("campanas_marketing.csv", io.BytesIO(csv_data.encode("utf-8")), "text/csv")},
     )
     assert upload_res.status_code == 201
     dataset_id = upload_res.json()["dataset_id"]
@@ -202,7 +211,9 @@ def test_marketing_campaigns_dataset_no_false_percentage_clamp():
     prof_data = prof_res.json()
 
     conv_prof = next(c for c in prof_data["columns"] if c["column_name"] == "Conversiones")
-    assert conv_prof["semantic_hint"] != "percentage", f"Conversiones no debe tener hint percentage: {conv_prof['semantic_hint']}"
+    assert (
+        conv_prof["semantic_hint"] != "percentage"
+    ), f"Conversiones no debe tener hint percentage: {conv_prof['semantic_hint']}"
 
     ctr_prof = next(c for c in prof_data["columns"] if c["column_name"] == "CTR_Pct")
     assert ctr_prof["semantic_hint"] == "percentage", "CTR_Pct sí debe tener hint percentage"
@@ -231,7 +242,12 @@ def test_marketing_campaigns_dataset_no_false_percentage_clamp():
 
     # Verificar códigos de campaña intactos
     assert clean_df["Cod_Campana"].tolist() == [
-        "CAM-401", "CAM-402", "CAM-403", "CAM-404", "CAM-405", "CAM-406", "CAM-407", "CAM-408"
+        "CAM-401",
+        "CAM-402",
+        "CAM-403",
+        "CAM-404",
+        "CAM-405",
+        "CAM-406",
+        "CAM-407",
+        "CAM-408",
     ]
-
-

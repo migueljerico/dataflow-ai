@@ -56,7 +56,7 @@ def test_process_saved_dataset_strips_bom_and_normalizes_windows1252():
             filename="windows_data.csv",
             file_ext=".csv",
             file_size=f_path.stat().st_size,
-            dataset_id="test-win1252"
+            dataset_id="test-win1252",
         )
         assert "código" in meta.columns
         assert "dirección" in meta.columns
