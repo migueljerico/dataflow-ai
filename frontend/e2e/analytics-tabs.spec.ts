@@ -62,6 +62,6 @@ test.describe('Business Analytics Tabs & Interactive Visualizations E2E', () => 
     await expect(page.getByText(/medida dax sugerida/i)).toBeVisible();
     await expect(page.getByText(/power query m/i)).toBeVisible();
     await expect(page.getByText(/microsoft excel/i)).toBeVisible();
-    await expect(page.getByText(/fórmulas de validación regionalizadas/i)).toBeVisible();
+    await expect(page.getByText(/fórmula de validación excel/i)).toBeVisible();
   });
 });
