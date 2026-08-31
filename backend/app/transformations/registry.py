@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 import pandas as pd
 from app.core.exceptions import FunctionalException
 from app.transformations.base import BaseTransformation
+from app.transformations.cluster_ops import ClusterKMeansTransformation
 from app.transformations.datetime_ops import ConvertDatetimeTransformation
 from app.transformations.missing_ops import (
     DropColumnTransformation,
@@ -14,6 +15,10 @@ from app.transformations.numeric_ops import (
     ClampRangeTransformation,
     ConvertNumericTransformation,
     RoundNumericTransformation,
+)
+from app.transformations.outlier_ops import (
+    DetectOutliersIQRTransformation,
+    DetectOutliersZScoreTransformation,
 )
 from app.transformations.text_ops import (
     NormalizeCaseTransformation,
@@ -35,6 +40,9 @@ class TransformationRegistry:
         "remove_duplicates": RemoveDuplicatesTransformation(),
         "rename_column": RenameColumnTransformation(),
         "drop_column": DropColumnTransformation(),
+        "detect_outliers_iqr": DetectOutliersIQRTransformation(),
+        "detect_outliers_zscore": DetectOutliersZScoreTransformation(),
+        "cluster_kmeans": ClusterKMeansTransformation(),
     }
 
     @classmethod

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Language, Translations, translations } from '../i18n';
+import { Language, LANGUAGES, Translations, translations } from '../i18n';
 
 interface LanguageContextType {
   language: Language;
@@ -14,8 +14,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_LANG_KEY);
-      if (saved === 'es' || saved === 'en') {
+      const saved = localStorage.getItem(STORAGE_LANG_KEY) as Language | null;
+      if (saved && LANGUAGES.some((l) => l.code === saved)) {
         return saved;
       }
     } catch {
@@ -24,6 +24,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     return 'es';
   });
 
+  const updateDocumentAttributes = (targetLang: Language) => {
+    const isRtl = targetLang === 'ar' || targetLang === 'ur';
+    document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+    document.documentElement.lang = targetLang;
+  };
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     try {
@@ -31,16 +37,17 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch {
       // Silencioso
     }
+    updateDocumentAttributes(lang);
   };
 
   useEffect(() => {
-    document.documentElement.lang = language;
+    updateDocumentAttributes(language);
   }, [language]);
 
   const value = {
     language,
     setLanguage,
-    t: translations[language],
+    t: (translations[language] || translations['es']) as Translations,
   };
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

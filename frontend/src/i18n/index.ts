@@ -1,4 +1,39 @@
-﻿export type Language = 'es' | 'en';
+export type Language =
+  | 'es'
+  | 'en'
+  | 'zh'
+  | 'hi'
+  | 'fr'
+  | 'ar'
+  | 'bn'
+  | 'pt'
+  | 'id'
+  | 'ur'
+  | 'ru'
+  | 'de'
+  | 'ja';
+
+export interface LanguageOption {
+  code: Language;
+  name: string;
+  nativeName: string;
+}
+
+export const LANGUAGES: LanguageOption[] = [
+  { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文 (简体)' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+  { code: 'fr', name: 'French', nativeName: 'Français' },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
+  { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+  { code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia' },
+  { code: 'ur', name: 'Urdu', nativeName: 'اردو' },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  { code: 'ja', name: 'Japanese', nativeName: '日本語' },
+];
 
 export interface Translations {
   brand: {
@@ -129,7 +164,7 @@ export interface Translations {
   };
 }
 
-export const translations: Record<Language, Translations> = {
+export const translations: Partial<Record<Language, Translations>> = {
   es: {
     brand: {
       title: 'DataFlow AI',

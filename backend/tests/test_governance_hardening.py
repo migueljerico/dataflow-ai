@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 import pandas as pd
 from app.models.etl import TransformationStep, StepStatusEnum
 from app.transformations.registry import TransformationRegistry
@@ -6,9 +6,9 @@ from app.core.exceptions import FunctionalException
 from app.services.etl_service import ETLService
 
 
-def test_registry_manifest_contains_all_11_operations():
+def test_registry_manifest_contains_all_14_operations():
     manifest = TransformationRegistry.get_catalog_manifest()
-    assert len(manifest) == 11
+    assert len(manifest) == 14
     for op_name, meta in manifest.items():
         assert "name" in meta
         assert "description" in meta

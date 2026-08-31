@@ -1,6 +1,6 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.4.0  
+**Versión:** 1.5.0  
 **Fecha de actualización:** 31 de agosto de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
@@ -285,11 +285,13 @@ migueljerico/dataflow-ai/
 | Archivo | Responsabilidad | Operaciones |
 | :--- | :--- | :--- |
 | `base.py` | Clase abstracta que define la interfaz de toda transformación. | `BaseTransformation` (ABC), métodos `validate_parameters()`, `apply()` |
-| `registry.py` | Registro central de operaciones permitidas. | `TransformationRegistry.get_transformation()`, `get()`, `list_all()` |
+| `registry.py` | Registro central de operaciones permitidas. | `TransformationRegistry.get_transformation()`, `get()`, `list_all()`, `get_catalog_manifest()` |
 | `text_ops.py` | Limpieza y normalización de texto. | `TrimTextTransformation` (trim_text), `NormalizeCaseTransformation` (normalize_case), `NormalizeCategoryTransformation` (normalize_category) |
 | `datetime_ops.py` | Conversión y estandarización de fechas. | `ConvertDatetimeTransformation` (convert_datetime) |
 | `numeric_ops.py` | Conversión, redondeo y acotación numérica. | `ConvertNumericTransformation` (convert_numeric), `RoundNumericTransformation` (round_numeric), `ClampRangeTransformation` (clamp_range) |
 | `missing_ops.py` | Imputación de valores y manipulación de filas/columnas. | `FillMissingTransformation` (fill_missing), `RemoveDuplicatesTransformation` (remove_duplicates), `RenameColumnTransformation` (rename_column), `DropColumnTransformation` (drop_column) |
+| `outlier_ops.py` | Detección y tratamiento de outliers estadísticos (IQR y Z-Score). | `DetectOutliersIQRTransformation` (detect_outliers_iqr), `DetectOutliersZScoreTransformation` (detect_outliers_zscore) |
+| `cluster_ops.py` | Clustering determinista de observaciones en NumPy puro. | `ClusterKMeansTransformation` (cluster_kmeans) |
 
 ### 5.6 Endpoints API (`backend/app/api/v1/`)
 
@@ -311,7 +313,9 @@ migueljerico/dataflow-ai/
 
 | Componente | Responsabilidad |
 | :--- | :--- |
-| `Header.tsx` | Barra de navegación principal, indicadores de estado de API Key Gemini y badges de privacidad. |
+| `Header.tsx` | Barra de navegación principal, selector de idiomas, indicadores de estado de API Key Gemini y badges de privacidad. |
+| `FlagIcon.tsx` | Renderizado de 13 banderas vectoriales nativas SVG y fallback 🌐. |
+| `LanguageSelector.tsx` | Menú desplegable interactivo accesible para seleccionar el idioma de la plataforma. |
 | `FileUpload.tsx` | Carga de archivos CSV/XLSX mediante drag-and-drop o selector, listado de datasets demo con un clic. |
 | `ProfilingDashboard.tsx` | Visualización del Quality Score global y las 5 dimensiones, badges de métricas. |
 | `PlanReview.tsx` | Revisión humana del plan ETL: aprobar/rechazar pasos individuales, ejecutar plan. |
@@ -350,6 +354,9 @@ Todas las operaciones están registradas en `TransformationRegistry` y son las �
 | `remove_duplicates` | Elimina filas duplicadas exactas o basadas en columnas clave. | high | `subset_columns` (opcional) |
 | `rename_column` | Renombra una columna existente. | low | `column`, `new_name` |
 | `drop_column` | Elimina una columna no deseada. | low | `column` |
+| `detect_outliers_iqr` | Detecta outliers por rango intercuartílico con acciones cap, nullify, drop o flag. | medium | `column`, `multiplier`, `action`, `lower_quantile`, `upper_quantile` |
+| `detect_outliers_zscore` | Detecta outliers mediante puntuación Z con acciones cap, nullify, drop o flag. | medium | `column`, `threshold`, `action` |
+| `cluster_kmeans` | Segmentación determinista K-Means en k clusters sobre variables normalizadas. | low | `columns`, `n_clusters`, `output_column`, `scale_features` |
 
 ---
 

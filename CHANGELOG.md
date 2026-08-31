@@ -4,6 +4,33 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.0] — 2026-08-31
+
+### 🚩 Selector de Idiomas Vectorial (13 Banderas SVG) y Transformaciones Avanzadas (Outliers IQR/Z-Score & Clustering)
+
+> **Selector Multi-Idioma Vectorial y Expansión del Catálogo de Transformaciones:** Replicación integral del selector de idiomas desde el proyecto de referencia `ZCodeProject` con renderizado de vectores SVG de alta precisión para 13 idiomas (`es`, `en`, `zh`, `hi`, `fr`, `ar`, `bn`, `pt`, `id`, `ur`, `ru`, `de`, `ja`) y fallback `🌐`, navegación accesible por teclado (Enter, Space, Escape, clic exterior) y detección de dirección RTL para lenguas arábigas/urdu. Expansión del catálogo de transformaciones deterministas de DataFlow AI (`TransformationRegistry`) incorporando algoritmos avanzados de detección y tratamiento de outliers por Rango Intercuartílico (`detect_outliers_iqr`) y puntuación Z (`detect_outliers_zscore`) con soporte para acotación (cap/winsorizing), anulación (nullify), filtrado (drop) y marcaje booleano (flag), así como clustering determinista (`cluster_kmeans`) en NumPy puro con inicialización K-Means++ y estandarización de características.
+
+#### 🚩 Frontend: Selector de Idiomas y Banderas SVG Vectoriales
+- **Componente `FlagIcon.tsx`:** Replicado desde `ZCodeProject` para dibujar banderas vectoriales nativas SVG proporcionales 4:3 para 13 idiomas internacionales, garantizando nitidez perfecta en navegadores de escritorio (Windows, macOS, Linux) y móviles sin depender de emojis del sistema operativo.
+- **Desplegable Accesible `LanguageSelector.tsx`:** Menú desplegable interactivo con soporte de accesibilidad WCAG/ARIA (`role="listbox"`, `role="option"`, `aria-expanded`), gestión de foco y atajos de teclado (`Enter`, `Space`, `Escape` y cierre por clic exterior).
+- **`LanguageContext.tsx` e `i18n/index.ts`:** Soporte tipado para 13 lenguas con catálogo `LANGUAGES`, fallback seguro a `es` / `en`, detección automática de dirección RTL (`dir="rtl"`) para `ar` y `ur` y persistencia en `localStorage`.
+- **Suite de Pruebas Frontend:** Nuevos tests `FlagIcon.test.tsx` (14 pruebas de banderas SVG y fallback) y tests de interacción de teclado y desplegable en `LanguageContext.test.tsx` (26 tests frontend pasando).
+
+#### 🧮 Backend: Transformaciones Avanzadas (Outliers y Clustering)
+- **`detect_outliers_iqr` (`DetectOutliersIQRTransformation`):** Detección estadística de valores atípicos mediante el Rango Intercuartílico ($Q_1, Q_3, IQR$) con multiplicador configurable (1.5 estándar, 3.0 extremos) y 4 estrategias de resolución: `cap` (winsorizado a límites), `nullify` (conversión a NaN), `drop` (eliminación de filas) y `flag` (creación de columna booleana `{col}_is_outlier`).
+- **`detect_outliers_zscore` (`DetectOutliersZScoreTransformation`):** Detección de anomalías mediante puntuación Z ($|z| > \text{threshold}$) con manejo seguro de varianza nula ($\sigma=0$), valores nulos y estrategias `cap`, `nullify`, `drop` y `flag`.
+- **`cluster_kmeans` (`ClusterKMeansTransformation`):** Algoritmo de clustering K-Means determinista implementado en NumPy puro (sin dependencias C/Cython adicionales) con semilla fija (`random_state=42`), inicialización inteligente K-Means++ y normalización Z-score previa.
+- **`TransformationRegistry`:** Registro de las 3 nuevas operaciones con esquemas declarativos `parameter_schema`, metadatos de riesgo y validación estricta de parámetros permitidos.
+- **`ScriptGeneratorService`:** Soporte completo de exportación de código Python reproducible para las nuevas transformaciones de outliers y clustering en los scripts de pipelines generados.
+
+#### 🧪 Testing y Verificación Integral (154 Tests Totales)
+- **Suite `test_advanced_transformations.py` (15 nuevos tests):** Verificación exhaustiva de cálculos matemáticos de IQR, Z-Score, K-Means determinista, casos límite (NaNs, datos vacíos, varianza cero) y validación de sintaxis en scripts generados.
+- **128 Tests Backend + 26 Tests Frontend:** 100% pasando sin errores ni regresiones.
+- **Linters y SAST Verificados:** Ruff (0 errores), Black (0 diffs), Bandit (0 vulnerabilidades), TypeScript estricto (0 errores), Vite build verificado.
+- **Atribución del Modelo:** Gemini 3.7 Flash (High).
+
+---
+
 ## [1.4.0] — 2026-08-31
 
 ### ☁️ Conectores Cloud Storage (GCS / S3) y Banderas Vectoriales Desktop

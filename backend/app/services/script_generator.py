@@ -146,6 +146,83 @@ class ScriptGeneratorService:
                 code_lines.append(f"    if {col_lit} in df.columns:")
                 code_lines.append(f"        df = df.drop(columns=[{col_lit}])")
 
+            elif op == "detect_outliers_iqr":
+                mult = float(params.get("multiplier", 1.5))
+                action = params.get("action", "cap")
+                lq = float(params.get("lower_quantile", 0.25))
+                uq = float(params.get("upper_quantile", 0.75))
+                code_lines.append(f"    if {col_lit} in df.columns:")
+                code_lines.append(f'        _s = pd.to_numeric(df[{col_lit}], errors="coerce")')
+                code_lines.append("        _v = _s.dropna()")
+                code_lines.append("        if not _v.empty:")
+                code_lines.append(f"            _q1 = float(_v.quantile({lq}))")
+                code_lines.append(f"            _q3 = float(_v.quantile({uq}))")
+                code_lines.append("            _iqr = _q3 - _q1")
+                code_lines.append(f"            _lb = _q1 - ({mult} * _iqr)")
+                code_lines.append(f"            _ub = _q3 + ({mult} * _iqr)")
+                code_lines.append("            _mask = (_s < _lb) | (_s > _ub)")
+                if action == "cap":
+                    code_lines.append(
+                        f"            df[{col_lit}] = _s.apply(lambda x: _lb if pd.notna(x) and x < _lb else (_ub if pd.notna(x) and x > _ub else x))"
+                    )
+                elif action == "nullify":
+                    code_lines.append(f"            df.loc[_mask, {col_lit}] = np.nan")
+                elif action == "drop":
+                    code_lines.append("            df = df[~_mask].reset_index(drop=True)")
+                elif action == "flag":
+                    flag_col = json.dumps(f"{col}_is_outlier")
+                    code_lines.append(f"            df[{flag_col}] = _mask")
+
+            elif op == "detect_outliers_zscore":
+                thresh = float(params.get("threshold", 3.0))
+                action = params.get("action", "cap")
+                code_lines.append(f"    if {col_lit} in df.columns:")
+                code_lines.append(f'        _s = pd.to_numeric(df[{col_lit}], errors="coerce")')
+                code_lines.append("        _v = _s.dropna()")
+                code_lines.append("        if len(_v) >= 2 and _v.std(ddof=1) > 0:")
+                code_lines.append("            _m = float(_v.mean())")
+                code_lines.append("            _std = float(_v.std(ddof=1))")
+                code_lines.append("            _z = (_s - _m).abs() / _std")
+                code_lines.append(f"            _mask = _z > {thresh}")
+                if action == "cap":
+                    code_lines.append(f"            _lb = _m - ({thresh} * _std)")
+                    code_lines.append(f"            _ub = _m + ({thresh} * _std)")
+                    code_lines.append(
+                        f"            df[{col_lit}] = _s.apply(lambda x: _lb if pd.notna(x) and x < _lb else (_ub if pd.notna(x) and x > _ub else x))"
+                    )
+                elif action == "nullify":
+                    code_lines.append(f"            df.loc[_mask, {col_lit}] = np.nan")
+                elif action == "drop":
+                    code_lines.append("            df = df[~_mask].reset_index(drop=True)")
+                elif action == "flag":
+                    flag_col = json.dumps(f"{col}_is_outlier")
+                    code_lines.append(f"            df[{flag_col}] = _mask.fillna(False)")
+
+            elif op == "cluster_kmeans":
+                feat_cols = params.get("columns", [])
+                n_clusters = int(params.get("n_clusters", 3))
+                out_col = params.get("output_column", "cluster_id")
+                scale = bool(params.get("scale_features", True))
+                out_lit = json.dumps(out_col)
+                cols_lit = json.dumps(feat_cols)
+                code_lines.append(f"    if all(c in df.columns for c in {cols_lit}) and len(df) > 0:")
+                code_lines.append(
+                    f"        _X = np.column_stack([pd.to_numeric(df[c], errors='coerce').fillna(0.0).values for c in {cols_lit}]).astype(np.float64)"
+                )
+                if scale:
+                    code_lines.append("        if len(_X) > 1:")
+                    code_lines.append("            _stds = np.std(_X, axis=0)")
+                    code_lines.append("            _stds[_stds == 0] = 1.0")
+                    code_lines.append("            _X = (_X - np.mean(_X, axis=0)) / _stds")
+                code_lines.append("        try:")
+                code_lines.append("            from sklearn.cluster import KMeans")
+                code_lines.append(
+                    f"            _km = KMeans(n_clusters=min({n_clusters}, len(_X)), random_state=42, n_init=10)"
+                )
+                code_lines.append(f"            df[{out_lit}] = _km.fit_predict(_X)")
+                code_lines.append("        except ImportError:")
+                code_lines.append(f"            df[{out_lit}] = np.arange(len(df)) % {n_clusters}")
+
             code_lines.append("")
 
         code_lines.extend(
