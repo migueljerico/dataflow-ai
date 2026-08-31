@@ -54,3 +54,7 @@ Thumbs.db
 .hypothesis/
 coverage.xml
 *.log
+test-results/
+playwright-report/
+frontend/test-results/
+frontend/playwright-report/
