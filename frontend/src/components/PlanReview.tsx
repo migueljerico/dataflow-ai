@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, Play, ShieldAlert, Sliders, Sparkles } from 'lucide-react';
+import { CheckCircle2, XCircle, Play, ShieldAlert, Sliders, Sparkles, AlertTriangle } from 'lucide-react';
 import { TransformationPlan, TransformationStep } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -17,6 +17,14 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
   const toggleStepStatus = (stepId: string, newStatus: 'approved' | 'rejected') => {
     setSteps((prev) =>
       prev.map((s) => (s.step_id === stepId ? { ...s, status: newStatus } : s))
+    );
+  };
+
+  const handleParameterChange = (stepId: string, paramKey: string, value: unknown) => {
+    setSteps((prev) =>
+      prev.map((s) =>
+        s.step_id === stepId ? { ...s, parameters: { ...s.parameters, [paramKey]: value } } : s
+      )
     );
   };
 
@@ -127,6 +135,46 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                 <span>{t.plan.estimatedRows}: {step.affected_rows_estimate}</span>
                 <span style={{ wordBreak: 'break-word' }}>{t.plan.parameters}: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
               </div>
+
+              {/* Advertencia interactiva de Protección de Datos (posible descarte de texto libre no recuperable) */}
+              {step.data_loss_warning && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                    border: '1px solid rgba(244, 63, 94, 0.35)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-rose)', fontWeight: 600 }}>
+                    <AlertTriangle size={16} />
+                    <span>Aviso de Protección de Datos: Posible Descarte Irreversible de Texto</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    {step.data_loss_warning}
+                  </p>
+                  <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                    <input
+                      type="checkbox"
+                      id={`ack-${step.step_id}`}
+                      checked={step.parameters?.confirmed_data_loss === true}
+                      onChange={(e) => {
+                        handleParameterChange(step.step_id, 'confirmed_data_loss', e.target.checked);
+                      }}
+                      style={{ cursor: 'pointer', accentColor: 'var(--accent-rose)' }}
+                    />
+                    <label htmlFor={`ack-${step.step_id}`} style={{ cursor: 'pointer', color: 'var(--text-main)' }}>
+                      He revisado esta columna y confirmo la transformación aunque descarte texto libre no parseable.
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Panel de Feature Selection para K-Means */}
               {step.operation === 'cluster_kmeans' && (

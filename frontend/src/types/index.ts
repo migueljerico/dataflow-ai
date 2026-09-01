@@ -111,6 +111,7 @@ export interface TransformationStep {
   risk: 'low' | 'medium' | 'high';
   affected_rows_estimate: number;
   status: StepStatus;
+  data_loss_warning?: string;
 }
 
 export interface TransformationPlan {
@@ -234,6 +235,38 @@ export interface OutlierVisualization {
   detection_method: string;
 }
 
+export interface IntegrationColumn {
+  name: string;
+  inferred_type: string;
+  power_query_type: string;
+  excel_column_letter: string;
+}
+
+export interface DaxMeasureItem {
+  name: string;
+  dax_formula: string;
+  description: string;
+  target_column: string;
+}
+
+export interface ExcelFormulaItem {
+  measure_name: string;
+  formula_es: string;
+  formula_en: string;
+  cell_target: string;
+  description: string;
+}
+
+export interface IntegrationGuide {
+  table_name: string;
+  power_query_m_csv: string;
+  power_query_m_parquet: string;
+  dax_measures: DaxMeasureItem[];
+  excel_formulas: ExcelFormulaItem[];
+  columns_metadata: IntegrationColumn[];
+  row_count: number;
+}
+
 export interface ExecutiveAnalyticsReport {
   run_id: string;
   dataset_name: string;
@@ -244,6 +277,7 @@ export interface ExecutiveAnalyticsReport {
   category_breakdown?: CategoryDistribution[];
   cluster_visualization?: ClusterVisualization;
   outlier_visualization?: OutlierVisualization;
+  integration_guide?: IntegrationGuide;
 }
 
 export interface OpenDatasetItem {

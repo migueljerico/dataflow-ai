@@ -165,6 +165,18 @@ class AIService:
                     sug.parameters["min_value"] = 0.0
                     sug.parameters["max_value"] = 100.0
 
+            step_loss_warning = None
+            if op == "convert_numeric" and target_col and target_col in df.columns:
+                ratio, _, total_real = get_numeric_parseable_ratio(df[target_col])
+                if total_real > 0 and ratio < 1.0:
+                    lost_approx = int(total_real * (1.0 - ratio))
+                    step_loss_warning = (
+                        f"Atención: Aproximadamente {lost_approx} celda(s) con texto o contenido no numérico "
+                        f"se convertirán irreversiblemente a NaN."
+                    )
+            elif op == "drop_column" and target_col:
+                step_loss_warning = f"La columna '{target_col}' y todos sus datos se eliminarán de forma permanente."
+
             valid_steps.append(
                 TransformationStep(
                     step_id=f"AI-STEP-{idx:03d}",
@@ -175,6 +187,7 @@ class AIService:
                     confidence=sug.confidence,
                     risk=sug.risk,
                     affected_rows_estimate=0,
+                    data_loss_warning=step_loss_warning,
                 )
             )
 

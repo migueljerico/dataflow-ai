@@ -179,3 +179,51 @@ def test_export_executive_analytics_html_report():
     export_ar = client.get(f"/api/v1/analytics/{run_id}/export?lang=ar")
     assert export_ar.status_code == 200
     assert 'dir="rtl"' in export_ar.text
+
+
+def test_xss_protection_and_sanitization_in_analytics_export():
+    """Verifica la mitigación de la vulnerabilidad CodeQL py/reflective-xss (#10)."""
+    # 1. run_id malicioso con caracteres peligrosos es bloqueado/rechazado
+    bad_run_res = client.get("/api/v1/analytics/run_id<script>alert(1)</script>/export")
+    assert bad_run_res.status_code in [400, 404, 422]
+
+    bad_run_encoded = client.get("/api/v1/analytics/run_id%3Cscript%3E/export")
+    assert bad_run_encoded.status_code in [400, 422]
+
+    # 2. Con un run_id válido, lang malicioso es neutralizado y no inyecta script
+    load_res = client.post("/api/v1/datasets/samples/contact_center/load")
+    dataset_id = load_res.json()["dataset_id"]
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    plan_data = plan_res.json()
+    approve_res = client.post(f"/api/v1/plans/{plan_data['plan_id']}/approve", json={"steps": plan_data["steps"]})
+    run_id = approve_res.json()["run_id"]
+
+    xss_payload = '"><script>alert("xss")</script>'
+    res = client.get(f"/api/v1/analytics/{run_id}/export?lang={xss_payload}")
+    assert res.status_code == 200
+    assert "<script>alert" not in res.text
+    assert 'X-Content-Type-Options' in res.headers
+    assert res.headers['X-Content-Type-Options'] == 'nosniff'
+
+
+def test_integration_guide_in_executive_analytics_report():
+    """Verifica que el reporte ejecutivo incluya la Guía de Integración adaptada para Power BI y Excel."""
+    load_res = client.post("/api/v1/datasets/samples/sales/load")
+    dataset_id = load_res.json()["dataset_id"]
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    plan_data = plan_res.json()
+    approve_res = client.post(f"/api/v1/plans/{plan_data['plan_id']}/approve", json={"steps": plan_data["steps"]})
+    run_id = approve_res.json()["run_id"]
+
+    analytics_res = client.get(f"/api/v1/analytics/{run_id}")
+    assert analytics_res.status_code == 200
+    data = analytics_res.json()
+    assert "integration_guide" in data
+    guide = data["integration_guide"]
+    assert guide is not None
+    assert "table_name" in guide
+    assert "power_query_m_csv" in guide
+    assert "Changed Type" in guide["power_query_m_csv"]
+    assert len(guide["dax_measures"]) > 0
+    assert len(guide["excel_formulas"]) > 0
+    assert any("Total_Registros" in m["name"] for m in guide["dax_measures"])

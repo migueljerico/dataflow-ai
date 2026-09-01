@@ -76,26 +76,28 @@ class ProfilerService:
             return SemanticHintEnum.PERCENTAGE
 
         # 5. Currency / Dinero
-        ratio, _, total_real = get_numeric_parseable_ratio(series)
-        if total_real > 0 and ratio >= 0.8:
-            if any(
-                keyword in col_lower
-                for keyword in [
-                    "precio",
-                    "importe",
-                    "coste",
-                    "gasto",
-                    "salario",
-                    "sueldo",
-                    "monto",
-                    "price",
-                    "amount",
-                    "revenue",
-                    "facturacion",
-                ]
-            ):
-                return SemanticHintEnum.CURRENCY
-            if any(symbol in val for val in non_null_str.head(20) for symbol in ["€", "$", "USD", "EUR"]):
+        has_curr_kw = any(
+            keyword in col_lower
+            for keyword in [
+                "precio",
+                "importe",
+                "coste",
+                "gasto",
+                "salario",
+                "sueldo",
+                "monto",
+                "price",
+                "amount",
+                "revenue",
+                "facturacion",
+            ]
+        )
+        sample_head = non_null_str.head(50)
+        has_curr_sym = any(symbol in val for val in sample_head for symbol in ["€", "$", "USD", "EUR"])
+        if has_curr_kw or has_curr_sym:
+            sample_for_ratio = series if len(series) <= 5000 else series.iloc[:5000]
+            ratio, _, total_real = get_numeric_parseable_ratio(sample_for_ratio)
+            if total_real > 0 and ratio >= 0.8:
                 return SemanticHintEnum.CURRENCY
 
         # 6. Dates
@@ -153,7 +155,8 @@ class ProfilerService:
 
         # Check if text contains convertible numeric values or symbols
         try:
-            ratio, valid_numeric_count, total_real = get_numeric_parseable_ratio(series)
+            sample_for_ratio = series if len(series) <= 5000 else series.iloc[:5000]
+            ratio, valid_numeric_count, total_real = get_numeric_parseable_ratio(sample_for_ratio)
             if total_real > 0 and ratio >= 0.8:
                 return ColumnTypeEnum.NUMERIC
         except (ValueError, TypeError):
@@ -187,10 +190,8 @@ class ProfilerService:
         return ColumnTypeEnum.TEXT
 
     @staticmethod
-    def profile_dataset(dataset_id: str) -> ProfilingReport:
-        metadata = DatasetService.get_dataset_metadata(dataset_id)
-        df = DatasetService.load_dataframe(dataset_id)
-
+    def profile_dataframe(df: pd.DataFrame, dataset_id: str = "temp_dataset") -> ProfilingReport:
+        """Genera el reporte de perfilado directamente a partir de un DataFrame de pandas."""
         row_count, col_count = df.shape
         duplicates_count = int(df.duplicated().sum())
         duplicates_pct = round((duplicates_count / row_count) * 100, 2) if row_count > 0 else 0.0
@@ -269,6 +270,14 @@ class ProfilerService:
             global_warnings=global_warnings,
             generated_at=datetime.now(timezone.utc),
         )
+        return report
+
+    @staticmethod
+    def profile_dataset(dataset_id: str) -> ProfilingReport:
+        metadata = DatasetService.get_dataset_metadata(dataset_id)
+        df = DatasetService.load_dataframe(dataset_id)
+
+        report = ProfilerService.profile_dataframe(df, dataset_id=dataset_id)
 
         metadata.status = ProcessingStateEnum.PROFILED
         PROFILING_CACHE[dataset_id] = report

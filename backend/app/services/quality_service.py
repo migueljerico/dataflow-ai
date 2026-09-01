@@ -8,7 +8,7 @@ import pandas as pd
 
 from app.core.number_parsing import is_missing_value, to_numeric_series
 from app.models.dataset import ProcessingStateEnum
-from app.models.profiling import ColumnTypeEnum, SemanticHintEnum
+from app.models.profiling import ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.models.quality import (
     DimensionBreakdown,
     QualityDimensionEnum,
@@ -53,11 +53,9 @@ def _safe_evidence_sample(sample_list: Any) -> List[Any]:
 
 class QualityService:
     @staticmethod
-    def analyze_quality(dataset_id: str) -> QualityReport:
-        profiling = ProfilerService.get_profiling_report(dataset_id)
-        df = DatasetService.load_dataframe(dataset_id)
-        metadata = DatasetService.get_dataset_metadata(dataset_id)
-
+    def analyze_dataframe(
+        df: pd.DataFrame, profiling: ProfilingReport, dataset_id: str = "temp_dataset"
+    ) -> QualityReport:
         row_count, col_count = df.shape
         total_cells = row_count * col_count if row_count * col_count > 0 else 1
 
@@ -125,7 +123,8 @@ class QualityService:
             if not len(series):
                 continue
 
-            has_whitespace = series.apply(lambda x: x != x.strip() or "  " in x)
+            stripped = series.str.strip()
+            has_whitespace = (series != stripped) | series.str.contains("  ", regex=False)
             whitespace_count = int(has_whitespace.sum())
 
             if whitespace_count > 0:
@@ -166,12 +165,12 @@ class QualityService:
                 col_prof.inferred_type in [ColumnTypeEnum.TEXT, ColumnTypeEnum.CATEGORICAL]
                 or col_prof.semantic_hint == SemanticHintEnum.NAME
             ):
-                cleaned_str = series.str.strip().str.lower()
-                unique_original = series.str.strip().nunique()
+                cleaned_str = stripped.str.lower()
+                unique_original = stripped.nunique()
                 unique_lower = cleaned_str.nunique()
 
-                # Detectar mayúsculas completas en cadenas largas (>2 caracteres)
-                has_all_caps = series.apply(lambda x: len(x.strip()) > 2 and x.strip().isupper())
+                # Detectar mayúsculas completas en cadenas largas (>2 caracteres) vectorizado
+                has_all_caps = (stripped.str.len() > 2) & stripped.str.isupper()
                 all_caps_count = int(has_all_caps.sum())
 
                 if unique_original > unique_lower or all_caps_count > 0:
@@ -206,7 +205,7 @@ class QualityService:
 
             # Fechas
             if col_prof.semantic_hint == SemanticHintEnum.DATE or col_prof.inferred_type == ColumnTypeEnum.DATETIME:
-                parsed_dates = pd.to_datetime(series, errors="coerce")
+                parsed_dates = pd.to_datetime(series, errors="coerce", dayfirst=True)
                 invalid_dates_count = int(parsed_dates.isna().sum())
 
                 if invalid_dates_count > 0:
@@ -432,6 +431,15 @@ class QualityService:
             issues_count=len(issues),
             generated_at=datetime.now(timezone.utc),
         )
+        return report
+
+    @staticmethod
+    def analyze_quality(dataset_id: str) -> QualityReport:
+        profiling = ProfilerService.get_profiling_report(dataset_id)
+        df = DatasetService.load_dataframe(dataset_id)
+        metadata = DatasetService.get_dataset_metadata(dataset_id)
+
+        report = QualityService.analyze_dataframe(df, profiling, dataset_id=dataset_id)
 
         metadata.status = ProcessingStateEnum.QUALITY_ANALYZED
         QUALITY_CACHE[dataset_id] = report

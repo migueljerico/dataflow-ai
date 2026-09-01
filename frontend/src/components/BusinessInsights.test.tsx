@@ -231,4 +231,63 @@ describe('BusinessInsights component', () => {
     expect(screen.getByText(/Microsoft Excel/i)).toBeInTheDocument();
     expect(screen.getByText(/Total_Registros = COUNTROWS/i)).toBeInTheDocument();
   });
+
+  it('renders adaptive integration guide with dynamic DAX and Excel formulas when available', async () => {
+    const reportWithGuide: ExecutiveAnalyticsReport = {
+      ...mockReport,
+      integration_guide: {
+        table_name: 'Ventas_Comerciales',
+        power_query_m_csv: 'let\n    Source = Csv.Document(...)\nin\n    #"Changed Type"',
+        power_query_m_parquet: 'let\n    Source = Parquet.Document(...)\nin\n    #"Changed Type"',
+        dax_measures: [
+          {
+            name: 'Total_Ventas',
+            dax_formula: "Total_Ventas = SUM('Ventas_Comerciales'[Ventas])",
+            description: "Suma total de la métrica 'Ventas'.",
+            target_column: 'Ventas',
+          },
+        ],
+        excel_formulas: [
+          {
+            measure_name: 'Ventas',
+            formula_es: '=SI(ESNUMERO(C2); "OK"; "Outlier")',
+            formula_en: '=IF(ISNUMBER(C2), "OK", "Outlier")',
+            cell_target: 'D2',
+            description: 'Validación de outliers para Ventas.',
+          },
+        ],
+        columns_metadata: [
+          {
+            name: 'Ventas',
+            inferred_type: 'numeric',
+            power_query_type: 'type number',
+            excel_column_letter: 'C',
+          },
+        ],
+        row_count: 1500,
+      },
+    };
+
+    vi.spyOn(api, 'getBusinessAnalytics').mockResolvedValue(reportWithGuide);
+
+    render(
+      <LanguageProvider>
+        <BusinessInsights runId="run-guide-123" />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Facturación Total Estimada')).toBeInTheDocument();
+    });
+
+    const integrationTab = screen.getByRole('tab', { name: /Integración Power BI \/ Excel/i });
+    fireEvent.click(integrationTab);
+
+    expect(screen.getByText(/Generación Adaptativa v1.9.0/i)).toBeInTheDocument();
+    expect(screen.getByText(/Total Registros:/i)).toBeInTheDocument();
+    expect(screen.getByText('[Total_Ventas]')).toBeInTheDocument();
+    expect(screen.getByText(/Suma total de la métrica 'Ventas'/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mapeo de Columnas \(Excel \/ Power BI\)/i)).toBeInTheDocument();
+    expect(screen.getByText('Col C')).toBeInTheDocument();
+  });
 });

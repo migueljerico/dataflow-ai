@@ -103,6 +103,8 @@ def is_missing_series(series: pd.Series) -> pd.Series:
         return pd.Series(dtype=bool)
     # pd.isna cubre None, np.nan, pd.NA
     na_mask = series.isna()
+    if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series):
+        return na_mask
     # Para los no nulos, convertir a str y comprobar el catálogo unificado
     str_series = series.astype(str).str.strip()
     marker_mask = str_series.str.lower().isin(MISSING_MARKERS) | str_series.str.match(r"^[-_—–\s]*$")

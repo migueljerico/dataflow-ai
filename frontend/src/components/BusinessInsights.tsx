@@ -67,6 +67,10 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
     isOutlier: boolean;
   } | null>(null);
 
+  // Estados de Integración Power BI / Excel adaptativa
+  const [selectedPqFormat, setSelectedPqFormat] = useState<'csv' | 'parquet'>('csv');
+  const [selectedExcelMeasureIndex, setSelectedExcelMeasureIndex] = useState<number>(0);
+
   useEffect(() => {
     let cancelled = false;
     const fetchAnalytics = async () => {
@@ -1167,11 +1171,34 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
               <Layers size={18} /> {t.powerBiExcel?.title || 'Guía de Integración y Fórmulas para Power BI y Excel'}
             </h4>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {t.powerBiExcel?.powerBiDesc || 'Conecte y modele el dataset depurado directamente en Microsoft Power BI Desktop o Servicio con medidas DAX y transformaciones M optimizadas.'}
+              {t.powerBiExcel?.powerBiDesc || 'Conecte y modele el dataset depurado directamente en Microsoft Power BI Desktop o Servicio con medidas DAX y transformaciones M optimizadas adaptadas a sus columnas reales.'}
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+          {/* Banner de contexto del dataset */}
+          {report?.integration_guide && (
+            <div
+              style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.85rem',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div>
+                <strong>Tabla de Modelo:</strong> <code style={{ color: 'var(--primary)' }}>'{report.integration_guide.table_name}'</code> · <strong>Total Registros:</strong> {report.integration_guide.row_count.toLocaleString()} filas · <strong>Columnas tipadas:</strong> {report.integration_guide.columns_metadata.length}
+              </div>
+              <span className="badge badge-blue">Generación Adaptativa v1.9.0</span>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
             {/* Tarjeta Microsoft Power BI */}
             <div
               style={{
@@ -1188,42 +1215,94 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                 <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Award size={16} /> {t.powerBiExcel?.tabPowerBi || 'Microsoft Power BI'}
                 </h5>
-                <span className="badge badge-amber">DAX + Power Query</span>
+                <span className="badge badge-amber">DAX + Power Query M</span>
               </div>
 
-              {/* Medida DAX */}
+              {/* Medidas DAX Adaptadas */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                    {t.powerBiExcel?.daxFormulaLabel || 'Medida DAX (KPI de Calidad y Conteo)'}:
+                    {t.powerBiExcel?.daxFormulaLabel || 'Medidas DAX Adaptadas al Dataset'}:
                   </span>
                   <button
                     className="btn btn-outline"
                     style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => {
-                      const daxCode = `// Medidas DAX calculadas por DataFlow AI\nTotal_Registros = COUNTROWS('DataFlow_Cleaned_Dataset')\n\nRegistros_Validos = \nCALCULATE(\n    COUNTROWS('DataFlow_Cleaned_Dataset'),\n    'DataFlow_Cleaned_Dataset'[is_outlier] = FALSE()\n)\n\nScore_Calidad_Pct = \nDIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`;
-                      navigator.clipboard.writeText(daxCode);
+                      const allDax = report?.integration_guide?.dax_measures?.length
+                        ? report.integration_guide.dax_measures
+                            .map((m) => `// ${m.description}\n${m.dax_formula}`)
+                            .join('\n\n')
+                        : `// Medidas DAX calculadas por DataFlow AI\nTotal_Registros = COUNTROWS('DataFlow_Cleaned_Dataset')\n\nRegistros_Validos = \nCALCULATE(\n    COUNTROWS('DataFlow_Cleaned_Dataset'),\n    'DataFlow_Cleaned_Dataset'[is_outlier] = FALSE()\n)\n\nScore_Calidad_Pct = \nDIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`;
+                      navigator.clipboard.writeText(allDax);
                       setCopiedSnippet('dax');
                       setTimeout(() => setCopiedSnippet(null), 2000);
                     }}
                   >
                     {copiedSnippet === 'dax' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
-                    {copiedSnippet === 'dax' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+                    {copiedSnippet === 'dax' ? (t.powerBiExcel?.copied || '¡Copiado!') : 'Copiar todas las medidas'}
                   </button>
                 </div>
-                <pre
-                  style={{
-                    backgroundColor: 'var(--bg-main)',
-                    border: '1px solid var(--border-color)',
-                    padding: '10px 12px',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-mono)',
-                    color: 'var(--primary)',
-                    overflowX: 'auto',
-                    margin: 0,
-                  }}
-                >
+
+                {report?.integration_guide?.dax_measures && report.integration_guide.dax_measures.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
+                    {report.integration_guide.dax_measures.map((measure, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          backgroundColor: 'var(--bg-main)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          padding: '8px 10px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
+                            [{measure.name}]
+                          </span>
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: '2px 6px', fontSize: '0.675rem' }}
+                            onClick={() => {
+                              navigator.clipboard.writeText(measure.dax_formula);
+                              setCopiedSnippet(`dax-${idx}`);
+                              setTimeout(() => setCopiedSnippet(null), 1500);
+                            }}
+                          >
+                            {copiedSnippet === `dax-${idx}` ? '¡Copiado!' : 'Copiar'}
+                          </button>
+                        </div>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {measure.description}
+                        </p>
+                        <pre
+                          style={{
+                            margin: 0,
+                            fontSize: '0.725rem',
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--primary)',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {measure.dax_formula}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <pre
+                    style={{
+                      backgroundColor: 'var(--bg-main)',
+                      border: '1px solid var(--border-color)',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--primary)',
+                      overflowX: 'auto',
+                      margin: 0,
+                    }}
+                  >
 {`Total_Registros = COUNTROWS('DataFlow_Cleaned_Dataset')
 
 Registros_Validos = 
@@ -1234,20 +1313,41 @@ CALCULATE(
 
 Score_Calidad_Pct = 
 DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
-                </pre>
+                  </pre>
+                )}
               </div>
 
               {/* Consulta M (Power Query) */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                    {t.powerBiExcel?.mQueryLabel || 'Power Query M (Importación automática)'}:
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                      {t.powerBiExcel?.mQueryLabel || 'Power Query M'}:
+                    </span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        className={`btn ${selectedPqFormat === 'csv' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '2px 8px', fontSize: '0.675rem' }}
+                        onClick={() => setSelectedPqFormat('csv')}
+                      >
+                        CSV
+                      </button>
+                      <button
+                        className={`btn ${selectedPqFormat === 'parquet' ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '2px 8px', fontSize: '0.675rem' }}
+                        onClick={() => setSelectedPqFormat('parquet')}
+                      >
+                        Parquet
+                      </button>
+                    </div>
+                  </div>
                   <button
                     className="btn btn-outline"
                     style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => {
-                      const mCode = `let\n    Source = Csv.Document(File.Contents("DataFlow_Cleaned_Dataset.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),\n    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"run_id", type text}})\nin\n    #"Changed Type"`;
+                      const mCode = report?.integration_guide
+                        ? (selectedPqFormat === 'parquet' ? report.integration_guide.power_query_m_parquet : report.integration_guide.power_query_m_csv)
+                        : `let\n    Source = Csv.Document(File.Contents("DataFlow_Cleaned_Dataset.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),\n    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"run_id", type text}})\nin\n    #"Changed Type"`;
                       navigator.clipboard.writeText(mCode);
                       setCopiedSnippet('m');
                       setTimeout(() => setCopiedSnippet(null), 2000);
@@ -1263,19 +1363,17 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                     border: '1px solid var(--border-color)',
                     padding: '10px 12px',
                     borderRadius: '6px',
-                    fontSize: '0.75rem',
+                    fontSize: '0.725rem',
                     fontFamily: 'var(--font-mono)',
                     color: 'var(--text-main)',
                     overflowX: 'auto',
                     margin: 0,
+                    maxHeight: '180px',
                   }}
                 >
-{`let
-    Source = Csv.Document(File.Contents("DataFlow_Cleaned_Dataset.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
-    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
-    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"run_id", type text}})
-in
-    #"Changed Type"`}
+                  {report?.integration_guide
+                    ? (selectedPqFormat === 'parquet' ? report.integration_guide.power_query_m_parquet : report.integration_guide.power_query_m_csv)
+                    : `let\n    Source = Csv.Document(File.Contents("DataFlow_Cleaned_Dataset.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),\n    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"run_id", type text}})\nin\n    #"Changed Type"`}
                 </pre>
               </div>
             </div>
@@ -1296,55 +1394,116 @@ in
                 <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Award size={16} /> {t.powerBiExcel?.tabExcel || 'Microsoft Excel'}
                 </h5>
-                <span className="badge badge-emerald">Fórmulas Dinámicas</span>
+                <span className="badge badge-emerald">Fórmulas Dinámicas Adaptativas</span>
               </div>
 
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                {t.powerBiExcel?.excelDesc || 'Fórmulas nativas adaptadas a la configuración regional para auditoría y validación de outliers.'}
+                {t.powerBiExcel?.excelDesc || 'Fórmulas nativas adaptadas a las columnas cuantitativas, letras de columna y rangos reales de este dataset.'}
               </p>
 
-              {/* Fórmula de Excel */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                    {t.powerBiExcel?.excelFormulaLabel || 'Fórmula de Validación de Outliers (IQR)'}:
-                  </span>
-                  <button
-                    className="btn btn-outline"
-                    style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    onClick={() => {
-                      const excelFormula = language === 'es'
-                        ? `=SI(ESNUMERO(A2); SI(Y(A2>=MEDIANA($A$2:$A$1000)-1,5*DESVEST($A$2:$A$1000); A2<=MEDIANA($A$2:$A$1000)+1,5*DESVEST($A$2:$A$1000)); "Válido"; "Outlier"); "Texto")`
-                        : `=IF(ISNUMBER(A2), IF(AND(A2>=MEDIAN($A$2:$A$1000)-1.5*STDEV($A$2:$A$1000), A2<=MEDIAN($A$2:$A$1000)+1.5*STDEV($A$2:$A$1000)), "Valid", "Outlier"), "Text")`;
-                      navigator.clipboard.writeText(excelFormula);
-                      setCopiedSnippet('excel');
-                      setTimeout(() => setCopiedSnippet(null), 2000);
-                    }}
-                  >
-                    {copiedSnippet === 'excel' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
-                    {copiedSnippet === 'excel' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
-                  </button>
+              {/* Selector de Columna / Métrica de Excel */}
+              {report?.integration_guide?.excel_formulas && report.integration_guide.excel_formulas.length > 0 && (
+                <div>
+                  <label style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                    Seleccionar variable para auditar outliers con fórmula Excel:
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {report.integration_guide.excel_formulas.map((item, idx) => (
+                      <button
+                        key={idx}
+                        className={`btn ${selectedExcelMeasureIndex === idx ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ padding: '3px 8px', fontSize: '0.725rem' }}
+                        onClick={() => setSelectedExcelMeasureIndex(idx)}
+                      >
+                        {item.measure_name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <pre
-                  style={{
-                    backgroundColor: 'var(--bg-main)',
-                    border: '1px solid var(--border-color)',
-                    padding: '10px 12px',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-mono)',
-                    color: '#10b981',
-                    overflowX: 'auto',
-                    margin: 0,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-{language === 'es'
-  ? `=SI(ESNUMERO(A2); SI(Y(A2>=MEDIANA($A$2:$A$1000)-1,5*DESVEST($A$2:$A$1000); A2<=MEDIANA($A$2:$A$1000)+1,5*DESVEST($A$2:$A$1000)); "Válido"; "Outlier"); "Texto")`
-  : `=IF(ISNUMBER(A2), IF(AND(A2>=MEDIAN($A$2:$A$1000)-1.5*STDEV($A$2:$A$1000), A2<=MEDIAN($A$2:$A$1000)+1.5*STDEV($A$2:$A$1000)), "Valid", "Outlier"), "Text")`}
-                </pre>
-              </div>
+              )}
+
+              {/* Fórmula de Excel Dinámica */}
+              {(() => {
+                const currentItem = report?.integration_guide?.excel_formulas?.[selectedExcelMeasureIndex];
+                const formula = currentItem
+                  ? (language === 'es' ? currentItem.formula_es : currentItem.formula_en)
+                  : (language === 'es'
+                      ? `=SI(ESNUMERO(A2); SI(Y(A2>=MEDIANA($A$2:$A$1000)-1,5*DESVEST($A$2:$A$1000); A2<=MEDIANA($A$2:$A$1000)+1,5*DESVEST($A$2:$A$1000)); "Válido"; "Outlier"); "Texto")`
+                      : `=IF(ISNUMBER(A2), IF(AND(A2>=MEDIAN($A$2:$A$1000)-1.5*STDEV($A$2:$A$1000), A2<=MEDIAN($A$2:$A$1000)+1.5*STDEV($A$2:$A$1000)), "Valid", "Outlier"), "Text")`);
+                const desc = currentItem?.description || 'Fórmula de validación de outliers por método IQR/Desviación.';
+                const cellTarget = currentItem?.cell_target || 'A2';
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                        {currentItem ? `Fórmula para ${currentItem.measure_name} (pegar en celda ${cellTarget}):` : (t.powerBiExcel?.excelFormulaLabel || 'Fórmula de Validación')}:
+                      </span>
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(formula);
+                          setCopiedSnippet('excel');
+                          setTimeout(() => setCopiedSnippet(null), 2000);
+                        }}
+                      >
+                        {copiedSnippet === 'excel' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
+                        {copiedSnippet === 'excel' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+                      </button>
+                    </div>
+                    <p style={{ margin: '0 0 6px 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {desc}
+                    </p>
+                    <pre
+                      style={{
+                        backgroundColor: 'var(--bg-main)',
+                        border: '1px solid var(--border-color)',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontFamily: 'var(--font-mono)',
+                        color: '#10b981',
+                        overflowX: 'auto',
+                        margin: 0,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {formula}
+                    </pre>
+                  </div>
+                );
+              })()}
+
+              {/* Resumen de Mapeo de Columnas */}
+              {report?.integration_guide?.columns_metadata && report.integration_guide.columns_metadata.length > 0 && (
+                <div style={{ marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                    Mapeo de Columnas (Excel / Power BI):
+                  </span>
+                  <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                    <table style={{ width: '100%', fontSize: '0.725rem', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                          <th style={{ padding: '4px 8px' }}>Columna</th>
+                          <th style={{ padding: '4px 8px' }}>Excel</th>
+                          <th style={{ padding: '4px 8px' }}>Tipo Power BI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.integration_guide.columns_metadata.map((col, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: '4px 8px', fontWeight: 600 }}>{col.name}</td>
+                            <td style={{ padding: '4px 8px', color: 'var(--primary)' }}>Col {col.excel_column_letter}</td>
+                            <td style={{ padding: '4px 8px', color: 'var(--text-muted)' }}>{col.power_query_type}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               <div
                 style={{

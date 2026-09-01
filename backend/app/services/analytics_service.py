@@ -1,3 +1,6 @@
+import html
+import re
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -12,10 +15,15 @@ from app.models.analytics import (
     ClusterPoint,
     ClusterSummaryItem,
     ClusterVisualization,
+    DaxMeasureItem,
+    ExcelFormulaItem,
     ExecutiveAnalyticsReport,
+    IntegrationColumn,
+    IntegrationGuide,
     OutlierScatterPoint,
     OutlierVisualization,
 )
+from app.models.etl import ExecutionResult
 from app.services.etl_service import ETLService
 from app.transformations.cluster_ops import _kmeans_numpy
 
@@ -365,6 +373,7 @@ class AnalyticsService:
 
         cluster_viz = AnalyticsService._build_cluster_visualization(df)
         outlier_viz = AnalyticsService._build_outlier_visualization(df)
+        integration_guide = AnalyticsService._build_integration_guide(df, run_result, domain)
 
         report = ExecutiveAnalyticsReport(
             run_id=run_id,
@@ -376,6 +385,7 @@ class AnalyticsService:
             category_breakdown=breakdown,
             cluster_visualization=cluster_viz,
             outlier_visualization=outlier_viz,
+            integration_guide=integration_guide,
         )
 
         ANALYTICS_CACHE[run_id] = report
@@ -790,6 +800,256 @@ class AnalyticsService:
         return "".join(svg_parts)
 
     @staticmethod
+    def _get_excel_column_letter(col_idx: int) -> str:
+        """Convierte un índice numérico de columna (0=A, 1=B, ..., 26=AA) en su letra de Excel."""
+        result = ""
+        col_num = col_idx + 1
+        while col_num > 0:
+            col_num, remainder = divmod(col_num - 1, 26)
+            result = chr(65 + remainder) + result
+        return result
+
+    @staticmethod
+    def _map_to_power_query_type(col_name: str, series: pd.Series) -> tuple[str, str]:
+        """Infiere el tipo de dato para Power Query (Lenguaje M) y el rol semántico."""
+        col_lower = col_name.lower()
+        dtype_str = str(series.dtype)
+
+        # 1. Identificadores y códigos
+        if (
+            col_lower.startswith(("id_", "cod_", "cp_", "codigo_"))
+            or col_lower.endswith(("_id", "_cod", "_codigo"))
+            or col_lower in ["id", "codigo", "cp", "cif", "nif", "dni", "iban"]
+        ):
+            return ("type text", "id")
+
+        # 2. Fechas y Datetime
+        if "datetime" in dtype_str or "timestamp" in dtype_str:
+            return ("type datetime", "date")
+        if "fecha" in col_lower or "date" in col_lower:
+            return ("type date", "date")
+
+        # 3. Booleanos
+        if "bool" in dtype_str:
+            return ("type logical", "boolean")
+
+        # 4. Numéricos
+        if "int" in dtype_str:
+            return ("Int64.Type", "numeric")
+        if "float" in dtype_str:
+            return ("type number", "numeric")
+
+        # 5. Categóricos o texto general
+        return ("type text", "category")
+
+    @staticmethod
+    def _build_integration_guide(df: pd.DataFrame, run_result: ExecutionResult, domain: str) -> IntegrationGuide:
+        """
+        Construye una guía de integración y fórmulas completamente adaptada al dataset concreto:
+        script Power Query M con tipos reales, medidas DAX contextuales y fórmulas de Excel dinámicas.
+        """
+        clean_fn = run_result.clean_filename or "DataFlow_Cleaned_Dataset.csv"
+        raw_table_name = Path(clean_fn).stem
+        sanitized_table = re.sub(r"[^a-zA-Z0-9_]", "_", raw_table_name).strip("_")
+        if not sanitized_table or sanitized_table[0].isdigit():
+            sanitized_table = f"DF_{sanitized_table}"
+        table_name = "_".join(word.capitalize() for word in sanitized_table.split("_"))
+
+        columns_info: List[IntegrationColumn] = []
+        pq_type_tuples: List[str] = []
+
+        for idx, col in enumerate(df.columns):
+            pq_type, role = AnalyticsService._map_to_power_query_type(col, df[col])
+            col_letter = AnalyticsService._get_excel_column_letter(idx)
+            columns_info.append(
+                IntegrationColumn(
+                    name=col,
+                    python_dtype=str(df[col].dtype),
+                    power_bi_m_type=pq_type,
+                    semantic_role=role,
+                    excel_column_letter=col_letter,
+                )
+            )
+            pq_type_tuples.append(f'{{"{col}", {pq_type}}}')
+
+        # 1. Script Power Query M (CSV)
+        types_formatted = ",\n        ".join(pq_type_tuples)
+        power_query_m_csv = (
+            f"let\n"
+            f'    Source = Csv.Document(File.Contents("{clean_fn}"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n'
+            f'    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),\n'
+            f'    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{\n'
+            f"        {types_formatted}\n"
+            f"    }})\n"
+            f"in\n"
+            f'    #"Changed Type"'
+        )
+
+        # 2. Script Power Query M (Parquet)
+        parquet_fn = run_result.parquet_filename or f"{Path(clean_fn).stem}.parquet"
+        power_query_m_parquet = (
+            f"let\n" f'    Source = Parquet.Document(File.Contents("{parquet_fn}"))\n' f"in\n" f"    Source"
+        )
+
+        # 3. Medidas DAX Contextuales
+        dax_measures: List[DaxMeasureItem] = []
+
+        # Base: Total de registros
+        dax_measures.append(
+            DaxMeasureItem(
+                name="Total_Registros",
+                formula=f"Total_Registros = COUNTROWS('{table_name}')",
+                description="Conteo total de filas depuradas en el dataset.",
+                category="kpi",
+            )
+        )
+
+        # Calidad y Outliers
+        has_outlier_col = "is_outlier" in df.columns
+        if has_outlier_col:
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Registros_Validos",
+                    formula=(
+                        f"Registros_Validos = \n"
+                        f"CALCULATE(\n"
+                        f"    COUNTROWS('{table_name}'),\n"
+                        f"    '{table_name}'[is_outlier] = FALSE()\n"
+                        f")"
+                    ),
+                    description="Conteo de registros que cumplen los criterios estadísticos estándar sin ser anomalías.",
+                    category="calidad",
+                )
+            )
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Score_Calidad_Pct",
+                    formula="Score_Calidad_Pct = \nDIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100",
+                    description="Porcentaje de registros limpios y validados por el pipeline.",
+                    category="calidad",
+                )
+            )
+        else:
+            first_col = df.columns[0] if len(df.columns) > 0 else "ID"
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Registros_Completos",
+                    formula=(
+                        f"Registros_Completos = \n"
+                        f"CALCULATE(\n"
+                        f"    COUNTROWS('{table_name}'),\n"
+                        f"    NOT(ISBLANK('{table_name}'[{first_col}]))\n"
+                        f")"
+                    ),
+                    description=f"Conteo de registros sin valores nulos en la columna clave '{first_col}'.",
+                    category="calidad",
+                )
+            )
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Score_Calidad_Pct",
+                    formula="Score_Calidad_Pct = \nDIVIDE([Registros_Completos], [Total_Registros], 1.0) * 100",
+                    description="Porcentaje de completitud de datos validados por DataFlow AI.",
+                    category="calidad",
+                )
+            )
+
+        # Medidas para variables numéricas clave
+        numeric_cols = [c.name for c in columns_info if c.semantic_role == "numeric"]
+        for num_c in numeric_cols[:4]:
+            sanitized_num_c = re.sub(r"[^a-zA-Z0-9_]", "_", num_c)
+            dax_measures.append(
+                DaxMeasureItem(
+                    name=f"Total_{sanitized_num_c}",
+                    formula=f"Total_{sanitized_num_c} = SUM('{table_name}'[{num_c}])",
+                    description=f"Suma acumulada de la variable numérica '{num_c}'.",
+                    category="numerico",
+                )
+            )
+            dax_measures.append(
+                DaxMeasureItem(
+                    name=f"Promedio_{sanitized_num_c}",
+                    formula=f"Promedio_{sanitized_num_c} = AVERAGE('{table_name}'[{num_c}])",
+                    description=f"Media aritmética calculada para '{num_c}'.",
+                    category="numerico",
+                )
+            )
+
+        # Medidas de cardinalidad única para IDs o categorías
+        id_or_cat_cols = [c.name for c in columns_info if c.semantic_role in ["id", "category"]]
+        for id_c in id_or_cat_cols[:2]:
+            sanitized_id_c = re.sub(r"[^a-zA-Z0-9_]", "_", id_c)
+            dax_measures.append(
+                DaxMeasureItem(
+                    name=f"Total_{sanitized_id_c}_Unicos",
+                    formula=f"Total_{sanitized_id_c}_Unicos = DISTINCTCOUNT('{table_name}'[{id_c}])",
+                    description=f"Recuento de valores distintos (cardinalidad) para '{id_c}'.",
+                    category="kpi",
+                )
+            )
+
+        # Inteligencia temporal si existe fecha
+        date_cols = [c.name for c in columns_info if c.semantic_role == "date"]
+        if date_cols and numeric_cols:
+            d_col = date_cols[0]
+            n_col = numeric_cols[0]
+            sanitized_n_col = re.sub(r"[^a-zA-Z0-9_]", "_", n_col)
+            dax_measures.append(
+                DaxMeasureItem(
+                    name=f"{sanitized_n_col}_YTD",
+                    formula=f"{sanitized_n_col}_YTD = TOTALYTD([Total_{sanitized_n_col}], '{table_name}'[{d_col}])",
+                    description=f"Acumulado anual (Year-to-Date) de '{n_col}' dimensionado por '{d_col}'.",
+                    category="tiempo",
+                )
+            )
+
+        # 4. Fórmulas de Excel Adaptativas
+        excel_formulas: List[ExcelFormulaItem] = []
+        row_count = max(len(df), 1)
+        last_row = row_count + 1
+
+        target_num_cols = [c for c in columns_info if c.semantic_role == "numeric"]
+        if not target_num_cols:
+            target_num_cols = columns_info[:1]
+
+        for col_meta in target_num_cols[:4]:
+            col_letter = col_meta.excel_column_letter or "A"
+            rng = f"${col_letter}$2:${col_letter}${last_row}"
+            cell = f"{col_letter}2"
+
+            formula_es = (
+                f"=SI(ESNUMERO({cell}); SI(Y({cell}>=MEDIANA({rng})-1,5*DESVEST.M({rng}); "
+                f'{cell}<=MEDIANA({rng})+1,5*DESVEST.M({rng})); "Válido"; "Outlier"); "Texto")'
+            )
+            formula_en = (
+                f"=IF(ISNUMBER({cell}), IF(AND({cell}>=MEDIAN({rng})-1.5*STDEV.S({rng}), "
+                f'{cell}<=MEDIAN({rng})+1.5*STDEV.S({rng})), "Valid", "Outlier"), "Text")'
+            )
+
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Validación IQR Outliers — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=formula_es,
+                    formula_en=formula_en,
+                    description=f"Detecta anomalías estadísticas en '{col_meta.name}' evaluando el rango real {rng}.",
+                )
+            )
+
+        return IntegrationGuide(
+            table_name=table_name,
+            clean_filename=clean_fn,
+            parquet_filename=parquet_fn if run_result.parquet_filename else None,
+            row_count=row_count,
+            columns=columns_info,
+            power_query_m_csv=power_query_m_csv,
+            power_query_m_parquet=power_query_m_parquet,
+            dax_measures=dax_measures,
+            excel_formulas=excel_formulas,
+        )
+
+    @staticmethod
     def generate_html_report(run_id: str, lang: str = "es") -> str:
         report = AnalyticsService.generate_report(run_id)
         run_result = ETLService.get_run_result(run_id)
@@ -816,25 +1076,32 @@ class AnalyticsService:
             else "<p>N/A</p>"
         )
 
-        is_rtl = lang in ["ar", "ur"]
-        direction = "rtl" if is_rtl else "ltr"
+        # Sanitización estricta contra XSS Reflejado (CWE-079 / py/reflective-xss)
+        safe_lang = html.escape(lang.strip().lower() if lang else "es")
+        safe_direction = "rtl" if safe_lang in ["ar", "ur"] else "ltr"
+        safe_run_id = html.escape(str(run_id))
+        safe_output_hash = html.escape(str(run_result.output_hash_md5))
+        safe_summary = html.escape(str(report.executive_summary))
 
-        # KPIs HTML
+        # KPIs HTML Sanitizados
         kpi_cards = []
         for k in report.kpis:
+            title_esc = html.escape(str(k.title))
+            val_esc = html.escape(str(k.value))
+            sub_esc = html.escape(str(k.subtitle))
             kpi_cards.append(f"""
             <div class="kpi-card">
-                <div class="kpi-title">{k.title}</div>
-                <div class="kpi-val">{k.value}</div>
-                <div class="kpi-sub">{k.subtitle}</div>
+                <div class="kpi-title">{title_esc}</div>
+                <div class="kpi-val">{val_esc}</div>
+                <div class="kpi-sub">{sub_esc}</div>
             </div>
             """)
         kpi_html = "".join(kpi_cards)
 
-        # Recomendaciones HTML
-        recs_html = "".join(f"<li>{r}</li>" for r in report.strategic_recommendations)
+        # Recomendaciones HTML Sanitizadas
+        recs_html = "".join(f"<li>{html.escape(str(r))}</li>" for r in report.strategic_recommendations)
 
-        # Filas tabla clusters
+        # Filas tabla clusters Sanitizadas
         cluster_rows = []
         if report.cluster_visualization and report.cluster_visualization.clusters:
             colors = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"]
@@ -845,9 +1112,10 @@ class AnalyticsService:
                     if c.feature_averages
                     else "<td>—</td>"
                 )
+                label_esc = html.escape(str(c.label))
                 cluster_rows.append(f"""
                     <tr>
-                        <td style="font-weight:600;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{col_hex};margin-right:6px;"></span>{c.label}</td>
+                        <td style="font-weight:600;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{col_hex};margin-right:6px;"></span>{label_esc}</td>
                         <td>{c.count}</td>
                         <td>{c.percentage}%</td>
                         {row_avgs}
@@ -855,12 +1123,12 @@ class AnalyticsService:
                     """)
         cluster_table_html = "".join(cluster_rows)
         cluster_cols_header = "".join(
-            f"<th>Media ({c})</th>"
+            f"<th>Media ({html.escape(str(c))})</th>"
             for c in (report.cluster_visualization.available_numeric_columns if report.cluster_visualization else [])
         )
 
         html_template = f"""<!DOCTYPE html>
-<html lang="{lang}" dir="{direction}">
+<html lang="{safe_lang}" dir="{safe_direction}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1048,7 +1316,7 @@ class AnalyticsService:
             </div>
             <div style="display:flex;align-items:center;gap:12px;">
                 <div class="meta-badges">
-                    <span class="badge">Run: {run_id}</span>
+                    <span class="badge">Run: {safe_run_id}</span>
                     <span class="badge badge-success">Clean Records: {run_result.rows_after}</span>
                 </div>
                 <button class="btn-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
@@ -1057,7 +1325,7 @@ class AnalyticsService:
 
         <div class="exec-summary">
             <h3>📌 Resumen Directivo y Conclusiones</h3>
-            <p>{report.executive_summary}</p>
+            <p>{safe_summary}</p>
         </div>
 
         <div class="section">
@@ -1104,8 +1372,8 @@ class AnalyticsService:
         </div>
 
         <div class="footer">
-            <span>DataFlow AI v1.7.0 · Gobernanza Determinista (Python/Pandas)</span>
-            <span>MD5 Salida: <code>{run_result.output_hash_md5}</code></span>
+            <span>DataFlow AI v1.9.0 · Gobernanza Determinista (Python/Pandas)</span>
+            <span>MD5 Salida: <code>{safe_output_hash}</code></span>
         </div>
     </div>
 </body>

@@ -4,6 +4,59 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.9.0] — 2026-09-01
+
+### 🛡️ Remediación XSS CodeQL, Benchmarks de Carga Masiva (>100k Filas), Protección Interactiva de Datos y Guía Adaptativa para Power BI y Excel
+
+> **Remediación AppSec, Rendimiento a Gran Escala e Integración Adaptativa:** Mitigación completa de la alerta CodeQL #10 (`py/reflective-xss`) mediante validación estricta con expresiones regulares, sanitización whitelist de idioma, cabeceras HTTP defensivas y escape HTML exhaustivo; suite automatizada de pruebas de rendimiento y carga con datasets de 100.000 filas; feedback interactivo en la interfaz de usuario para prevenir la pérdida irreversible de texto libre con confirmación explícita del operador humano; y desarrollo del motor adaptativo de Guía de Integración y Fórmulas para Microsoft Power BI (Power Query M nativo para CSV y Parquet, medidas DAX contextuales) y Microsoft Excel (fórmulas dinámicas por columna y mapeo regional ES/EN).
+
+#### 🔒 Seguridad y Remediación de Código (CodeQL #10)
+- **Mitigación Reflected Server-Side XSS (`backend/app/api/v1/endpoints/analytics.py`):**
+  - Validación de ruta para `run_id` mediante expresión regular restrictiva `^[a-zA-Z0-9_\-]+$`, bloqueando inyecciones de caracteres `<script>`, comillas o caracteres de control HTTP con respuesta 400 Bad Request.
+  - Validación del parámetro `lang` contra whitelist estricta de 13 idiomas internacionales permitidos (`es`, `en`, `zh`, `hi`, `fr`, `ar`, `bn`, `pt`, `id`, `ur`, `ru`, `de`, `ja`), con fallback seguro a `"es"`.
+  - Inclusión de cabecera de respuesta HTTP defensiva `X-Content-Type-Options: nosniff` en `/api/v1/analytics/{run_id}/export`.
+- **Sanitización Exhaustiva en Generación de Informes HTML (`backend/app/services/analytics_service.py`):**
+  - Todas las variables dinámicas incrustadas en `generate_html_report` (`safe_lang`, `safe_run_id`, `safe_output_hash`, `safe_summary`, métricas de KPI, recomendaciones estratégicas y filas de clusters) se escapan obligatoriamente con `html.escape(..., quote=True)`.
+  - Adición de tests de regresión de seguridad específicos en `tests/test_analytics.py::test_xss_protection_and_sanitization_in_analytics_export`.
+
+#### ⚡ Rendimiento Vectorizado y Tests de Carga (>100.000 Filas)
+- **Suite de Pruebas de Rendimiento (`backend/tests/test_performance_large_dataset.py`):**
+  - Incorporación de 5 tests exhaustivos de rendimiento sobre datasets de 100.000 filas verificando tiempos de perfilado (<30s), análisis de calidad (<25s), transformaciones vectorizadas `ConvertNumeric`, `ClampRange` y `TrimText` (<3s), serialización columnar Apache Parquet (<3s) y generación de guías de integración (<1s).
+- **Optimización de Motores de Perfilado y Calidad (`profiler_service.py`, `quality_service.py`, `number_parsing.py`):**
+  - Extracción de métodos `ProfilerService.profile_dataframe` y `QualityService.analyze_dataframe` para permitir análisis directos en memoria.
+  - Optimización de `is_missing_series`: omite conversiones innecesarias a string en columnas numéricas y booleanas vectorizadas.
+  - Comprobación previa de palabras clave y símbolos antes del cálculo de parseabilidad numérica en inferencia de tipos y sugerencias de divisas.
+  - Vectorización en C de la detección de espacios sobrantes (`series != series.str.strip() | series.str.contains("  ")`) y mayúsculas en `QualityService`.
+
+#### ⚠️ Protección Interactiva de Pérdida de Datos en UI
+- **Advertencias Proactivas (`TransformationStep.data_loss_warning`):**
+  - Backend calcula y adjunta advertencias explicativas cuando una transformación (`convert_numeric`) convertirá texto libre a números descartando contenido no numérico.
+- **Interfaz React Interactiva (`PlanReview.tsx`):**
+  - Renderizado de tarjeta de aviso destacado con icono `AlertTriangle` y explicación clara de la pérdida irreversible de datos.
+  - Checkbox de confirmación explícita (*Human-in-the-Loop*): el usuario debe marcar la casilla de confirmación para autorizar la conversión antes de la ejecución.
+
+#### 📊 Guía de Integración y Fórmulas Adaptativas para Power BI y Excel
+- **Arquitectura de Metadatos de Integración (`models/analytics.py` & `frontend/src/types/index.ts`):**
+  - Modelos `IntegrationGuide`, `IntegrationColumn`, `DaxMeasureItem`, `ExcelFormulaItem` incorporados en el reporte analítico ejecutivo.
+- **Generación Dinámica Adaptada al Dataset (`backend/app/services/analytics_service.py`):**
+  - Mapeo automático de nombres y tipos de columna nativos para scripts de Power Query M (`type text`, `type number`, `Int64.Type`, `type date`, `type logical`).
+  - Scripts M independientes optimizados tanto para ingesta de CSV delimitado como para Apache Parquet de alto rendimiento.
+  - Generación de medidas DAX adaptadas a cada variable cuantitativa real (sumas, promedios, KPI de calidad sin outliers, periodo temporal máximo) con comentarios descriptivos.
+  - Fórmulas de Excel dinámicas basadas en la letra real de cada columna (ej. `Col C (C2:C150)`), adaptadas con sintaxis regional en castellano (`=SI(ESNUMERO(...); ...; ...)`) e inglés (`=IF(ISNUMBER(...), ..., ...)`).
+- **Componente Visual Adaptativo (`BusinessInsights.tsx`):**
+  - Conmutador interactivo entre conectores CSV y Parquet para Power Query M.
+  - Botón de copiado masivo de todas las medidas DAX y copiado individual por medida.
+  - Selector interactivo de columna para generar al instante la fórmula de validación de outliers de Excel para cualquier variable del dataset.
+  - Tabla de mapeo de columnas con letra de Excel asignada y tipo de Power BI.
+
+#### 🧪 Verificación Integral de Calidad
+- **145 Tests Backend (Pytest):** 100% pasando en verde.
+- **33 Tests Frontend (Vitest):** 100% pasando en verde.
+- **Linters y SAST:** Ruff (0 errores), Black (0 diferencias), Bandit SAST (0 vulnerabilidades), TypeScript estricto (0 errores), Vite build verificado (0 errores).
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
 ## [1.8.1] — 2026-09-01
 
 ### 🛡️ Endurecimiento de Gobernanza de Datos, Integridad Semántica y Auditoría de Calidad Determinista

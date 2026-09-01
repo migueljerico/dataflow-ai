@@ -11,6 +11,7 @@ import pandas as pd
 from app.core.exceptions import FunctionalException
 from app.core.number_parsing import (
     get_numeric_parseable_ratio,
+    is_missing_series,
     is_missing_value,
     to_numeric_series,
 )
@@ -128,6 +129,18 @@ class ETLService:
                     or "marcadores" in issue.description.lower()
                     or "cuantitativa" in issue.description.lower()
                 ) and not any(s.column == col and s.operation == "convert_numeric" for s in steps):
+                    loss_warning = None
+                    if col and col in df.columns:
+                        missing_mask = is_missing_series(df[col])
+                        real_content = df[col][~missing_mask]
+                        if len(real_content) > 0:
+                            parsed_real = to_numeric_series(real_content)
+                            lost_count = int(parsed_real.isna().sum())
+                            if lost_count > 0:
+                                loss_warning = (
+                                    f"Atención: {lost_count} celda(s) contienen texto libre o caracteres no numéricos "
+                                    f"que se descartarán irreversiblemente como NaN."
+                                )
                     steps.append(
                         TransformationStep(
                             step_id=step_id,
@@ -138,6 +151,7 @@ class ETLService:
                             confidence=0.95,
                             risk="medium",
                             affected_rows_estimate=issue.affected_rows,
+                            data_loss_warning=loss_warning,
                         )
                     )
 
@@ -308,6 +322,18 @@ class ETLService:
                         for v in series_raw
                     )
                     if has_dirty:
+                        loss_warning = None
+                        if col_name in df.columns:
+                            missing_mask = is_missing_series(df[col_name])
+                            real_content = df[col_name][~missing_mask]
+                            if len(real_content) > 0:
+                                parsed_real = to_numeric_series(real_content)
+                                lost_count = int(parsed_real.isna().sum())
+                                if lost_count > 0:
+                                    loss_warning = (
+                                        f"Atención: {lost_count} celda(s) contienen texto libre o caracteres no numéricos "
+                                        f"que se descartarán irreversiblemente como NaN."
+                                    )
                         steps.append(
                             TransformationStep(
                                 step_id=f"STEP-{len(steps)+1:03d}",
@@ -318,6 +344,7 @@ class ETLService:
                                 confidence=0.95,
                                 risk="medium",
                                 affected_rows_estimate=len(df),
+                                data_loss_warning=loss_warning,
                             )
                         )
 

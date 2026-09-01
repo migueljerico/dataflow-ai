@@ -27,6 +27,9 @@ class TransformationStep(BaseModel):
     risk: str = Field(default="low", description="Riesgo de la operación (low, medium, high)")
     affected_rows_estimate: int = Field(default=0, description="Estimación de filas afectadas")
     status: StepStatusEnum = Field(default=StepStatusEnum.PROPOSED, description="Estado de revisión humana")
+    data_loss_warning: Optional[str] = Field(
+        None, description="Advertencia sobre posible descarte irreversible de texto libre o datos cualitativos"
+    )
 
 
 class TransformationPlan(BaseModel):

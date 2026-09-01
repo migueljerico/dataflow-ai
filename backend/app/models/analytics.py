@@ -82,6 +82,42 @@ class OutlierVisualization(BaseModel):
     detection_method: str = "IQR (1.5x) / Z-Score (>3.0)"
 
 
+class IntegrationColumn(BaseModel):
+    name: str
+    python_dtype: str
+    power_bi_m_type: str
+    semantic_role: str  # 'id', 'numeric', 'date', 'category', 'boolean'
+    excel_column_letter: Optional[str] = None
+
+
+class DaxMeasureItem(BaseModel):
+    name: str
+    formula: str
+    description: str
+    category: str  # 'kpi', 'calidad', 'numerico', 'tiempo'
+
+
+class ExcelFormulaItem(BaseModel):
+    title: str
+    column: str
+    excel_column_letter: str
+    formula_es: str
+    formula_en: str
+    description: str
+
+
+class IntegrationGuide(BaseModel):
+    table_name: str
+    clean_filename: str
+    parquet_filename: Optional[str] = None
+    row_count: int
+    columns: List[IntegrationColumn]
+    power_query_m_csv: str
+    power_query_m_parquet: Optional[str] = None
+    dax_measures: List[DaxMeasureItem]
+    excel_formulas: List[ExcelFormulaItem]
+
+
 class ExecutiveAnalyticsReport(BaseModel):
     run_id: str
     dataset_name: str
@@ -92,3 +128,4 @@ class ExecutiveAnalyticsReport(BaseModel):
     category_breakdown: Optional[List[CategoryDistribution]] = None
     cluster_visualization: Optional[ClusterVisualization] = None
     outlier_visualization: Optional[OutlierVisualization] = None
+    integration_guide: Optional[IntegrationGuide] = None
