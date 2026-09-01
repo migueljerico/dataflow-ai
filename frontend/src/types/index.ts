@@ -237,34 +237,38 @@ export interface OutlierVisualization {
 
 export interface IntegrationColumn {
   name: string;
-  inferred_type: string;
-  power_query_type: string;
-  excel_column_letter: string;
+  python_dtype: string;
+  power_bi_m_type: string;
+  semantic_role: string;
+  excel_column_letter?: string;
 }
 
 export interface DaxMeasureItem {
   name: string;
-  dax_formula: string;
+  formula: string;
   description: string;
-  target_column: string;
+  category: string;
 }
 
 export interface ExcelFormulaItem {
-  measure_name: string;
+  title: string;
+  column: string;
+  excel_column_letter: string;
   formula_es: string;
   formula_en: string;
-  cell_target: string;
   description: string;
 }
 
 export interface IntegrationGuide {
   table_name: string;
+  clean_filename: string;
+  parquet_filename?: string;
+  row_count: number;
+  columns: IntegrationColumn[];
   power_query_m_csv: string;
-  power_query_m_parquet: string;
+  power_query_m_parquet?: string;
   dax_measures: DaxMeasureItem[];
   excel_formulas: ExcelFormulaItem[];
-  columns_metadata: IntegrationColumn[];
-  row_count: number;
 }
 
 export interface ExecutiveAnalyticsReport {

@@ -4,6 +4,26 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.9.1] — 2026-09-01
+
+### 🐛 Corrección de Excepción en Renderizado de Integración Power BI / Excel y Alineación de Esquema
+
+> **Blindaje de la Pestaña de Integración:** Corrección del error en tiempo de ejecución `TypeError: Cannot read properties of undefined (reading 'length')` al acceder a la pestaña "Integración Power BI / Excel"; alineación estricta de las interfaces de TypeScript (`columns`, `formula`, `title`, `column`, `power_bi_m_type`, `excel_column_letter`) con los modelos Pydantic del backend; e incorporación de protecciones defensivas y valores por defecto para garantizar un renderizado fluido incluso con datasets previos o sin guía analítica precalculada.
+
+#### 🔧 Frontend: Robustez de la Interfaz y Resiliencia
+- **Alineación de Esquema de Datos (`frontend/src/types/index.ts`):**
+  - Corrección de la interfaz `IntegrationGuide`: se renombró `columns_metadata` a `columns` para coincidir exactamente con el campo emitido por el backend FastAPI/Pydantic.
+  - Actualización de campos en `DaxMeasureItem` (`formula` en lugar de `dax_formula`) y `ExcelFormulaItem` (`title`, `column`, `excel_column_letter`).
+- **Renderizado Seguro y Resiliente (`frontend/src/components/BusinessInsights.tsx`):**
+  - Adición de encadenamiento opcional defensivo (`guide?.columns?.length ?? 0`, `(guide.row_count ?? 0).toLocaleString()`) y desestructuración con fallbacks vacíos (`[]`) para todas las listas (`columns`, `daxMeasures`, `excelFormulas`).
+  - Soporte bidireccional retrocompatible para atributos legacy y nuevos en las medidas DAX y fórmulas de Excel.
+  - Prevención de desbordamientos en el ErrorBoundary al conmutar entre pestañas.
+- **Suite de Pruebas Frontend:**
+  - Nuevo test unitario en `BusinessInsights.test.tsx` comprobando que la pestaña de integración renderiza correctamente con valores por defecto y sin excepciones cuando `report.integration_guide` es `undefined`. Total: 34 tests unitarios de frontend pasando al 100%.
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
 ## [1.9.0] — 2026-09-01
 
 ### 🛡️ Remediación XSS CodeQL, Benchmarks de Carga Masiva (>100k Filas), Protección Interactiva de Datos y Guía Adaptativa para Power BI y Excel

@@ -237,30 +237,34 @@ describe('BusinessInsights component', () => {
       ...mockReport,
       integration_guide: {
         table_name: 'Ventas_Comerciales',
+        clean_filename: 'Ventas_Comerciales.csv',
+        parquet_filename: 'Ventas_Comerciales.parquet',
         power_query_m_csv: 'let\n    Source = Csv.Document(...)\nin\n    #"Changed Type"',
         power_query_m_parquet: 'let\n    Source = Parquet.Document(...)\nin\n    #"Changed Type"',
         dax_measures: [
           {
             name: 'Total_Ventas',
-            dax_formula: "Total_Ventas = SUM('Ventas_Comerciales'[Ventas])",
+            formula: "Total_Ventas = SUM('Ventas_Comerciales'[Ventas])",
             description: "Suma total de la métrica 'Ventas'.",
-            target_column: 'Ventas',
+            category: 'numerico',
           },
         ],
         excel_formulas: [
           {
-            measure_name: 'Ventas',
+            title: 'Validación IQR Outliers — Ventas',
+            column: 'Ventas',
             formula_es: '=SI(ESNUMERO(C2); "OK"; "Outlier")',
             formula_en: '=IF(ISNUMBER(C2), "OK", "Outlier")',
-            cell_target: 'D2',
+            excel_column_letter: 'C',
             description: 'Validación de outliers para Ventas.',
           },
         ],
-        columns_metadata: [
+        columns: [
           {
             name: 'Ventas',
-            inferred_type: 'numeric',
-            power_query_type: 'type number',
+            python_dtype: 'float64',
+            power_bi_m_type: 'type number',
+            semantic_role: 'numeric',
             excel_column_letter: 'C',
           },
         ],
@@ -289,5 +293,32 @@ describe('BusinessInsights component', () => {
     expect(screen.getByText(/Suma total de la métrica 'Ventas'/i)).toBeInTheDocument();
     expect(screen.getByText(/Mapeo de Columnas \(Excel \/ Power BI\)/i)).toBeInTheDocument();
     expect(screen.getByText('Col C')).toBeInTheDocument();
+  });
+
+  it('does not crash and renders defaults when report.integration_guide is undefined', async () => {
+    const reportWithoutGuide: ExecutiveAnalyticsReport = {
+      ...mockReport,
+      integration_guide: undefined,
+    };
+
+    vi.spyOn(api, 'getBusinessAnalytics').mockResolvedValue(reportWithoutGuide);
+
+    render(
+      <LanguageProvider>
+        <BusinessInsights runId="run-no-guide" />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Facturación Total Estimada')).toBeInTheDocument();
+    });
+
+    const integrationTab = screen.getByRole('tab', { name: /Integración Power BI \/ Excel/i });
+    fireEvent.click(integrationTab);
+
+    expect(screen.getByText(/Guía de Integración y Fórmulas para Power BI y Excel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Microsoft Power BI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Microsoft Excel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Total_Registros = COUNTROWS/i)).toBeInTheDocument();
   });
 });
