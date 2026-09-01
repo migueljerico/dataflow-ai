@@ -9,7 +9,12 @@ from typing import Dict, List
 import pandas as pd
 
 from app.core.exceptions import FunctionalException
-from app.core.number_parsing import MISSING_MARKERS, to_numeric_series
+from app.core.number_parsing import (
+    get_numeric_parseable_ratio,
+    is_missing_value,
+    to_numeric_series,
+)
+from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
 from app.core.storage import get_storage
 from app.models.dataset import FileTypeEnum, ProcessingStateEnum
 from app.models.etl import ExecutionResult, StepStatusEnum, TransformationPlan, TransformationStep
@@ -30,37 +35,12 @@ def _count_modified_cells(series_orig: pd.Series, series_curr: pd.Series) -> int
     return int(((a != b) & ~both_missing).sum())
 
 
-def _is_percentage_or_score_column(col_name: str, raw_series: pd.Series, numeric_series: pd.Series) -> bool:
+def _is_percentage_or_score_column(col_name: str, raw_series: pd.Series, numeric_series: pd.Series = None) -> bool:
     """
     Determina si una columna es de tipo porcentaje o score acotado a [0, 100].
-    Evita falsos positivos con conteos absolutos (e.g. Conversiones, Leads, Clicks, Ventas, Horas).
+    Delega a app.core.semantics garantizando que columnas de texto libre nunca sean porcentajes.
     """
-    # 1. Si contiene el símbolo '%' en sus datos originales -> Es porcentaje inequívocamente
-    if any("%" in str(x) for x in raw_series.dropna()):
-        return True
-
-    col_lower = col_name.lower().strip()
-    # 2. Nombres con sufijos/prefijos explícitos de porcentaje o score
-    return (
-        col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score"))
-        or col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_"))
-        or col_lower
-        in [
-            "%",
-            "pct",
-            "porcentaje",
-            "ctr",
-            "cvr",
-            "roi",
-            "score",
-            "score_calidad",
-            "tasa_conversion",
-            "conversion_rate",
-            "churn_rate",
-            "descuento_pct",
-            "incidencias_pct",
-        ]
-    )
+    return is_percentage_or_score_column(col_name, raw_series)
 
 
 class ETLService:
@@ -180,13 +160,19 @@ class ETLService:
                 elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(
                     s.column == col and s.operation == "clamp_range" for s in steps
                 ):
+                    min_v = 0.0 if col_is_pct else 0
+                    max_v = 100.0 if col_is_pct else None
                     steps.append(
                         TransformationStep(
                             step_id=step_id,
                             operation="clamp_range",
                             column=col,
-                            parameters={"column": col, "min_value": 0, "max_value": None},
-                            reason=f"Acotar {issue.affected_rows} valor(es) negativo(s) ilógico(s) en '{col}' estableciendo piso mínimo en 0.",
+                            parameters={"column": col, "min_value": min_v, "max_value": max_v},
+                            reason=(
+                                f"Acotar valores fuera de rango en la columna porcentual '{col}' al intervalo de negocio [0.0, 100.0%]."
+                                if col_is_pct
+                                else f"Acotar {issue.affected_rows} valor(es) negativo(s) ilógico(s) en '{col}' estableciendo piso mínimo en 0."
+                            ),
                             confidence=0.94,
                             risk="medium",
                             affected_rows_estimate=issue.affected_rows,
@@ -313,25 +299,27 @@ class ETLService:
 
             # Marcadores N/D / N/A / -- o símbolos en series convertibles a numérico
             if not is_id and not any(s.column == col_name and s.operation == "convert_numeric" for s in steps):
-                has_dirty = any(
-                    v.lower().strip() in MISSING_MARKERS
-                    or bool(re.match(r"^[-_—–\s]+$", str(v)))
-                    or any(sym in v for sym in ["€", "$", "%", "usd", "eur"])
-                    for v in series_raw
-                )
-                if has_dirty:
-                    steps.append(
-                        TransformationStep(
-                            step_id=f"STEP-{len(steps)+1:03d}",
-                            operation="convert_numeric",
-                            column=col_name,
-                            parameters={"column": col_name},
-                            reason=f"Convertir '{col_name}' a numérico puro float64 asignando marcadores de ausencia (N/A, N/D, --, -) a nulos (NaN) para Power BI.",
-                            confidence=0.95,
-                            risk="medium",
-                            affected_rows_estimate=len(df),
-                        )
+                ratio, _, total_real = get_numeric_parseable_ratio(df[col_name])
+                if total_real > 0 and ratio >= 0.8:
+                    has_dirty = any(
+                        is_missing_value(v)
+                        or any(sym in v for sym in ["€", "$", "%", "usd", "eur"])
+                        or bool(re.search(r"\d,\d", v))
+                        for v in series_raw
                     )
+                    if has_dirty:
+                        steps.append(
+                            TransformationStep(
+                                step_id=f"STEP-{len(steps)+1:03d}",
+                                operation="convert_numeric",
+                                column=col_name,
+                                parameters={"column": col_name},
+                                reason=f"Convertir '{col_name}' a numérico puro float64 asignando marcadores de ausencia (N/A, N/D, --, -) a nulos (NaN) para Power BI.",
+                                confidence=0.95,
+                                risk="medium",
+                                affected_rows_estimate=len(df),
+                            )
+                        )
 
             # Valores numéricos fuera de rango (excluyendo IDs)
             if not is_id:
@@ -538,6 +526,11 @@ class ETLService:
 
             except Exception as e:
                 errors.append(f"Error al ejecutar paso {step.step_id} ({step.operation}): {str(e)}")
+
+        # Preservar tipos de columnas ID antes de guardar para garantizar ceros a la izquierda
+        for c in df_current.columns:
+            if is_id_or_code_column(c, df_current[c]):
+                df_current[c] = df_current[c].astype(str)
 
         # Guardar dataset limpio mediante StorageBackend
         run_id = f"RUN-{uuid.uuid4().hex[:8]}"

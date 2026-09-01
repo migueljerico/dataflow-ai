@@ -1,4 +1,3 @@
-import re
 import warnings
 from datetime import datetime, timezone
 from typing import Any, Dict, List
@@ -6,7 +5,12 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
-from app.core.number_parsing import MISSING_MARKERS, to_numeric_series
+from app.core.number_parsing import (
+    get_numeric_parseable_ratio,
+    is_missing_series,
+    to_numeric_series,
+)
+from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import ColumnProfile, ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.services.dataset_service import DatasetService
@@ -45,94 +49,7 @@ class ProfilerService:
 
     @staticmethod
     def _is_id_or_code(col_name: str, non_null_str: pd.Series) -> bool:
-        col_lower = col_name.lower().strip()
-
-        # Si el nombre de la columna es explícitamente una fecha (ej. 'fecha', 'fecha_factura', 'date_created'), NO es ID
-        is_date_named = (
-            col_lower.startswith(("fecha", "date", "fec_"))
-            or col_lower.endswith(("_fecha", "_date"))
-            or col_lower in ["fecha", "date", "fec", "created_at", "updated_at", "timestamp"]
-        )
-        if is_date_named and not col_lower.startswith(("id_", "cod_", "pk_", "fk_")):
-            return False
-
-        # 1. Nombres y prefijos/sufijos explícitos de identificador o código
-        if (
-            col_lower.startswith(("id", "cod", "ref", "num_", "pk_", "fk_", "cpostal", "cp_"))
-            or col_lower.endswith(("_id", "_cod", "_code", "_ref", "_num", "_pk", "_fk", "_ine", "_cp"))
-            or col_lower
-            in [
-                "id",
-                "cod",
-                "code",
-                "codigo",
-                "ref",
-                "referencia",
-                "cpostal",
-                "cp",
-                "cif",
-                "nif",
-                "nie",
-                "dni",
-                "iban",
-                "sku",
-                "ean",
-                "matricula",
-                "tramo",
-                "distrito",
-                "seccion",
-                "num_factura",
-                "id_factura",
-                "cod_factura",
-                "num_pedido",
-                "id_pedido",
-                "cod_pedido",
-            ]
-            or any(
-                k in col_lower
-                for k in [
-                    "codigo",
-                    "code",
-                    "cpostal",
-                    "cod_postal",
-                    "codigo_postal",
-                    "cod_ine",
-                    "seccion_censal",
-                    "identificador",
-                    "cif",
-                    "nif",
-                    "nie",
-                    "dni",
-                    "iban",
-                    "sku",
-                    "ean",
-                    "matricula",
-                    "expediente",
-                    "tramo",
-                    "tracking",
-                ]
-            )
-        ):
-            return True
-
-        # 2. Muestras con ceros a la izquierda en cadenas numéricas (ej. códigos postales '08001' o INE '01004')
-        sample = non_null_str.head(30)
-        has_leading_zeros = any(
-            val.strip().startswith("0") and len(val.strip()) > 1 and val.strip().isdigit() for val in sample
-        )
-        if has_leading_zeros:
-            return True
-
-        # 3. Patrones alfanuméricos típicos de códigos (deben contener al menos una letra alfabética para no confundir con fechas tipo '2026-01-05')
-        has_alphanumeric_code = any(
-            bool(re.search(r"[A-Za-z]", val.strip()))
-            and bool(re.match(r"^[A-Za-z0-9]{1,8}[-_][A-Za-z0-9]{1,}$", val.strip()))
-            for val in sample
-        )
-        if has_alphanumeric_code:
-            return True
-
-        return False
+        return is_id_or_code_column(col_name, non_null_str)
 
     @staticmethod
     def _detect_semantic_hint(col_name: str, series: pd.Series, inferred_type: ColumnTypeEnum) -> SemanticHintEnum:
@@ -155,41 +72,31 @@ class ProfilerService:
             return SemanticHintEnum.PHONE
 
         # 4. Percentage / Ratios
-        has_percent_symbol = any("%" in val for val in non_null_str.head(50))
-        if has_percent_symbol:
-            return SemanticHintEnum.PERCENTAGE
-
-        has_explicit_pct_name = (
-            col_lower.endswith(("_pct", "_percentage", "_porcentaje", "_rate", "_ratio", "_tasa", "_score"))
-            or col_lower.startswith(("pct_", "porcentaje_", "tasa_", "ratio_", "score_"))
-            or col_lower
-            in [
-                "%",
-                "pct",
-                "porcentaje",
-                "ctr",
-                "cvr",
-                "roi",
-                "score",
-                "score_calidad",
-                "tasa_conversion",
-                "conversion_rate",
-                "churn_rate",
-                "descuento_pct",
-                "incidencias_pct",
-            ]
-        )
-        if has_explicit_pct_name:
+        if is_percentage_or_score_column(col_name, series):
             return SemanticHintEnum.PERCENTAGE
 
         # 5. Currency / Dinero
-        if any(
-            keyword in col_lower
-            for keyword in ["precio", "importe", "coste", "salario", "sueldo", "monto", "price", "amount", "revenue"]
-        ):
-            return SemanticHintEnum.CURRENCY
-        if any(symbol in val for val in non_null_str.head(20) for symbol in ["€", "$", "USD", "EUR"]):
-            return SemanticHintEnum.CURRENCY
+        ratio, _, total_real = get_numeric_parseable_ratio(series)
+        if total_real > 0 and ratio >= 0.8:
+            if any(
+                keyword in col_lower
+                for keyword in [
+                    "precio",
+                    "importe",
+                    "coste",
+                    "gasto",
+                    "salario",
+                    "sueldo",
+                    "monto",
+                    "price",
+                    "amount",
+                    "revenue",
+                    "facturacion",
+                ]
+            ):
+                return SemanticHintEnum.CURRENCY
+            if any(symbol in val for val in non_null_str.head(20) for symbol in ["€", "$", "USD", "EUR"]):
+                return SemanticHintEnum.CURRENCY
 
         # 6. Dates
         if any(keyword in col_lower for keyword in ["fecha", "date", "created", "updated", "ingreso", "alta", "baja"]):
@@ -246,19 +153,9 @@ class ProfilerService:
 
         # Check if text contains convertible numeric values or symbols
         try:
-            is_marker = non_null_str.str.lower().isin(MISSING_MARKERS) | non_null_str.str.match(r"^[-_—–\s]+$")
-            converted = to_numeric_series(non_null_series)
-            valid_numeric_count = int(converted.notna().sum())
-            total_non_null = len(non_null_series)
-
-            if total_non_null > 0:
-                non_marker_count = int((~is_marker).sum())
-                # Si todos los elementos que no son marcadores se convierten a número
-                if non_marker_count > 0 and converted[~is_marker].notna().all():
-                    return ColumnTypeEnum.NUMERIC
-                # Si al menos un 50% de los valores se parsean exitosamente a número
-                if valid_numeric_count > 0 and (valid_numeric_count / total_non_null) >= 0.5:
-                    return ColumnTypeEnum.NUMERIC
+            ratio, valid_numeric_count, total_real = get_numeric_parseable_ratio(series)
+            if total_real > 0 and ratio >= 0.8:
+                return ColumnTypeEnum.NUMERIC
         except (ValueError, TypeError):
             pass
 
@@ -309,9 +206,10 @@ class ProfilerService:
 
         for col_name in df.columns:
             series = df[col_name]
-            clean_series = series.replace(r"^\s*$", np.nan, regex=True)
-            null_count = int(clean_series.isna().sum())
+            missing_mask = is_missing_series(series)
+            null_count = int(missing_mask.sum())
             null_pct = round((null_count / row_count) * 100, 2) if row_count > 0 else 0.0
+            clean_series = series.mask(missing_mask, np.nan)
             unique_count = int(clean_series.nunique())
 
             sample_vals = clean_series.dropna().unique()[:5].tolist()
@@ -319,6 +217,10 @@ class ProfilerService:
 
             inferred_type = ProfilerService._infer_column_type(clean_series, col_name=str(col_name))
             semantic_hint = ProfilerService._detect_semantic_hint(col_name, clean_series, inferred_type)
+
+            # Si es detectado como ID, forzar tipo de columna TEXT para garantizar preservación de ceros
+            if semantic_hint == SemanticHintEnum.ID:
+                inferred_type = ColumnTypeEnum.TEXT
 
             col_warnings: List[str] = []
             if null_pct > 20.0:

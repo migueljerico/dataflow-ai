@@ -11,6 +11,7 @@ from fastapi import UploadFile
 from app.core.config import settings
 from app.core.exceptions import FunctionalException
 from app.core.security_url import safe_download_url_to_file
+from app.core.semantics import is_id_or_code_column
 from app.core.storage import get_storage
 from app.models.dataset import DatasetMetadata, FileTypeEnum, ProcessingStateEnum
 
@@ -72,6 +73,33 @@ class DatasetService:
             return ","
 
     @staticmethod
+    def _detect_id_columns(file_path: Path, delimiter: str = ",", encoding: str = "utf-8") -> Dict[str, type]:
+        """
+        Pre-escanea las columnas del archivo CSV para detectar identificadores, códigos postales
+        o valores con ceros a la izquierda, devolviendo un mapeo {col: str} para que pd.read_csv
+        los cargue como texto sin truncar ceros iniciales.
+        """
+        try:
+            sample_df = pd.read_csv(
+                file_path,
+                sep=delimiter,
+                encoding=encoding,
+                nrows=100,
+                dtype=str,
+                on_bad_lines="skip",
+            )
+            clean_cols = [str(c).strip().replace("\ufeff", "") for c in sample_df.columns]
+            sample_df.columns = clean_cols
+
+            id_dtypes: Dict[str, type] = {}
+            for col in sample_df.columns:
+                if is_id_or_code_column(col, sample_df[col]):
+                    id_dtypes[col] = str
+            return id_dtypes
+        except Exception:
+            return {}
+
+    @staticmethod
     def _clean_empty_rows(df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
         """
         Elimina de forma vectorizada filas donde todas las columnas sean nulas,
@@ -114,12 +142,27 @@ class DatasetService:
             if file_type == FileTypeEnum.CSV:
                 detected_encoding = DatasetService._detect_csv_encoding(saved_path)
                 delimiter = DatasetService._detect_csv_delimiter(saved_path, encoding=detected_encoding)
+                id_dtypes = DatasetService._detect_id_columns(
+                    saved_path, delimiter=delimiter, encoding=detected_encoding
+                )
 
                 try:
-                    full_df = pd.read_csv(saved_path, sep=delimiter, encoding=detected_encoding, on_bad_lines="skip")
+                    full_df = pd.read_csv(
+                        saved_path,
+                        sep=delimiter,
+                        encoding=detected_encoding,
+                        dtype=id_dtypes,
+                        on_bad_lines="skip",
+                    )
                 except (UnicodeDecodeError, LookupError):
                     # Fallback robusto a latin-1/windows-1252 si fallase la decodificación
-                    full_df = pd.read_csv(saved_path, sep=delimiter, encoding="latin-1", on_bad_lines="skip")
+                    full_df = pd.read_csv(
+                        saved_path,
+                        sep=delimiter,
+                        encoding="latin-1",
+                        dtype=id_dtypes,
+                        on_bad_lines="skip",
+                    )
                     detected_encoding = "latin-1"
 
                 # Normalizar nombres de columnas (eliminar BOM y espacios sobrantes)
@@ -315,7 +358,8 @@ class DatasetService:
             try:
                 if file_type == FileTypeEnum.CSV:
                     delimiter = DatasetService._detect_csv_delimiter(target_file)
-                    df = pd.read_csv(target_file, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
+                    id_dtypes = DatasetService._detect_id_columns(target_file, delimiter=delimiter)
+                    df = pd.read_csv(target_file, sep=delimiter, encoding="utf-8", dtype=id_dtypes, on_bad_lines="skip")
                 else:
                     df = pd.read_excel(target_file, sheet_name=0)
 
@@ -369,7 +413,8 @@ class DatasetService:
 
         if metadata.file_type == FileTypeEnum.CSV:
             delimiter = DatasetService._detect_csv_delimiter(filepath)
-            df = pd.read_csv(filepath, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
+            id_dtypes = DatasetService._detect_id_columns(filepath, delimiter=delimiter)
+            df = pd.read_csv(filepath, sep=delimiter, encoding="utf-8", dtype=id_dtypes, on_bad_lines="skip")
         else:
             df = pd.read_excel(filepath, sheet_name=0)
 

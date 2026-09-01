@@ -2,7 +2,7 @@ from typing import Any, Dict, Tuple
 
 import pandas as pd
 from app.core.exceptions import FunctionalException
-from app.core.number_parsing import to_numeric_series
+from app.core.number_parsing import is_missing_series, to_numeric_series
 from app.transformations.base import BaseTransformation
 
 
@@ -26,6 +26,33 @@ class ConvertNumericTransformation(BaseTransformation):
         self.validate_parameters(df, parameters)
         col = parameters["column"]
         df_copy = df.copy()
+
+        # Cinturón de seguridad contra pérdida de datos:
+        # Si más del 50% de las celdas con contenido real (excluyendo marcadores de ausencia)
+        # terminan en NaN tras la conversión, abortar la operación con FunctionalException.
+        missing_mask = is_missing_series(df_copy[col])
+        real_content = df_copy[col][~missing_mask]
+        total_real = len(real_content)
+        if total_real > 0:
+            parsed_real = to_numeric_series(real_content)
+            lost_count = int(parsed_real.isna().sum())
+            loss_ratio = lost_count / total_real
+            if loss_ratio > 0.5:
+                sample_lost = str(real_content[parsed_real.isna()].iloc[0]) if lost_count > 0 else ""
+                loss_pct = round(loss_ratio * 100, 1)
+                raise FunctionalException(
+                    message=(
+                        f"Conversión a numérico abortada en '{col}': el {loss_pct}% de las celdas con datos reales "
+                        f"({lost_count}/{total_real}) no son numéricas y se perderían como NaN (ej. '{sample_lost[:50]}')."
+                    ),
+                    code="CONVERT_NUMERIC_DATA_LOSS",
+                    details={
+                        "column": col,
+                        "lost_count": lost_count,
+                        "total_real": total_real,
+                        "loss_ratio": loss_ratio,
+                    },
+                )
 
         original_series = df_copy[col].astype(str)
         converted = to_numeric_series(original_series)

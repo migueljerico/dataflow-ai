@@ -39,9 +39,10 @@ Muestra anonimizada (3 filas): {json.dumps(sample_rows[:3])}
 Reglas estrictas de negocio y gobernanza:
 1. SOLO puedes utilizar operaciones del catálogo permitido:
    - trim_text, normalize_case, normalize_category, convert_datetime, convert_numeric, round_numeric, clamp_range, fill_missing, remove_duplicates, rename_column, drop_column.
-2. Los importes y números cuantitativos pueden usar separadores europeos (1.234,56 €) o americanos ($1,234.56), y marcadores de ausencia ('--', 'N/D', 'N/A', '-'); SIEMPRE deben convertirse a float64 mediante 'convert_numeric'.
+2. Los importes y números cuantitativos pueden usar separadores europeos (1.234,56 €, 2450,75) o americanos ($1,234.56), y marcadores de ausencia ('--', 'N/D', 'N/A', '-', 'null', 'nan'); SIEMPRE deben convertirse a float64 mediante 'convert_numeric'. NUNCA propongas 'convert_numeric' sobre columnas de texto libre (notas, observaciones, descripciones).
 3. NUNCA propongas 'normalize_case' sobre columnas identificadoras o códigos (ej. ID_Pedido, Cod_Cliente, SKU, CIF, DNI, o patrones como PED-123, EMP-001) para no degradar claves primarias ni romper JOINs.
-4. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
+4. Para columnas porcentuales o scores (hint 'percentage', o sufijos _pct, tasa, ratio), cualquier operación 'clamp_range' DEBE acotar el intervalo de negocio completo [0.0, 100.0] fijando obligatoriamente 'min_value': 0.0 y 'max_value': 100.0.
+5. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
 {{
   "dataset_summary": "Explicación breve del dataset y su propósito operativo",
   "suggestions": [

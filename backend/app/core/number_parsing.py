@@ -12,7 +12,7 @@ Convenciones soportadas tras limpiar símbolos (€, $, %, USD, EUR) y espacios:
 """
 
 import re
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -85,3 +85,46 @@ def parse_numeric_string(value: Any) -> Optional[float]:
 def to_numeric_series(series: pd.Series) -> pd.Series:
     """Versión vectorizada de parse_numeric_string sobre una Series cualquiera."""
     return pd.to_numeric(series.map(parse_numeric_string), errors="coerce")
+
+
+def is_missing_value(value: Any) -> bool:
+    """Comprueba si un valor es nulo, NaN o coincide con un marcador de ausencia de negocio."""
+    if value is None or pd.isna(value):
+        return True
+    s = str(value).strip()
+    if not s or s.lower() in MISSING_MARKERS or bool(_DASH_ONLY_RE.fullmatch(s)):
+        return True
+    return False
+
+
+def is_missing_series(series: pd.Series) -> pd.Series:
+    """Devuelve una Series booleana indicando si cada elemento es nulo o marcador de ausencia."""
+    if series is None or len(series) == 0:
+        return pd.Series(dtype=bool)
+    # pd.isna cubre None, np.nan, pd.NA
+    na_mask = series.isna()
+    # Para los no nulos, convertir a str y comprobar el catálogo unificado
+    str_series = series.astype(str).str.strip()
+    marker_mask = str_series.str.lower().isin(MISSING_MARKERS) | str_series.str.match(r"^[-_—–\s]*$")
+    return na_mask | marker_mask
+
+
+def get_numeric_parseable_ratio(series: pd.Series) -> Tuple[float, int, int]:
+    """Calcula el ratio de valores parseables a numérico sobre las celdas con contenido real.
+
+    Ignora marcadores de ausencia (N/D, --, etc.) del denominador para no penalizar
+    columnas con nulos legítimos. Devuelve (ratio, parseables_count, total_real_content).
+    """
+    if series is None or len(series) == 0:
+        return 0.0, 0, 0
+
+    missing_mask = is_missing_series(series)
+    real_content = series[~missing_mask]
+    total_real = len(real_content)
+    if total_real == 0:
+        return 0.0, 0, 0
+
+    parsed = to_numeric_series(real_content)
+    valid_count = int(parsed.notna().sum())
+    ratio = valid_count / total_real
+    return ratio, valid_count, total_real

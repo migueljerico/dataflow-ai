@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
-from app.core.number_parsing import MISSING_MARKERS, to_numeric_series
+from app.core.number_parsing import is_missing_value, to_numeric_series
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import ColumnTypeEnum, SemanticHintEnum
 from app.models.quality import (
@@ -253,14 +253,13 @@ class QualityService:
             )
 
             if is_quant_column:
-                # Detectar símbolos monetarios/porcentuales o marcadores de texto
-                has_placeholders = series.apply(
-                    lambda x: str(x).lower().strip() in MISSING_MARKERS or bool(re.match(r"^[-_—–\s]+$", str(x)))
-                )
+                # Detectar símbolos monetarios/porcentuales, marcadores de texto o separadores regionales
+                has_placeholders = series.apply(is_missing_value)
                 has_symbols = series.apply(lambda x: any(sym in str(x) for sym in ["€", "$", "%", "USD", "EUR"]))
+                has_decimal_comma = series.apply(lambda x: bool(re.search(r"\d,\d", str(x))))
                 converted_check = to_numeric_series(series)
                 has_non_numeric = converted_check.isna() & series.notna()
-                dirty_mask = has_placeholders | has_symbols | has_non_numeric
+                dirty_mask = has_placeholders | has_symbols | has_decimal_comma | has_non_numeric
                 dirty_count = int(dirty_mask.sum())
 
                 if dirty_count > 0:
@@ -271,7 +270,7 @@ class QualityService:
                             dimension=QualityDimensionEnum.VALIDITY,
                             severity=SeverityEnum.MEDIUM,
                             column=col_prof.column_name,
-                            description=f"La columna cuantitativa '{col_prof.column_name}' contiene {dirty_count} celdas con símbolos, texto o marcadores de ausencia (N/D, N/A, --, €/$).",
+                            description=f"La columna cuantitativa '{col_prof.column_name}' contiene {dirty_count} celdas con símbolos, texto, separadores regionales o marcadores de ausencia (N/D, N/A, --, €/$).",
                             affected_rows=dirty_count,
                             affected_percentage=round((dirty_count / row_count) * 100, 2),
                             evidence_sample=_safe_evidence_sample(series[dirty_mask].head(3)),

@@ -92,7 +92,8 @@ async def load_sample_dataset(sample_id: str):
     saved_path = storage.save_file(safe_filename, content)
 
     delimiter = DatasetService._detect_csv_delimiter(saved_path)
-    df = pd.read_csv(saved_path, sep=delimiter, encoding="utf-8", on_bad_lines="skip")
+    id_dtypes = DatasetService._detect_id_columns(saved_path, delimiter=delimiter)
+    df = pd.read_csv(saved_path, sep=delimiter, encoding="utf-8", dtype=id_dtypes, on_bad_lines="skip")
     df, empty_dropped = DatasetService._clean_empty_rows(df)
 
     warnings: List[str] = []

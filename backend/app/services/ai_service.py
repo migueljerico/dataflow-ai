@@ -8,6 +8,8 @@ import pandas as pd
 from app.ai_providers.base import LLMProvider
 from app.ai_providers.gemini_provider import GeminiProvider
 from app.ai_providers.mock_provider import MockProvider
+from app.core.number_parsing import get_numeric_parseable_ratio
+from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
 from app.models.dataset import ProcessingStateEnum
 from app.models.etl import TransformationPlan, TransformationStep
 from app.services.dataset_service import DatasetService
@@ -132,6 +134,36 @@ class AIService:
                     f"[GUARDRAIL] La operación '{op}' propuesta por el Copiloto fue descartada: no pertenece al catálogo permitido de transformaciones."
                 )
                 continue
+
+            target_col = sug.column or (sug.parameters or {}).get("column")
+
+            # GUARDRAIL: Proteger columnas ID contra normalize_case
+            if op == "normalize_case" and target_col and target_col in df.columns:
+                if is_id_or_code_column(target_col, df[target_col]):
+                    plan_warnings.append(
+                        f"[GUARDRAIL] La operación 'normalize_case' en '{target_col}' fue descartada: es una columna identificadora/código."
+                    )
+                    continue
+
+            # GUARDRAIL: Prevenir pérdida de datos con convert_numeric en columnas no numéricas
+            if op == "convert_numeric" and target_col and target_col in df.columns:
+                ratio, _, total_real = get_numeric_parseable_ratio(df[target_col])
+                if total_real > 0 and ratio < 0.8:
+                    plan_warnings.append(
+                        f"[GUARDRAIL] La operación 'convert_numeric' en '{target_col}' fue descartada: "
+                        f"la columna contiene texto no numérico (ratio parseable: {round(ratio*100, 1)}% < 80%) y causaría pérdida de datos."
+                    )
+                    continue
+
+            # GUARDRAIL: Garantizar clamp completo [0.0, 100.0] en columnas porcentuales
+            if op == "clamp_range" and target_col and target_col in df.columns:
+                col_schema = next((c for c in columns_schema if c["name"] == target_col), None)
+                is_pct = (
+                    col_schema and col_schema.get("semantic_hint") == "percentage"
+                ) or is_percentage_or_score_column(target_col, df[target_col])
+                if is_pct:
+                    sug.parameters["min_value"] = 0.0
+                    sug.parameters["max_value"] = 100.0
 
             valid_steps.append(
                 TransformationStep(

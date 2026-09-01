@@ -4,6 +4,39 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.8.1] — 2026-09-01
+
+### 🛡️ Endurecimiento de Gobernanza de Datos, Integridad Semántica y Auditoría de Calidad Determinista
+
+> **Resolución de Hallazgos de Auditoría Externa:** Corrección integral y blindaje determinista ante los 5 hallazgos críticos y altos detectados sobre datasets empresariales con formato español y marcadores mixtos de ausencia: prevención absoluta de pérdida de datos en texto libre, preservación de ceros a la izquierda en identificadores y códigos postales, acotamiento de rango bidireccional en porcentajes [0.0, 100.0%], unificación del catálogo de valores ausentes entre perfilado y motor ETL, y detección nativa de separadores decimales regionales europeos (coma decimal).
+
+#### 🛡️ Backend: Integridad de Negocio y Gobernanza
+- **FIX 1 — Prevención de Pérdida de Datos en Texto Libre (`ConvertNumericTransformation` & `semantics.py`):**
+  - Implementación de `get_numeric_parseable_ratio`: exige un ratio de parseabilidad numérica $\ge 80\%$ sobre valores no vacíos para que una columna pueda clasificarse como `percentage` o inferirse como `numeric`.
+  - Columnas como `Observaciones` que contienen el carácter `%` dentro de prosa textual ya nunca reciben sugerencias ni transformaciones de `convert_numeric`.
+  - Mecanismo de seguridad (*Circuit Breaker*) en `ConvertNumericTransformation.apply`: aborta inmediatamente con excepción funcional `CONVERT_NUMERIC_DATA_LOSS` si más del 50% de las celdas con contenido real fueran a convertirse en `NaN`.
+- **FIX 2 — Preservación de Ceros a la Izquierda en Identificadores (`DatasetService`, `datasets.py`, `profiler_service.py` & `etl_service.py`):**
+  - Escaneo previo a la ingestión (`pd.read_csv(nrows=100, dtype=str)`) para detectar columnas de códigos o identificadores mediante `is_id_or_code_column`.
+  - Forzado explícito de `dtype=str` durante la carga de CSVs (`pd.read_csv(..., dtype=id_dtypes)`), garantizando que códigos postales españoles como `08001`, `07001` y `01001` nunca se degraden a enteros truncados (`8001`, `7001`, `1001`).
+  - Protección activa de columnas ID en `ProfilerService.profile_dataset` y reconversión estricta a texto antes de la exportación a CSV y Apache Parquet.
+- **FIX 3 — Acotamiento Bidireccional en Porcentajes [0.0, 100.0%] (`mock_provider.py`, `gemini_provider.py`, `ai_service.py` & `etl_service.py`):**
+  - Cualquier operación `clamp_range` propuesta o ejecutada sobre columnas de porcentaje fija obligatoriamente tanto `min_value: 0.0` como `max_value: 100.0`, corrigiendo tanto valores negativos (ej. `-5,20%` $\rightarrow 0.0$) como superiores al 100% (ej. `105,30%` $\rightarrow 100.0$).
+  - Guardrail en `AIService` que reescribe automáticamente los parámetros de acotamiento propuestos por cualquier proveedor LLM sobre columnas porcentuales.
+- **FIX 4 — Unificación del Catálogo de Marcadores de Ausencia (`number_parsing.py`, `profiler_service.py` & `quality_service.py`):**
+  - Funciones centralizadas `is_missing_value(val)` e `is_missing_series(series)` basadas en el catálogo exhaustivo `MISSING_MARKERS` (`--`, `---`, `n/d`, `n/a`, `s/n`, `nan`, `null`, `undefined`, `nd`, `na`).
+  - `ProfilerService` reporta con precisión matemática el 100% de los nulos reales (ej. 14 nulos / 43.75% en `Unidades_Stock`, 2 nulos / 6.25% en `Tasa_Conversion_Pct`, `Descuento_Pct` y `Score_Calidad`), coincidiendo exactamente con los `NaN` resultantes de la transformación determinista.
+- **FIX 5 — Detección y Conversión de Formato Numérico Español (`quality_service.py`, `mock_provider.py` & `etl_service.py`):**
+  - Detección de números almacenados como texto con comas decimales europeas (`2450,75`) y palabras clave financieras (`gasto`, `facturacion`).
+  - `QualityService` y el motor de reglas generan advertencias y proponen automáticamente `convert_numeric` para columnas como `Gasto_Medio_Mensual`, convirtiéndolas a `float64` (`2450.75`).
+  - Protección de claves e identificadores (`ID_Cliente`, `ID_Pedido`) para que el Copiloto nunca proponga `normalize_case` sobre códigos alfanuméricos.
+
+#### 🧪 Testing y Verificación Integral (173 Tests Totales)
+- **138 Tests Backend (Pytest) + 32 Tests Frontend (Vitest) + 3 Suites E2E (Playwright):** 100% pasando en verde (+6 tests dedicados de regresión de auditoría en `test_audit_v180_fixes.py`).
+- **Linters y SAST Verificados:** Ruff (0 errores), Black (0 diferencias), Bandit SAST (0 vulnerabilidades), TypeScript estricto (0 errores), Vite build verificado (0 errores).
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
 ## [1.8.0] — 2026-08-31
 
 ### 🏹 Exportación Nativa a Apache Parquet / Arrow y Suite de Pruebas E2E Automatizadas con Playwright
