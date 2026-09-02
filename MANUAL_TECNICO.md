@@ -1,7 +1,7 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.9.1  
-**Fecha de actualización:** 1 de septiembre de 2026  
+**Versión:** 1.9.2  
+**Fecha de actualización:** 2 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
 **Stack:** Python 3.11/3.14 · FastAPI · Pandas · PyArrow · React 19 · TypeScript · Vite · Playwright · Docker
@@ -318,7 +318,7 @@ migueljerico/dataflow-ai/
 | `LanguageSelector.tsx` | Menú desplegable interactivo accesible para seleccionar el idioma de la plataforma. |
 | `FileUpload.tsx` | Carga de archivos CSV/XLSX mediante drag-and-drop o selector, listado de datasets demo con un clic. |
 | `ProfilingDashboard.tsx` | Visualización del Quality Score global y las 5 dimensiones, badges de métricas. |
-| `PlanReview.tsx` | Revisión humana del plan ETL: aprobar/rechazar pasos individuales, ejecutar plan. |
+| `PlanReview.tsx` | Revisión humana del plan ETL: previsualización interactiva de esquemas de columnas (antes vs. después y visor por paso), aprobar/rechazar pasos individuales, configuración de clusters y ejecución del plan. |
 | `ExecutionReport.tsx` | Comparativa antes/después de la ejecución, logs de auditoría, botones de descarga y reinicio. |
 | `BusinessInsights.tsx` | Visualización de KPIs ejecutivos de negocio calculados por el backend. |
 | `ApiKeyModal.tsx` | Modal para configurar/eliminar la API Key de Google Gemini almacenada en localStorage. |
@@ -391,7 +391,7 @@ Base URL: `/api/v1`
 | `POST` | `/datasets/upload` | Sube un fichero CSV o XLSX y crea el dataset. | `file` (multipart, requerido, máx 10 MB) |
 | `POST` | `/datasets/from-url` | Descarga e importa un dataset desde una URL pública con protección Anti-SSRF. | Body: `{"url": string}` (máx 20 MB) |
 | `GET` | `/datasets/samples` | Lista los datasets de demostración preconfigurados. | — |
-| `POST` | `/datasets/samples/{sample_id}/load` | Carga un dataset demo sin subir archivo. | `sample_id` (path): `contact_center` \| `sales` \| `people_analytics` |
+| `POST` | `/datasets/samples/{sample_id}/load` | Carga un dataset demo sin subir archivo. | `sample_id` (path): `contact_center` \| `sales` \| `people_analytics` \| `logistics` |
 | `GET` | `/datasets/{dataset_id}` | Obtiene los metadatos de un dataset. | `dataset_id` (path) |
 
 ### 9.2 Profiling

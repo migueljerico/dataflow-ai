@@ -10,7 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-145%20backend%20%7C%2034%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-146%20backend%20%7C%2037%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.9.2-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -132,13 +133,13 @@ La calidad del dataset se calcula mediante una fórmula ponderada en **5 dimensi
 
 $$\text{Quality Score} = (0.30 \times C) + (0.25 \times V) + (0.20 \times K) + (0.15 \times U) + (0.10 \times I)$$
 
-| Dimensión | Peso | Objetivo de Calidad |
+| Dimensión | Ponderación | Objetivo de Calidad y Métrica de Ejemplo |
 | :--- | :---: | :--- |
-| **Completitud ($C$)** | **30%** | Detección de campos nulos o vacíos. |
-| **Validez ($V$)** | **25%** | Verificación de formatos de fecha, tipos y números. |
-| **Consistencia ($K$)** | **20%** | Normalización de espacios y formatos de texto (respetando siglas). |
-| **Unicidad ($U$)** | **15%** | Eliminación de registros y filas duplicadas exactas. |
-| **Integridad ($I$)** | **10%** | Cumplimiento de límites lógicos (ej. valores $\ge 0$, porcentajes $[0, 100]$). |
+| **Datos Completos ($C$)** | **30%** | Detección de campos nulos o vacíos *(ej. 91.67% · 8 columnas con nulos)*. |
+| **Formatos Válidos ($V$)** | **25%** | Verificación de formatos de fecha, tipos y números *(ej. 75.87% · 7 correcciones de tipo/fecha)*. |
+| **Formato Homogéneo ($K$)** | **20%** | Normalización de espacios y formatos de texto respetando siglas *(ej. 100% · 0 variantes de texto)*. |
+| **Registros Únicos ($U$)** | **15%** | Eliminación de registros y filas duplicadas exactas *(ej. 100% · 0 filas duplicadas)*. |
+| **Reglas de Negocio ($I$)** | **10%** | Cumplimiento de límites lógicos y rangos válidos *(ej. Absentismo $\ge 0$, Productividad $[0, 100\%]$)*. |
 
 ---
 
@@ -169,6 +170,7 @@ Disponibles para pruebas de 1 clic en la interfaz o en [`data_samples/`](./data_
 - **Contact Center & Operaciones** (`contact_center_corrupted.csv`): Métricas de llamadas (AHT, Conversión, Score de Calidad) con valores `N/D`, AHT negativo y fechas europeas.
 - **Ventas & Retail** (`sales_sample_corrupted.csv`): Transacciones con precios como texto multimoneda (`1200.50 €`, `$350.00`), fechas mixtas y filas duplicadas.
 - **People Analytics & RRHH** (`people_analytics_corrupted.csv`): Salarios con símbolos, absentismo negativo (`-3`), productividad $>100\%$ y fila vacía.
+- **Logística & Cadena de Suministro** (`logistics_pedidos_corrupted.csv`): Pedidos B2B con acrónimos mercantiles (`S.L.U.`), marcadores universales de nulo (`--`), divisas combinadas (`€`, `$`) y outliers.
 
 ---
 
