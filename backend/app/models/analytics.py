@@ -107,6 +107,8 @@ class DaxMeasureItem(BaseModel):
     formula: str
     description: str
     category: str  # 'kpi', 'calidad', 'numerico', 'tiempo'
+    format_string: Optional[str] = None
+    display_folder: Optional[str] = None
 
 
 class ExcelFormulaItem(BaseModel):
@@ -116,6 +118,8 @@ class ExcelFormulaItem(BaseModel):
     formula_es: str
     formula_en: str
     description: str
+    category: str = "outlier"  # 'outlier', 'kpi', 'relative', 'conditional'
+    target_cell: Optional[str] = None
 
 
 class IntegrationGuide(BaseModel):
@@ -128,6 +132,9 @@ class IntegrationGuide(BaseModel):
     power_query_m_parquet: Optional[str] = None
     dax_measures: List[DaxMeasureItem]
     excel_formulas: List[ExcelFormulaItem]
+    tmdl_table_definition: Optional[str] = None
+    tmdl_model_definition: Optional[str] = None
+    dax_script: Optional[str] = None
 
 
 class ExecutiveAnalyticsReport(BaseModel):

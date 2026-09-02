@@ -148,6 +148,16 @@ export const PlanReview: React.FC<Props> = ({
                 </strong>
               </span>
             </div>
+            {plan.ai_metrics.cached && (
+              <span
+                data-testid="ai-cached-badge"
+                className="badge badge-emerald"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.725rem' }}
+                title="Respuesta recuperada instantáneamente desde la caché de inferencia semántica (ahorro del 100% en tokens)"
+              >
+                <Zap size={12} /> {t.plan?.aiCachedBadge || 'Caché de Inferencia (100% Ahorro)'}
+              </span>
+            )}
           </div>
         )}
 

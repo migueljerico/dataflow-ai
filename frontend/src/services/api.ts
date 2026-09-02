@@ -159,4 +159,16 @@ export const api = {
   getExecutiveReportExportUrl: (runId: string, lang: string = 'es'): string => {
     return `${API_BASE}/analytics/${runId}/export?lang=${encodeURIComponent(lang)}`;
   },
+
+  getTmdlExportUrl: (runId: string): string => {
+    return `${API_BASE}/analytics/${runId}/export/tmdl`;
+  },
+
+  getDaxExportUrl: (runId: string): string => {
+    return `${API_BASE}/analytics/${runId}/export/dax`;
+  },
+
+  getPbipExportUrl: (runId: string): string => {
+    return `${API_BASE}/analytics/${runId}/export/pbip`;
+  },
 };

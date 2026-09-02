@@ -14,6 +14,7 @@ from app.models.dataset import ProcessingStateEnum
 from app.models.etl import TransformationPlan, TransformationStep
 from app.services.dataset_service import DatasetService
 from app.services.etl_service import PLANS_CACHE
+from app.services.inference_cache import InferenceCacheService
 from app.services.profiler_service import ProfilerService
 from app.services.quality_service import QualityService
 from app.transformations.registry import TransformationRegistry
@@ -115,13 +116,25 @@ class AIService:
         # Minimización RGPD: 3 filas con PII enmascarada en lugar del dataset completo
         sample_rows = anonymize_sample_rows(df, profiling)
 
-        # Invocar proveedor de IA con proxy/credencial del usuario o entorno
-        ai_response = await provider.suggest_transformations(
-            filename=metadata.filename,
+        # Calcular clave de huella canónica de esquema para caché de inferencia
+        model_name = getattr(provider, "model", "default")
+        cache_key = InferenceCacheService.compute_cache_key(
             columns_schema=columns_schema,
             quality_issues=quality_issues,
-            sample_rows=sample_rows,
+            model=model_name,
+            provider=provider.provider_name,
         )
+
+        ai_response = InferenceCacheService.get(cache_key)
+        if ai_response is None:
+            # Invocar proveedor de IA con proxy/credencial del usuario o entorno
+            ai_response = await provider.suggest_transformations(
+                filename=metadata.filename,
+                columns_schema=columns_schema,
+                quality_issues=quality_issues,
+                sample_rows=sample_rows,
+            )
+            InferenceCacheService.set(cache_key, ai_response)
 
         # GUARDRAILS DE IA: filtrar operaciones no reconocidas en el registro,
         # dejando constancia explícita en los warnings del plan (transparencia)

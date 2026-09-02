@@ -21,6 +21,7 @@ class AIMetrics(BaseModel):
     estimated_cost_usd: float = Field(default=0.0, description="Coste estimado en dólares estadounidenses (USD)")
     model: str = Field(default="", description="Identificador del modelo empleado")
     provider: str = Field(default="", description="Nombre del proveedor (gemini, mock, etc.)")
+    cached: bool = Field(default=False, description="Indica si la respuesta fue servida desde la caché de inferencia")
 
 
 class AISuggestionResponse(BaseModel):

@@ -145,6 +145,7 @@ export interface Translations {
     aiTokens?: string;
     aiCost?: string;
     aiModel?: string;
+    aiCachedBadge?: string;
   };
   report: {
     title: string;
@@ -245,6 +246,17 @@ export interface Translations {
     excelFormulaLabel: string;
     excelFormulaCode: string;
     decimalNote: string;
+    btnExportTmdl?: string;
+    btnExportDax?: string;
+    btnExportPbip?: string;
+    tabDax?: string;
+    tabMQuery?: string;
+    tabTmdl?: string;
+    excelCategoryAll?: string;
+    excelCategoryOutliers?: string;
+    excelCategoryKpis?: string;
+    excelCategoryRelative?: string;
+    excelCategoryConditional?: string;
   };
   apiKeyModal: {
     title: string;
@@ -381,6 +393,7 @@ export const translations: Record<Language, Translations> = {
       aiTokens: 'Tokens Consumidos',
       aiCost: 'Coste Estimado',
       aiModel: 'Modelo IA',
+      aiCachedBadge: 'Caché de Inferencia (100% Ahorro)',
     },
     report: {
       title: 'Transformación Completada con Éxito',
@@ -481,6 +494,17 @@ export const translations: Record<Language, Translations> = {
       excelFormulaLabel: 'Fórmula de Validación Excel (Español):',
       excelFormulaCode: '=SI(ESNUMERO(B2); REDONDEAR(B2; 2); "N/D")',
       decimalNote: 'Configuración regional: Separador decimal coma (,), separador de miles punto (.).',
+      btnExportTmdl: 'Exportar Modelo TMDL (.tmdl)',
+      btnExportDax: 'Descargar Medidas DAX (.dax)',
+      btnExportPbip: 'Proyecto PBIP (.zip)',
+      tabDax: 'Medidas DAX',
+      tabMQuery: 'Power Query M',
+      tabTmdl: 'Modelo Semántico TMDL',
+      excelCategoryAll: 'Todas las Fórmulas',
+      excelCategoryOutliers: 'Auditoría Outliers (IQR)',
+      excelCategoryKpis: 'KPIs & Estadísticas',
+      excelCategoryRelative: 'Participación % Total',
+      excelCategoryConditional: 'Validación Condicional',
     },
     apiKeyModal: {
       title: 'Configuración de Google Gemini API Key',
@@ -616,6 +640,7 @@ export const translations: Record<Language, Translations> = {
       aiTokens: 'Consumed Tokens',
       aiCost: 'Estimated Cost',
       aiModel: 'AI Model',
+      aiCachedBadge: 'Inference Cache (100% Saved)',
     },
     report: {
       title: 'Transformation Successfully Completed',
@@ -716,6 +741,17 @@ export const translations: Record<Language, Translations> = {
       excelFormulaLabel: 'Excel Formula (English):',
       excelFormulaCode: '=IF(ISNUMBER(B2), ROUND(B2, 2), "N/A")',
       decimalNote: 'Regional configuration: Decimal point (.), thousands comma (,).',
+      btnExportTmdl: 'Export TMDL Model (.tmdl)',
+      btnExportDax: 'Download DAX Measures (.dax)',
+      btnExportPbip: 'Full PBIP Project (.zip)',
+      tabDax: 'DAX Measures',
+      tabMQuery: 'Power Query M',
+      tabTmdl: 'TMDL Semantic Model',
+      excelCategoryAll: 'All Formulas',
+      excelCategoryOutliers: 'Outlier Audit (IQR)',
+      excelCategoryKpis: 'KPIs & Summary',
+      excelCategoryRelative: 'Relative % of Total',
+      excelCategoryConditional: 'Conditional Checks',
     },
     apiKeyModal: {
       title: 'Google Gemini API Key Configuration',

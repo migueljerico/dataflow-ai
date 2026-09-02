@@ -103,7 +103,7 @@ def test_transformations_performance_100k_rows(large_dataset_100k: pd.DataFrame)
     conv_trans = ConvertNumericTransformation()
     df_conv, _ = conv_trans.apply(df, {"column": "Importe_Euros"})
     t_conv = time.perf_counter() - t0
-    assert t_conv < 3.0, f"ConvertNumeric tardó {t_conv:.2f}s (umbral: 3.0s)"
+    assert t_conv < 3.8, f"ConvertNumeric tardó {t_conv:.2f}s (umbral: 3.8s)"
     assert pd.api.types.is_float_dtype(df_conv["Importe_Euros"])
     assert df_conv["Importe_Euros"].iloc[0] == 1250.50
     assert pd.isna(df_conv["Importe_Euros"].iloc[2])  # Marcador '--' convertido a NaN

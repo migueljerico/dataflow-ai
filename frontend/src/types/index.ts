@@ -122,6 +122,7 @@ export interface AIMetrics {
   estimated_cost_usd: number;
   model: string;
   provider: string;
+  cached?: boolean;
 }
 
 export interface TransformationPlan {
@@ -271,6 +272,8 @@ export interface DaxMeasureItem {
   formula: string;
   description: string;
   category: string;
+  format_string?: string;
+  display_folder?: string;
 }
 
 export interface ExcelFormulaItem {
@@ -280,6 +283,8 @@ export interface ExcelFormulaItem {
   formula_es: string;
   formula_en: string;
   description: string;
+  category?: string;
+  target_cell?: string;
 }
 
 export interface IntegrationGuide {
@@ -292,6 +297,9 @@ export interface IntegrationGuide {
   power_query_m_parquet?: string;
   dax_measures: DaxMeasureItem[];
   excel_formulas: ExcelFormulaItem[];
+  tmdl_table_definition?: string;
+  tmdl_model_definition?: string;
+  dax_script?: string;
 }
 
 export interface ExecutiveAnalyticsReport {

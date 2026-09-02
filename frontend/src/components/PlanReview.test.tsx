@@ -230,4 +230,38 @@ describe('PlanReview Component — Schema Previews', () => {
     expect(banner).toHaveTextContent('500');
     expect(banner).toHaveTextContent('$0.000086 USD');
   });
+
+  it('renders ai-cached-badge when plan inference was served from cache', () => {
+    const handleExecute = vi.fn();
+    const planWithCache: TransformationPlan = {
+      ...mockPlan,
+      source: 'ai_copilot',
+      ai_metrics: {
+        latency_ms: 0.5,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        estimated_cost_usd: 0.0,
+        model: 'gemini-2.5-flash (cached)',
+        provider: 'gemini',
+        cached: true,
+      },
+    };
+
+    render(
+      <LanguageProvider>
+        <PlanReview
+          plan={planWithCache}
+          onExecutePlan={handleExecute}
+          executing={false}
+          metadata={mockMetadata}
+          profiling={mockProfiling}
+        />
+      </LanguageProvider>
+    );
+
+    const badge = screen.getByTestId('ai-cached-badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent(/Caché de Inferencia/i);
+  });
 });

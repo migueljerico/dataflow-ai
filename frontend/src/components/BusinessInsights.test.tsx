@@ -257,12 +257,15 @@ describe('BusinessInsights component', () => {
         parquet_filename: 'Ventas_Comerciales.parquet',
         power_query_m_csv: 'let\n    Source = Csv.Document(...)\nin\n    #"Changed Type"',
         power_query_m_parquet: 'let\n    Source = Parquet.Document(...)\nin\n    #"Changed Type"',
+        tmdl_table_definition: "table Ventas_Comerciales\n\tlineageTag: 12345\n\n\tmeasure 'Total_Ventas' = SUM('Ventas_Comerciales'[Ventas])",
         dax_measures: [
           {
             name: 'Total_Ventas',
             formula: "Total_Ventas = SUM('Ventas_Comerciales'[Ventas])",
             description: "Suma total de la métrica 'Ventas'.",
             category: 'numerico',
+            format_string: '#,##0.00 €',
+            display_folder: 'KPIs Directivos',
           },
         ],
         excel_formulas: [
@@ -273,6 +276,18 @@ describe('BusinessInsights component', () => {
             formula_en: '=IF(ISNUMBER(C2), "OK", "Outlier")',
             excel_column_letter: 'C',
             description: 'Validación de outliers para Ventas.',
+            category: 'outlier',
+            target_cell: 'C2',
+          },
+          {
+            title: 'Total Suma — Ventas',
+            column: 'Ventas',
+            formula_es: '=SUMA(C2:C1501)',
+            formula_en: '=SUM(C2:C1501)',
+            excel_column_letter: 'C',
+            description: 'Suma acumulada de Ventas.',
+            category: 'kpi',
+            target_cell: 'C1502',
           },
         ],
         columns: [
@@ -306,9 +321,30 @@ describe('BusinessInsights component', () => {
     expect(screen.getByText(/Generación Adaptativa v1.9.0/i)).toBeInTheDocument();
     expect(screen.getByText(/Total Registros:/i)).toBeInTheDocument();
     expect(screen.getByText('[Total_Ventas]')).toBeInTheDocument();
+    expect(screen.getByText(/KPIs Directivos/i)).toBeInTheDocument();
     expect(screen.getByText(/Suma total de la métrica 'Ventas'/i)).toBeInTheDocument();
     expect(screen.getByText(/Mapeo de Columnas \(Excel \/ Power BI\)/i)).toBeInTheDocument();
     expect(screen.getByText('Col C')).toBeInTheDocument();
+
+    // Enlaces de exportación directa
+    const pbipLink = screen.getByRole('link', { name: /Proyecto PBIP/i });
+    expect(pbipLink).toHaveAttribute('href', expect.stringContaining('/api/v1/analytics/run-guide-123/export/pbip'));
+
+    const tmdlLink = screen.getByRole('link', { name: /Modelo TMDL/i });
+    expect(tmdlLink).toHaveAttribute('href', expect.stringContaining('/api/v1/analytics/run-guide-123/export/tmdl'));
+
+    const daxLink = screen.getByRole('link', { name: /Medidas DAX/i });
+    expect(daxLink).toHaveAttribute('href', expect.stringContaining('/api/v1/analytics/run-guide-123/export/dax'));
+
+    // Cambiar a vista de Modelo TMDL
+    const tmdlTabBtn = screen.getByRole('button', { name: /Modelo Semántico TMDL|Modelo TMDL/i });
+    fireEvent.click(tmdlTabBtn);
+    expect(screen.getByText(/table Ventas_Comerciales/i)).toBeInTheDocument();
+
+    // Filtrar fórmulas Excel por categoría
+    const kpiCategoryBtn = screen.getByRole('button', { name: /KPIs & Estadísticas|KPIs/i });
+    fireEvent.click(kpiCategoryBtn);
+    expect(screen.getAllByText(/Total Suma — Ventas/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('does not crash and renders defaults when report.integration_guide is undefined', async () => {

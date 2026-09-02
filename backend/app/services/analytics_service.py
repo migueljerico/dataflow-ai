@@ -1,5 +1,9 @@
 import html
+import io
+import json
 import re
+import uuid
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -978,7 +982,7 @@ class AnalyticsService:
             f"let\n" f'    Source = Parquet.Document(File.Contents("{parquet_fn}"))\n' f"in\n" f"    Source"
         )
 
-        # 3. Medidas DAX Contextuales
+        # 3. Medidas DAX Contextuales Enriquecidas
         dax_measures: List[DaxMeasureItem] = []
 
         # Base: Total de registros
@@ -988,6 +992,8 @@ class AnalyticsService:
                 formula=f"Total_Registros = COUNTROWS('{table_name}')",
                 description="Conteo total de filas depuradas en el dataset.",
                 category="kpi",
+                format_string="#,##0",
+                display_folder="KPIs Directivos",
             )
         )
 
@@ -1006,6 +1012,24 @@ class AnalyticsService:
                     ),
                     description="Conteo de registros que cumplen los criterios estadísticos estándar sin ser anomalías.",
                     category="calidad",
+                    format_string="#,##0",
+                    display_folder="Calidad de Datos",
+                )
+            )
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Total_Outliers",
+                    formula=(
+                        f"Total_Outliers = \n"
+                        f"CALCULATE(\n"
+                        f"    COUNTROWS('{table_name}'),\n"
+                        f"    '{table_name}'[is_outlier] = TRUE()\n"
+                        f")"
+                    ),
+                    description="Conteo de anomalías estadísticas detectadas por el pipeline de calidad.",
+                    category="calidad",
+                    format_string="#,##0",
+                    display_folder="Calidad de Datos",
                 )
             )
             dax_measures.append(
@@ -1014,6 +1038,8 @@ class AnalyticsService:
                     formula="Score_Calidad_Pct = \nDIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100",
                     description="Porcentaje de registros limpios y validados por el pipeline.",
                     category="calidad",
+                    format_string='0.0"%"',
+                    display_folder="Calidad de Datos",
                 )
             )
         else:
@@ -1030,6 +1056,8 @@ class AnalyticsService:
                     ),
                     description=f"Conteo de registros sin valores nulos en la columna clave '{first_col}'.",
                     category="calidad",
+                    format_string="#,##0",
+                    display_folder="Calidad de Datos",
                 )
             )
             dax_measures.append(
@@ -1038,6 +1066,8 @@ class AnalyticsService:
                     formula="Score_Calidad_Pct = \nDIVIDE([Registros_Completos], [Total_Registros], 1.0) * 100",
                     description="Porcentaje de completitud de datos validados por DataFlow AI.",
                     category="calidad",
+                    format_string='0.0"%"',
+                    display_folder="Calidad de Datos",
                 )
             )
 
@@ -1051,6 +1081,8 @@ class AnalyticsService:
                     formula=f"Total_{sanitized_num_c} = SUM('{table_name}'[{num_c}])",
                     description=f"Suma acumulada de la variable numérica '{num_c}'.",
                     category="numerico",
+                    format_string="#,##0.00",
+                    display_folder="Métricas Agregadas",
                 )
             )
             dax_measures.append(
@@ -1059,6 +1091,28 @@ class AnalyticsService:
                     formula=f"Promedio_{sanitized_num_c} = AVERAGE('{table_name}'[{num_c}])",
                     description=f"Media aritmética calculada para '{num_c}'.",
                     category="numerico",
+                    format_string="#,##0.00",
+                    display_folder="Estadísticas",
+                )
+            )
+            dax_measures.append(
+                DaxMeasureItem(
+                    name=f"Mediana_{sanitized_num_c}",
+                    formula=f"Mediana_{sanitized_num_c} = MEDIAN('{table_name}'[{num_c}])",
+                    description=f"Mediana estadística no sensible a valores extremos para '{num_c}'.",
+                    category="numerico",
+                    format_string="#,##0.00",
+                    display_folder="Estadísticas",
+                )
+            )
+            dax_measures.append(
+                DaxMeasureItem(
+                    name=f"DesvEst_{sanitized_num_c}",
+                    formula=f"DesvEst_{sanitized_num_c} = STDEV.S('{table_name}'[{num_c}])",
+                    description=f"Desviación estándar muestral para auditar dispersión en '{num_c}'.",
+                    category="numerico",
+                    format_string="#,##0.00",
+                    display_folder="Estadísticas",
                 )
             )
 
@@ -1072,6 +1126,8 @@ class AnalyticsService:
                     formula=f"Total_{sanitized_id_c}_Unicos = DISTINCTCOUNT('{table_name}'[{id_c}])",
                     description=f"Recuento de valores distintos (cardinalidad) para '{id_c}'.",
                     category="kpi",
+                    format_string="#,##0",
+                    display_folder="KPIs Directivos",
                 )
             )
 
@@ -1087,10 +1143,12 @@ class AnalyticsService:
                     formula=f"{sanitized_n_col}_YTD = TOTALYTD([Total_{sanitized_n_col}], '{table_name}'[{d_col}])",
                     description=f"Acumulado anual (Year-to-Date) de '{n_col}' dimensionado por '{d_col}'.",
                     category="tiempo",
+                    format_string="#,##0.00",
+                    display_folder="Inteligencia Temporal",
                 )
             )
 
-        # 4. Fórmulas de Excel Adaptativas
+        # 4. Fórmulas de Excel Adaptativas Enriquecidas (Multi-Categoría)
         excel_formulas: List[ExcelFormulaItem] = []
         row_count = max(len(df), 1)
         last_row = row_count + 1
@@ -1104,6 +1162,7 @@ class AnalyticsService:
             rng = f"${col_letter}$2:${col_letter}${last_row}"
             cell = f"{col_letter}2"
 
+            # Categoría 1: Auditoría de Outliers (IQR / Desviación)
             formula_es = (
                 f"=SI(ESNUMERO({cell}); SI(Y({cell}>=MEDIANA({rng})-1,5*DESVEST.M({rng}); "
                 f'{cell}<=MEDIANA({rng})+1,5*DESVEST.M({rng})); "Válido"; "Outlier"); "Texto")'
@@ -1112,17 +1171,111 @@ class AnalyticsService:
                 f"=IF(ISNUMBER({cell}), IF(AND({cell}>=MEDIAN({rng})-1.5*STDEV.S({rng}), "
                 f'{cell}<=MEDIAN({rng})+1.5*STDEV.S({rng})), "Valid", "Outlier"), "Text")'
             )
-
             excel_formulas.append(
                 ExcelFormulaItem(
-                    title=f"Validación IQR Outliers — {col_meta.name}",
+                    title=f"Auditoría Outliers IQR — {col_meta.name}",
                     column=col_meta.name,
                     excel_column_letter=col_letter,
                     formula_es=formula_es,
                     formula_en=formula_en,
                     description=f"Detecta anomalías estadísticas en '{col_meta.name}' evaluando el rango real {rng}.",
+                    category="outlier",
+                    target_cell=f"{col_letter}2",
                 )
             )
+
+            # Categoría 2: KPIs y Agregaciones Ejecutivas
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Total Suma — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=f"=SUMA({rng})",
+                    formula_en=f"=SUM({rng})",
+                    description=f"Suma acumulada de todos los valores cuantitativos de '{col_meta.name}'.",
+                    category="kpi",
+                    target_cell="Celda de Resumen",
+                )
+            )
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Promedio / Media — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=f"=PROMEDIO({rng})",
+                    formula_en=f"=AVERAGE({rng})",
+                    description=f"Media aritmética calculada sobre el rango {rng}.",
+                    category="kpi",
+                    target_cell="Celda de Resumen",
+                )
+            )
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Mediana Robusta — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=f"=MEDIANA({rng})",
+                    formula_en=f"=MEDIAN({rng})",
+                    description=f"Mediana central insensible a anomalías extremas para '{col_meta.name}'.",
+                    category="kpi",
+                    target_cell="Celda de Resumen",
+                )
+            )
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Desviación Estándar — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=f"=DESVEST.M({rng})",
+                    formula_en=f"=STDEV.S({rng})",
+                    description=f"Desviación estándar muestral para auditar volatilidad en '{col_meta.name}'.",
+                    category="kpi",
+                    target_cell="Celda de Resumen",
+                )
+            )
+
+            # Categoría 3: Participación Relativa y Ratios Dinámicos
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Peso Relativo (% Total) — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=f"={cell}/SUMA({rng})",
+                    formula_en=f"={cell}/SUM({rng})",
+                    description=f"Participación porcentual de cada registro fila a fila sobre el total acumulado de '{col_meta.name}'.",
+                    category="relative",
+                    target_cell=f"{col_letter}2",
+                )
+            )
+
+            # Categoría 4: Validación Condicional y Conteos
+            excel_formulas.append(
+                ExcelFormulaItem(
+                    title=f"Registros > Promedio — {col_meta.name}",
+                    column=col_meta.name,
+                    excel_column_letter=col_letter,
+                    formula_es=f'=CONTAR.SI({rng}; ">"&PROMEDIO({rng}))',
+                    formula_en=f'=COUNTIF({rng}, ">"&AVERAGE({rng}))',
+                    description=f"Cuenta el número de filas en '{col_meta.name}' con valor por encima de la media aritmética.",
+                    category="conditional",
+                    target_cell="Celda de Resumen",
+                )
+            )
+
+        # 5. Generación de Definiciones TMDL y Script DAX
+        tmdl_table = AnalyticsService._build_tmdl_table_definition(
+            table_name=table_name,
+            clean_fn=clean_fn,
+            columns_info=columns_info,
+            dax_measures=dax_measures,
+            power_query_m_csv=power_query_m_csv,
+        )
+        tmdl_model = AnalyticsService._build_tmdl_model_definition(table_name=table_name)
+        dax_script = AnalyticsService._build_dax_script(
+            table_name=table_name,
+            row_count=row_count,
+            dax_measures=dax_measures,
+        )
 
         return IntegrationGuide(
             table_name=table_name,
@@ -1134,7 +1287,196 @@ class AnalyticsService:
             power_query_m_parquet=power_query_m_parquet,
             dax_measures=dax_measures,
             excel_formulas=excel_formulas,
+            tmdl_table_definition=tmdl_table,
+            tmdl_model_definition=tmdl_model,
+            dax_script=dax_script,
         )
+
+    @staticmethod
+    def _map_to_tmdl_type(pq_type: str) -> str:
+        """Mapea tipos de Power Query M a tipos de datos TMDL de Power BI."""
+        if "Int64" in pq_type:
+            return "int64"
+        if "number" in pq_type:
+            return "double"
+        if "datetime" in pq_type or "date" in pq_type:
+            return "dateTime"
+        if "logical" in pq_type:
+            return "boolean"
+        return "string"
+
+    @staticmethod
+    def _build_tmdl_table_definition(
+        table_name: str,
+        clean_fn: str,
+        columns_info: List[IntegrationColumn],
+        dax_measures: List[DaxMeasureItem],
+        power_query_m_csv: str,
+    ) -> str:
+        """Genera la definición estándar TMDL para la tabla, columnas, partición M y medidas DAX."""
+        table_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table_name}.table"))
+        lines = [f"table '{table_name}'", f"\tlineageTag: {table_guid}", ""]
+
+        # Medidas DAX
+        for m in dax_measures:
+            m_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table_name}.measure.{m.name}"))
+            formula_clean = m.formula.strip()
+            if formula_clean.startswith(f"{m.name} ="):
+                expr = formula_clean[len(f"{m.name} =") :].strip()
+            elif "=" in formula_clean:
+                expr = formula_clean.split("=", 1)[1].strip()
+            else:
+                expr = formula_clean
+
+            expr_indented = "\n\t\t\t".join(expr.split("\n"))
+            lines.append(f"\tmeasure '{m.name}' = \n\t\t\t{expr_indented}")
+            if m.format_string:
+                lines.append(f"\t\tformatString: {m.format_string}")
+            if m.display_folder:
+                lines.append(f'\t\tdisplayFolder: "{m.display_folder}"')
+            lines.append(f"\t\tlineageTag: {m_guid}")
+            lines.append("")
+
+        # Columnas
+        for col in columns_info:
+            col_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table_name}.col.{col.name}"))
+            tmdl_type = AnalyticsService._map_to_tmdl_type(col.power_bi_m_type)
+            summarize_by = "sum" if col.semantic_role == "numeric" else "none"
+            lines.append(f"\tcolumn '{col.name}'")
+            lines.append(f"\t\tdataType: {tmdl_type}")
+            if tmdl_type == "int64":
+                lines.append("\t\tformatString: 0")
+            elif tmdl_type == "double":
+                lines.append("\t\tformatString: #,##0.00")
+            elif tmdl_type == "dateTime":
+                lines.append("\t\tformatString: yyyy-mm-dd")
+            lines.append(f"\t\tlineageTag: {col_guid}")
+            lines.append(f"\t\tsummarizeBy: {summarize_by}")
+            lines.append(f"\t\tsourceColumn: '{col.name}'")
+            lines.append("")
+
+        # Partición M
+        m_lines = power_query_m_csv.split("\n")
+        m_indented = "\n\t\t\t".join(m_lines)
+        lines.append(f"\tpartition '{table_name}' = m")
+        lines.append("\t\tmode: import")
+        lines.append(f"\t\tsource =\n\t\t\t{m_indented}")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _build_tmdl_model_definition(table_name: str) -> str:
+        """Genera el archivo model.tmdl para el proyecto de modelo semántico."""
+        return (
+            "model Model\n"
+            "\tculture: es-ES\n"
+            "\tdefaultPowerBIDataSourceVersion: powerBI_V3\n\n"
+            f"ref table '{table_name}'\n"
+        )
+
+    @staticmethod
+    def _build_dax_script(table_name: str, row_count: int, dax_measures: List[DaxMeasureItem]) -> str:
+        """Genera un archivo standalone de medidas DAX para Power BI / DAX Studio."""
+        lines = [
+            "// ============================================================================",
+            "// DATAFLOW AI — MEDIDAS DAX CALCULADAS PARA MICROSOFT POWER BI",
+            f"// Tabla de Modelo: '{table_name}' | Total Registros: {row_count:,}",
+            "// ============================================================================",
+            "",
+        ]
+
+        # Agrupar por carpeta de despliegue
+        folders: Dict[str, List[DaxMeasureItem]] = {}
+        for m in dax_measures:
+            folder = m.display_folder or "Otras Medidas"
+            folders.setdefault(folder, []).append(m)
+
+        for folder_name, measures in folders.items():
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append(f"// CARPETA: {folder_name}")
+            lines.append("// ----------------------------------------------------------------------------")
+            lines.append("")
+            for m in measures:
+                lines.append(f"// {m.description}")
+                if m.format_string:
+                    lines.append(f"// Formato sugerido: {m.format_string}")
+                lines.append(m.formula)
+                lines.append("")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def generate_tmdl(run_id: str) -> str:
+        """Devuelve la definición TMDL completa de la tabla para Power BI."""
+        report = AnalyticsService.generate_report(run_id)
+        if not report.integration_guide or not report.integration_guide.tmdl_table_definition:
+            raise FunctionalException(
+                message=f"La definición TMDL para la ejecución '{run_id}' no está disponible.",
+                code="TMDL_NOT_FOUND",
+                status_code=404,
+            )
+        return report.integration_guide.tmdl_table_definition
+
+    @staticmethod
+    def generate_dax_script(run_id: str) -> str:
+        """Devuelve el script completo de medidas DAX calculadas."""
+        report = AnalyticsService.generate_report(run_id)
+        if not report.integration_guide or not report.integration_guide.dax_script:
+            raise FunctionalException(
+                message=f"El script DAX para la ejecución '{run_id}' no está disponible.",
+                code="DAX_NOT_FOUND",
+                status_code=404,
+            )
+        return report.integration_guide.dax_script
+
+    @staticmethod
+    def generate_powerbi_pbip_zip(run_id: str) -> bytes:
+        """
+        Genera en memoria un archivo ZIP con el proyecto completo de Power BI Developer Mode (.pbip),
+        incluyendo la estructura de modelo semántico (.SemanticModel) y definiciones TMDL.
+        """
+        report = AnalyticsService.generate_report(run_id)
+        guide = report.integration_guide
+        if not guide:
+            raise FunctionalException(
+                message=f"La guía de integración para la ejecución '{run_id}' no está disponible.",
+                code="INTEGRATION_GUIDE_NOT_FOUND",
+                status_code=404,
+            )
+
+        table_name = guide.table_name or "DataFlow_Model"
+        tmdl_table = guide.tmdl_table_definition or ""
+        tmdl_model = (
+            guide.tmdl_model_definition
+            or f"model Model\n\tculture: es-ES\n\tdefaultPowerBIDataSourceVersion: powerBI_V3\n\nref table '{table_name}'\n"
+        )
+
+        database_tmdl = f"database '{table_name}'\n\tcompatibilityLevel: 1567\n"
+        culture_tmdl = "culture es-ES\n"
+        pbip_json = json.dumps(
+            {
+                "version": "1.0",
+                "artifacts": [{"semanticModel": {"path": f"{table_name}.SemanticModel"}}],
+                "settings": {"enableAutoAuth": True},
+            },
+            indent=2,
+        )
+        pbidataset_json = json.dumps({"version": "1.0", "settings": {}}, indent=2)
+        diagram_json = json.dumps({"version": "1.0.0", "diagrams": []}, indent=2)
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(f"{table_name}.pbip", pbip_json)
+            zf.writestr(f"{table_name}.SemanticModel/definition.pbidataset", pbidataset_json)
+            zf.writestr(f"{table_name}.SemanticModel/diagramLayout.json", diagram_json)
+            zf.writestr(f"{table_name}.SemanticModel/definition/database.tmdl", database_tmdl)
+            zf.writestr(f"{table_name}.SemanticModel/definition/model.tmdl", tmdl_model)
+            zf.writestr(f"{table_name}.SemanticModel/definition/cultures/es-ES.tmdl", culture_tmdl)
+            zf.writestr(f"{table_name}.SemanticModel/definition/tables/{table_name}.tmdl", tmdl_table)
+
+        buf.seek(0)
+        return buf.getvalue()
 
     @staticmethod
     def generate_html_report(run_id: str, lang: str = "es") -> str:

@@ -4,6 +4,58 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.11.0] — 2026-09-02
+
+### 📊 Exportación Nativa de Modelos Semánticos Power BI (TMDL / PBIP / DAX), Fórmulas Dinámicas Multi-Categoría para Excel y Caché de Inferencia Gemini
+
+> **Integración Avanzada con Power BI & Excel, Optimización de Costes y Latencia de IA:** Incorporación de exportación directa de modelos semánticos a formatos TMDL (`.tmdl`), scripts DAX (`.dax`) y paquetes de proyecto Power BI Developer Mode (`.pbip` en archivo ZIP); diversificación y enriquecimiento de las fórmulas adaptativas de Microsoft Excel en 4 categorías analíticas (Outliers IQR, KPIs Directivos, Participación Relativa y Validación Condicional) resolviendo la monotonía en la interfaz; y despliegue de una capa de caché semántica LRU/TTL para el Copiloto IA (Gemini 2.5 Flash) que reduce la latencia a < 1 ms y ahorra el 100% de costes y tokens en datasets con esquemas similares.
+
+#### 📊 Exportación a Power BI (TMDL, DAX y Proyecto PBIP)
+- **Modelos Pydantic Enriquecidos (`backend/app/models/analytics.py`):**
+  - Adición de `format_string` y `display_folder` a `DaxMeasureItem` para organización jerárquica en Power BI Desktop.
+  - Adición de `tmdl_table_definition`, `tmdl_model_definition` y `dax_script` a `IntegrationGuide`.
+- **Motor de Generación TMDL y PBIP (`backend/app/services/analytics_service.py`):**
+  - Generador declarativo de sintaxis TMDL compatible con Power BI Desktop y Microsoft Fabric (`table`, `lineageTag`, `column`, `summarizeBy`, `measure`, `partition` con Power Query M embebido).
+  - Ensamblador de proyectos `.pbip` (Developer Mode) en ZIP conteniendo `{Nombre}.pbip`, `definition.pbidataset`, `diagramLayout.json`, `database.tmdl`, `model.tmdl` y `tables/{Nombre}.tmdl`.
+- **Nuevos Endpoints REST (`backend/app/api/v1/endpoints/analytics.py`):**
+  - `GET /api/v1/analytics/{run_id}/export/tmdl`: Descarga de definición TMDL.
+  - `GET /api/v1/analytics/{run_id}/export/dax`: Descarga de script DAX consolidado.
+  - `GET /api/v1/analytics/{run_id}/export/pbip`: Descarga de proyecto PBIP empaquetado en `.zip`.
+- **UI Interactiva en Frontend (`frontend/src/components/BusinessInsights.tsx`):**
+  - Botones de descarga directa para Proyecto PBIP, Modelo TMDL y Medidas DAX.
+  - Selector de vistas de código: `[Medidas DAX]` | `[Power Query M]` | `[Modelo Semántico TMDL]` con copiado instantáneo al portapapeles.
+
+#### 📗 Fórmulas Dinámicas Adaptativas Multi-Categoría para Excel
+- **Diversificación Analítica (`backend/app/services/analytics_service.py`):**
+  - Adición de 4 categorías de fórmulas nativas adaptadas a la configuración regional (español e inglés):
+    - `outlier`: Auditoría fila a fila por método IQR/Desviación evaluando el rango real del dataset.
+    - `kpi`: Métricas acumuladas y estadísticas de resumen (`SUMA`, `PROMEDIO`, `MEDIANA`, `DESVEST.M`).
+    - `relative`: Participación porcentual de cada registro sobre el total acumulado (`H2/SUMA(...)`).
+    - `conditional`: Validación de registros por encima de la media (`CONTAR.SI(...)`).
+- **Selector de Categorías en Frontend (`frontend/src/components/BusinessInsights.tsx`):**
+  - Filtro por categoría mediante botones pills (`Todas`, `Auditoría Outliers`, `KPIs & Estadísticas`, `Participación %`, `Condicionales`).
+  - Guía visual de celda de destino recomendada (`target_cell`) e instrucciones de pegado.
+
+#### ⚡ Caché de Inferencia Semántica para Copiloto IA (Gemini)
+- **Servicio de Caché LRU/TTL (`backend/app/services/inference_cache.py`):**
+  - Cálculo de hash canónico (SHA-256) invariante al orden de columnas, tipo de datos, inferencias semánticas y anomalías de calidad.
+  - Almacén en memoria con límite de 500 entradas y TTL configurable (24 horas).
+  - Telemetría de rendimiento y métricas acumuladas (`hits`, `misses`, `saved_tokens`, `saved_cost_usd`).
+- **Integración Transparente (`backend/app/services/ai_service.py` & `backend/app/ai_providers/base.py`):**
+  - Consulta y persistencia automática en `propose_ai_plan`. En caso de acierto (cache hit), retorna respuesta con `cached = True`, `estimated_cost_usd = 0.0` y `latency_ms < 1 ms`.
+- **Indicador Visual en UI (`frontend/src/components/PlanReview.tsx`):**
+  - Badge distintivo `ai-cached-badge` (`Caché de Inferencia (100% Ahorro)`) en el banner de telemetría IA.
+
+#### 🧪 Pruebas, Calidad de Código y Validación
+- **Tests Automatizados de Backend (`backend/tests/`):**
+  - `test_powerbi_tmdl_export.py`: Validación de endpoints y sintaxis TMDL/DAX/PBIP.
+  - `test_inference_cache.py`: Validación de cache hits, ahorro de costes e invariancia de orden de columnas.
+  - 156/156 tests PASSED (`pytest -v`).
+  - 0 errores de Ruff, 0 diferencias de Black, 0 vulnerabilidades de Bandit.
+- **Tests Automatizados de Frontend (`frontend/src/`):**
+  - 39/39 tests PASSED (`vitest run`).
+  - Compilación TypeScript estricta y bundle Vite exitoso al 100%.
+
 ## [1.10.0] — 2026-09-02
 
 ### ⚡ Observabilidad de Inferencia IA (Latencia, Tokens y Coste USD), Comparador Scatter Diff de Outliers (Crudo vs. Limpio) y Actualización de Dependencias a Node 24 / jsdom 30
