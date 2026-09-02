@@ -114,6 +114,16 @@ export interface TransformationStep {
   data_loss_warning?: string;
 }
 
+export interface AIMetrics {
+  latency_ms: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
+  model: string;
+  provider: string;
+}
+
 export interface TransformationPlan {
   plan_id: string;
   dataset_id: string;
@@ -122,6 +132,7 @@ export interface TransformationPlan {
   source: string;
   created_at: string;
   warnings?: string[];
+  ai_metrics?: AIMetrics;
 }
 
 export interface ExecutionResult {
@@ -225,12 +236,24 @@ export interface OutlierScatterPoint {
   y_value: number;
   is_outlier: boolean;
   label?: string;
+  raw_y_value?: number;
+  was_modified?: boolean;
+  diff_status?: 'clamped' | 'resolved_outlier' | 'imputed' | 'unchanged' | string;
+}
+
+export interface OutlierDiffSummary {
+  raw_outliers_count: number;
+  clean_outliers_count: number;
+  resolved_outliers_count: number;
+  reduction_percentage: number;
 }
 
 export interface OutlierVisualization {
   columns: BoxPlotData[];
   active_column: string;
   scatter_points?: OutlierScatterPoint[];
+  raw_scatter_points?: OutlierScatterPoint[];
+  diff_summary?: OutlierDiffSummary;
   total_outliers_detected: number;
   detection_method: string;
 }

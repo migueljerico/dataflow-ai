@@ -194,4 +194,40 @@ describe('PlanReview Component — Schema Previews', () => {
     expect(handleExecute).toHaveBeenCalledTimes(1);
     expect(handleExecute).toHaveBeenCalledWith(mockPlan.steps);
   });
+
+  it('renders AI inference metrics banner when plan has ai_metrics', () => {
+    const handleExecute = vi.fn();
+    const planWithMetrics: TransformationPlan = {
+      ...mockPlan,
+      source: 'ai_copilot',
+      ai_metrics: {
+        latency_ms: 1240,
+        prompt_tokens: 380,
+        completion_tokens: 120,
+        total_tokens: 500,
+        estimated_cost_usd: 0.000086,
+        model: 'gemini-2.5-flash',
+        provider: 'gemini',
+      },
+    };
+
+    render(
+      <LanguageProvider>
+        <PlanReview
+          plan={planWithMetrics}
+          onExecutePlan={handleExecute}
+          executing={false}
+          metadata={mockMetadata}
+          profiling={mockProfiling}
+        />
+      </LanguageProvider>
+    );
+
+    const banner = screen.getByTestId('ai-metrics-banner');
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveTextContent('gemini-2.5-flash');
+    expect(banner).toHaveTextContent('1.24 s');
+    expect(banner).toHaveTextContent('500');
+    expect(banner).toHaveTextContent('$0.000086 USD');
+  });
 });

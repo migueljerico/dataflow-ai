@@ -1,9 +1,10 @@
 import json
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 import httpx
-from app.ai_providers.base import AISuggestionResponse, LLMProvider
+from app.ai_providers.base import AIMetrics, AISuggestionResponse, LLMProvider
 from app.core.exceptions import FunctionalException
 
 
@@ -70,8 +71,10 @@ Reglas estrictas de negocio y gobernanza:
             "generationConfig": {"response_mime_type": "application/json"},
         }
 
+        start_time = time.perf_counter()
         async with httpx.AsyncClient(timeout=15.0) as client:
             res = await client.post(url, headers=headers, json=payload)
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
             if res.status_code != 200:
                 raise FunctionalException(
                     message="Error de comunicación con el servicio de IA de Gemini.",
@@ -80,6 +83,24 @@ Reglas estrictas de negocio y gobernanza:
                 )
 
             data = res.json()
+
+        # Observabilidad de tokens y costes de inferencia
+        usage = data.get("usageMetadata") or {}
+        prompt_tokens = int(usage.get("promptTokenCount", 0))
+        candidates_tokens = int(usage.get("candidatesTokenCount", 0))
+        total_tokens = int(usage.get("totalTokenCount", prompt_tokens + candidates_tokens))
+
+        # Tarificación oficial Google Gemini 2.5 Flash: $0.10/1M prompt, $0.40/1M completion
+        estimated_cost_usd = round((prompt_tokens * 0.10 + candidates_tokens * 0.40) / 1_000_000, 6)
+        metrics = AIMetrics(
+            latency_ms=latency_ms,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=candidates_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=estimated_cost_usd,
+            model=self.model,
+            provider=self.provider_name,
+        )
 
         # Respuestas bloqueadas por filtros de seguridad o sin contenido procesable
         candidates = data.get("candidates") or []
@@ -108,4 +129,5 @@ Reglas estrictas de negocio y gobernanza:
                 details={"model": self.model, "parse_error": str(exc), "raw_prefix": raw_json_str[:300]},
             ) from exc
 
+        parsed_dict["metrics"] = metrics
         return AISuggestionResponse(**parsed_dict)

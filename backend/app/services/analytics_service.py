@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.exceptions import FunctionalException
+from app.core.number_parsing import parse_numeric_string
 from app.core.storage import get_storage
 from app.models.analytics import (
     BoxPlotData,
@@ -20,10 +21,12 @@ from app.models.analytics import (
     ExecutiveAnalyticsReport,
     IntegrationColumn,
     IntegrationGuide,
+    OutlierDiffSummary,
     OutlierScatterPoint,
     OutlierVisualization,
 )
 from app.models.etl import ExecutionResult
+from app.services.dataset_service import DatasetService
 from app.services.etl_service import ETLService
 from app.transformations.cluster_ops import _kmeans_numpy
 
@@ -59,6 +62,13 @@ class AnalyticsService:
             df = pd.read_csv(clean_filepath)
         else:
             df = pd.read_excel(clean_filepath)
+
+        raw_df = None
+        try:
+            if run_result.dataset_id:
+                raw_df = DatasetService.load_dataframe(run_result.dataset_id)
+        except Exception:
+            raw_df = None
 
         cols_lower = [c.lower() for c in df.columns]
         domain = "general"
@@ -372,7 +382,7 @@ class AnalyticsService:
             ]
 
         cluster_viz = AnalyticsService._build_cluster_visualization(df)
-        outlier_viz = AnalyticsService._build_outlier_visualization(df)
+        outlier_viz = AnalyticsService._build_outlier_visualization(df, raw_df=raw_df)
         integration_guide = AnalyticsService._build_integration_guide(df, run_result, domain)
 
         report = ExecutiveAnalyticsReport(
@@ -538,7 +548,9 @@ class AnalyticsService:
         )
 
     @staticmethod
-    def _build_outlier_visualization(df: pd.DataFrame) -> Optional[OutlierVisualization]:
+    def _build_outlier_visualization(
+        df: pd.DataFrame, raw_df: Optional[pd.DataFrame] = None
+    ) -> Optional[OutlierVisualization]:
         if df.empty or len(df) < 2:
             return None
 
@@ -613,7 +625,35 @@ class AnalyticsService:
         label_col = text_cols[0] if text_cols else None
 
         scatter_points: List[OutlierScatterPoint] = []
+        raw_scatter_points: List[OutlierScatterPoint] = []
         flag_col = f"{active_col}_is_outlier"
+
+        # Comparador Scatter Diff entre Dataset Crudo y Limpio
+        has_raw_col = raw_df is not None and not raw_df.empty and active_col in raw_df.columns
+        diff_summary: Optional[OutlierDiffSummary] = None
+        rlw, ruw = active_box.lower_whisker, active_box.upper_whisker
+
+        if has_raw_col:
+            raw_series_parsed = raw_df[active_col].apply(parse_numeric_string).dropna()
+            if len(raw_series_parsed) >= 2 and raw_series_parsed.nunique() > 1:
+                rq1 = float(raw_series_parsed.quantile(0.25))
+                rq3 = float(raw_series_parsed.quantile(0.75))
+                riqr = rq3 - rq1
+                rlw = rq1 - 1.5 * riqr
+                ruw = rq3 + 1.5 * riqr
+                raw_outliers_cnt = int(((raw_series_parsed < rlw) | (raw_series_parsed > ruw)).sum())
+            else:
+                raw_outliers_cnt = 0
+
+            clean_outliers_cnt = active_box.outliers_count
+            resolved_cnt = max(0, raw_outliers_cnt - clean_outliers_cnt)
+            reduction_pct = round((resolved_cnt / raw_outliers_cnt) * 100.0, 1) if raw_outliers_cnt > 0 else 0.0
+            diff_summary = OutlierDiffSummary(
+                raw_outliers_count=raw_outliers_cnt,
+                clean_outliers_count=clean_outliers_cnt,
+                resolved_outliers_count=resolved_cnt,
+                reduction_percentage=reduction_pct,
+            )
 
         for idx, row in sample_df.iterrows():
             y_val = pd.to_numeric(pd.Series([row[active_col]]), errors="coerce").iloc[0]
@@ -624,20 +664,67 @@ class AnalyticsService:
                 is_out = True
 
             lbl = str(row[label_col]) if label_col and pd.notna(row[label_col]) else f"Fila #{int(idx) + 1}"
-            scatter_points.append(
-                OutlierScatterPoint(
-                    row_index=int(idx),
-                    x_value=float(idx) + 1.0,
-                    y_value=round(float(y_val), 2),
-                    is_outlier=is_out,
-                    label=lbl,
-                )
+            clean_y_val = round(float(y_val), 2)
+
+            raw_y_val: Optional[float] = None
+            was_mod = False
+            diff_status = "unchanged"
+
+            if has_raw_col and idx in raw_df.index:
+                raw_raw = raw_df.loc[idx, active_col]
+                parsed_raw = parse_numeric_string(raw_raw)
+                if parsed_raw is not None:
+                    raw_y_val = round(float(parsed_raw), 2)
+                    was_mod = abs(raw_y_val - clean_y_val) > 1e-4
+                    if was_mod:
+                        if (
+                            parsed_raw < active_box.lower_whisker or parsed_raw > active_box.upper_whisker
+                        ) and not is_out:
+                            diff_status = "resolved_outlier"
+                        else:
+                            diff_status = "clamped"
+                    else:
+                        diff_status = "unchanged"
+                else:
+                    raw_y_val = None
+                    was_mod = True
+                    diff_status = "imputed"
+            else:
+                raw_y_val = clean_y_val
+
+            pt = OutlierScatterPoint(
+                row_index=int(idx),
+                x_value=float(idx) + 1.0,
+                y_value=clean_y_val,
+                is_outlier=is_out,
+                label=lbl,
+                raw_y_value=raw_y_val,
+                was_modified=was_mod,
+                diff_status=diff_status,
             )
+            scatter_points.append(pt)
+
+            if raw_y_val is not None:
+                raw_is_out = bool(raw_y_val < rlw or raw_y_val > ruw)
+                raw_scatter_points.append(
+                    OutlierScatterPoint(
+                        row_index=int(idx),
+                        x_value=float(idx) + 1.0,
+                        y_value=raw_y_val,
+                        is_outlier=raw_is_out,
+                        label=f"{lbl} [Crudo]",
+                        raw_y_value=raw_y_val,
+                        was_modified=was_mod,
+                        diff_status=diff_status,
+                    )
+                )
 
         return OutlierVisualization(
             columns=boxplots,
             active_column=active_col,
             scatter_points=scatter_points,
+            raw_scatter_points=raw_scatter_points if raw_scatter_points else None,
+            diff_summary=diff_summary,
             total_outliers_detected=total_outliers,
             detection_method="IQR (1.5x) / Z-Score (>3.0)",
         )

@@ -15,6 +15,7 @@ import {
   Copy,
   Check,
   Layers,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
@@ -67,13 +68,17 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
 
   // Estados de visualización de Outliers
   const [selectedOutlierCol, setSelectedOutlierCol] = useState<string>('');
-  const [outlierViewMode, setOutlierViewMode] = useState<'boxplot' | 'scatter'>('boxplot');
+  const [outlierViewMode, setOutlierViewMode] = useState<'boxplot' | 'scatter' | 'diff'>('boxplot');
+  const [diffOnlyModified, setDiffOnlyModified] = useState<boolean>(false);
   const [hoveredOutlierPoint, setHoveredOutlierPoint] = useState<{
     x: number;
     y: number;
     valY: number;
     label: string;
     isOutlier: boolean;
+    rawY?: number | null;
+    wasModified?: boolean;
+    diffStatus?: string;
   } | null>(null);
 
   // Estados de Integración Power BI / Excel adaptativa
@@ -908,6 +913,14 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                   >
                     <Maximize2 size={13} /> {t.analytics?.viewModeScatter || 'Dispersión'}
                   </button>
+                  <button
+                    className={`btn ${outlierViewMode === 'diff' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => setOutlierViewMode('diff')}
+                    data-testid="outlier-diff-view-btn"
+                  >
+                    <ArrowLeftRight size={13} /> {t.analytics?.viewModeDiff || 'Comparador Diff'}
+                  </button>
                 </div>
               </div>
 
@@ -1120,6 +1133,285 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                               Valor: <strong>{hoveredOutlierPoint.valY}</strong>{' '}
                               {hoveredOutlierPoint.isOutlier && <span style={{ color: 'var(--accent-rose)' }}>[OUTLIER]</span>}
                             </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* RENDERIZADOR SVG: MODO COMPARADOR DIFF (CRUDO VS LIMPIO) */}
+              {outlierViewMode === 'diff' && outlierViz.scatter_points && (
+                <div
+                  style={{
+                    backgroundColor: 'var(--bg-input)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    padding: '16px',
+                    marginBottom: '20px',
+                    position: 'relative',
+                  }}
+                  data-testid="outlier-diff-container"
+                >
+                  {/* Resumen de Resolución de Outliers */}
+                  {outlierViz.diff_summary && (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                        gap: '10px',
+                        marginBottom: '16px',
+                        paddingBottom: '14px',
+                        borderBottom: '1px solid var(--border-color)',
+                      }}
+                    >
+                      <div style={{ backgroundColor: 'var(--card-bg, rgba(255,255,255,0.03))', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t.analytics?.rawOutliers || 'Outliers en Crudo'}</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-rose, #f43f5e)', marginTop: '2px' }}>
+                          {outlierViz.diff_summary.raw_outliers_count}
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: 'var(--card-bg, rgba(255,255,255,0.03))', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t.analytics?.cleanOutliers || 'Outliers en Limpio'}</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)', marginTop: '2px' }}>
+                          {outlierViz.diff_summary.clean_outliers_count}
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: 'var(--card-bg, rgba(255,255,255,0.03))', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t.analytics?.resolvedOutliers || 'Anomalías Resueltas'}</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-emerald, #10b981)', marginTop: '2px' }}>
+                          {outlierViz.diff_summary.resolved_outliers_count}
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: 'var(--card-bg, rgba(255,255,255,0.03))', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t.analytics?.reductionRate || 'Tasa de Reducción'}</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-emerald, #10b981)', marginTop: '2px' }}>
+                          {outlierViz.diff_summary.reduction_percentage}%
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Barra de Filtro y Leyenda */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center', fontSize: '0.75rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--accent-rose, #f43f5e)', display: 'inline-block' }} />
+                        {t.analytics?.rawVal || 'Valor Crudo'}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary)', display: 'inline-block' }} />
+                        {t.analytics?.cleanVal || 'Valor Limpio'}
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ width: '14px', height: '2px', borderTop: '2px dashed var(--accent-amber, #f59e0b)', display: 'inline-block' }} />
+                        {t.analytics?.diffStatusClamped || 'Ajuste / Clamp'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`btn ${diffOnlyModified ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                      onClick={() => setDiffOnlyModified((prev) => !prev)}
+                      data-testid="toggle-diff-modified-btn"
+                    >
+                      <Filter size={12} />
+                      {diffOnlyModified
+                        ? (t.analytics?.filterAllPoints || 'Ver Todos')
+                        : (t.analytics?.filterOnlyModified || 'Solo Anomalías Modificadas')}
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const b = activeBoxPlot;
+                    const allPts = outlierViz.scatter_points || [];
+                    const pts = diffOnlyModified ? allPts.filter((p) => p.was_modified || p.is_outlier) : allPts;
+
+                    const vals: number[] = [];
+                    pts.forEach((p) => {
+                      vals.push(p.y_value);
+                      if (p.raw_y_value !== undefined && p.raw_y_value !== null) {
+                        vals.push(p.raw_y_value);
+                      }
+                    });
+                    if (vals.length === 0) vals.push(b.median);
+
+                    const minY = Math.min(b.min, ...vals);
+                    const maxY = Math.max(b.max, ...vals);
+                    const padY = (maxY - minY) * 0.1 || 1.0;
+                    const dMinY = minY - padY;
+                    const dMaxY = maxY + padY;
+
+                    const width = 640;
+                    const height = 280;
+                    const margin = { top: 20, right: 35, bottom: 35, left: 55 };
+                    const plotW = width - margin.left - margin.right;
+                    const plotH = height - margin.top - margin.bottom;
+
+                    const scaleX = (idx: number) => margin.left + ((idx - 1) / (pts.length || 1)) * plotW;
+                    const scaleY = (val: number) => height - margin.bottom - ((val - dMinY) / (dMaxY - dMinY || 1)) * plotH;
+
+                    const yLower = scaleY(b.lower_whisker);
+                    const yUpper = scaleY(b.upper_whisker);
+
+                    return (
+                      <div>
+                        <svg
+                          viewBox={`0 0 ${width} ${height}`}
+                          style={{ width: '100%', height: 'auto', display: 'block' }}
+                          role="img"
+                          aria-label={`Comparador scatter diff para ${b.column}`}
+                        >
+                          {/* Líneas de Límites IQR */}
+                          <line x1={margin.left} y1={yUpper} x2={width - margin.right} y2={yUpper} stroke="var(--accent-rose, #f43f5e)" strokeDasharray="5 4" strokeWidth="1.5" />
+                          <text x={width - margin.right + 4} y={yUpper + 3} fill="var(--accent-rose, #f43f5e)" fontSize="9" textAnchor="start">
+                            Max IQR
+                          </text>
+
+                          <line x1={margin.left} y1={yLower} x2={width - margin.right} y2={yLower} stroke="var(--accent-rose, #f43f5e)" strokeDasharray="5 4" strokeWidth="1.5" />
+                          <text x={width - margin.right + 4} y={yLower + 3} fill="var(--accent-rose, #f43f5e)" fontSize="9" textAnchor="start">
+                            Min IQR
+                          </text>
+
+                          {/* Líneas y Puntos */}
+                          {pts.map((p, idx) => {
+                            const px = scaleX(idx + 1);
+                            const pyClean = scaleY(p.y_value);
+                            const hasRaw = p.raw_y_value !== undefined && p.raw_y_value !== null;
+                            const pyRaw = hasRaw ? scaleY(p.raw_y_value!) : null;
+
+                            return (
+                              <g key={idx}>
+                                {p.was_modified && pyRaw !== null && (
+                                  <>
+                                    <line
+                                      x1={px}
+                                      y1={pyRaw}
+                                      x2={px}
+                                      y2={pyClean}
+                                      stroke="var(--accent-amber, #f59e0b)"
+                                      strokeWidth="1.5"
+                                      strokeDasharray="3 3"
+                                    />
+                                    <circle
+                                      cx={px}
+                                      cy={pyRaw}
+                                      r="4"
+                                      fill="var(--accent-rose, #f43f5e)"
+                                      stroke="#ffffff"
+                                      strokeWidth="1"
+                                      opacity="0.85"
+                                    />
+                                  </>
+                                )}
+                                <circle
+                                  cx={px}
+                                  cy={pyClean}
+                                  r={p.was_modified ? '5' : p.is_outlier ? '5.5' : '3.5'}
+                                  fill={p.was_modified ? 'var(--accent-emerald, #10b981)' : p.is_outlier ? 'var(--accent-rose, #f43f5e)' : 'var(--primary)'}
+                                  stroke="#ffffff"
+                                  strokeWidth="1"
+                                  style={{ cursor: 'pointer' }}
+                                  onMouseEnter={() =>
+                                    setHoveredOutlierPoint({
+                                      x: px,
+                                      y: pyClean,
+                                      valY: p.y_value,
+                                      label: p.label || `Fila #${p.row_index + 1}`,
+                                      isOutlier: p.is_outlier,
+                                      rawY: p.raw_y_value,
+                                      wasModified: p.was_modified,
+                                      diffStatus: p.diff_status,
+                                    })
+                                  }
+                                  onMouseLeave={() => setHoveredOutlierPoint(null)}
+                                />
+                              </g>
+                            );
+                          })}
+                        </svg>
+
+                        {hoveredOutlierPoint && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: Math.max(10, (hoveredOutlierPoint.y / 280) * 100 - 15) + '%',
+                              left: Math.min(75, (hoveredOutlierPoint.x / 640) * 100 + 3) + '%',
+                              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                              color: '#ffffff',
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              pointerEvents: 'none',
+                              boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                              zIndex: 10,
+                              border: `1px solid ${hoveredOutlierPoint.wasModified ? 'var(--accent-emerald, #10b981)' : 'var(--primary)'}`,
+                            }}
+                          >
+                            <div style={{ fontWeight: 600 }}>{hoveredOutlierPoint.label}</div>
+                            {hoveredOutlierPoint.rawY !== undefined && hoveredOutlierPoint.rawY !== null && (
+                              <div style={{ color: 'var(--text-muted)', marginTop: '2px' }}>
+                                {t.analytics?.rawVal || 'Crudo'}: <strong style={{ color: 'var(--accent-rose, #f43f5e)' }}>{hoveredOutlierPoint.rawY}</strong>
+                              </div>
+                            )}
+                            <div style={{ marginTop: '2px' }}>
+                              {t.analytics?.cleanVal || 'Limpio'}: <strong style={{ color: 'var(--accent-emerald, #10b981)' }}>{hoveredOutlierPoint.valY}</strong>{' '}
+                              {hoveredOutlierPoint.isOutlier && <span style={{ color: 'var(--accent-rose, #f43f5e)' }}>[OUTLIER]</span>}
+                            </div>
+                            {hoveredOutlierPoint.wasModified && (
+                              <div style={{ color: 'var(--accent-amber, #f59e0b)', fontSize: '0.7rem', marginTop: '4px' }}>
+                                {hoveredOutlierPoint.diffStatus === 'resolved_outlier'
+                                  ? (t.analytics?.diffStatusResolved || 'Anomalía corregida al rango')
+                                  : (t.analytics?.diffStatusClamped || 'Valor acotado por regla clamp')}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Mini Tabla de Evidencia de Anomalías Modificadas */}
+                        {pts.some((p) => p.was_modified) && (
+                          <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+                            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                                  <th style={{ padding: '6px 8px' }}>Registro</th>
+                                  <th style={{ padding: '6px 8px' }}>{t.analytics?.rawVal || 'Crudo'}</th>
+                                  <th style={{ padding: '6px 8px' }}>{t.analytics?.cleanVal || 'Limpio'}</th>
+                                  <th style={{ padding: '6px 8px' }}>Variación</th>
+                                  <th style={{ padding: '6px 8px' }}>Estado</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pts
+                                  .filter((p) => p.was_modified)
+                                  .slice(0, 5)
+                                  .map((p, idx) => (
+                                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <td style={{ padding: '6px 8px', fontWeight: 600 }}>{p.label}</td>
+                                      <td style={{ padding: '6px 8px', color: 'var(--accent-rose, #f43f5e)' }}>{p.raw_y_value ?? 'N/A'}</td>
+                                      <td style={{ padding: '6px 8px', color: 'var(--accent-emerald, #10b981)' }}>{p.y_value}</td>
+                                      <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>
+                                        {p.raw_y_value != null ? (p.y_value - p.raw_y_value > 0 ? `+${(p.y_value - p.raw_y_value).toFixed(2)}` : (p.y_value - p.raw_y_value).toFixed(2)) : 'N/A'}
+                                      </td>
+                                      <td style={{ padding: '6px 8px' }}>
+                                        <span
+                                          style={{
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            backgroundColor: p.diff_status === 'resolved_outlier' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                                            color: p.diff_status === 'resolved_outlier' ? 'var(--accent-emerald, #10b981)' : 'var(--accent-amber, #f59e0b)',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          {p.diff_status === 'resolved_outlier' ? 'Resuelto' : 'Acotado'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </div>

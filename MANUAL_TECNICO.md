@@ -1,10 +1,10 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.9.3  
+**Versión:** 1.10.0  
 **Fecha de actualización:** 2 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
-**Stack:** Python 3.11/3.14 · FastAPI · Pandas · PyArrow · React 19 · TypeScript · Vite · Playwright · Docker
+**Stack:** Python 3.11/3.14 (Pandas 3.0, Pydantic 2.13, PyArrow 25, Pytest 9.1) · FastAPI · React 19 · TypeScript 5.9 · Vite 8 · Vitest 4.1 · Node.js 24 · Docker
 
 
 ---
@@ -552,8 +552,10 @@ Ubicación: `backend/tests/`
 | `test_analytics.py` | 4 | Cálculo de KPIs ejecutivos, clusters 2D, boxplots y exportación de reportes ejecutivos en HTML5. |
 | `test_parquet_export.py` | 2 | Exportación columnar nativa a Apache Parquet, validación de magic bytes PAR1 y descarga REST. |
 | `test_dataset4_verification.py` | 6 | Verificación de marcadores de ausencia, preservación de mayúsculas en identificadores y no corrupción de conteos. |
+| `test_copilot_metrics.py` | 3 | Métricas de inferencia y observabilidad del Copiloto IA (latencia, tokens consumidos, coste USD). |
+| `test_outliers_scatter_diff.py` | 2 | Comparador de dispersión (Scatter Diff) de outliers entre dataset crudo y dataset limpio con trazabilidad de anomalías. |
 
-**Total:** 132 tests backend + 32 tests frontend (Vitest) + 3 suites E2E (Playwright) — 100% pasando en verde.
+**Total:** 151 tests backend (Pytest) + 38 tests frontend (Vitest) + 3 suites E2E (Playwright) — 100% pasando en verde.
 
 ---
 

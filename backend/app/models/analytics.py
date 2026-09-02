@@ -72,12 +72,24 @@ class OutlierScatterPoint(BaseModel):
     y_value: float
     is_outlier: bool
     label: Optional[str] = None
+    raw_y_value: Optional[float] = None
+    was_modified: bool = False
+    diff_status: Optional[str] = None
+
+
+class OutlierDiffSummary(BaseModel):
+    raw_outliers_count: int
+    clean_outliers_count: int
+    resolved_outliers_count: int
+    reduction_percentage: float
 
 
 class OutlierVisualization(BaseModel):
     columns: List[BoxPlotData]
     active_column: str
     scatter_points: Optional[List[OutlierScatterPoint]] = None
+    raw_scatter_points: Optional[List[OutlierScatterPoint]] = None
+    diff_summary: Optional[OutlierDiffSummary] = None
     total_outliers_detected: int
     detection_method: str = "IQR (1.5x) / Z-Score (>3.0)"
 

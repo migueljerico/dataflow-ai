@@ -200,6 +200,7 @@ class AIService:
             source=f"ai_copilot_{provider.provider_name}",
             created_at=datetime.now(timezone.utc),
             warnings=plan_warnings,
+            ai_metrics=ai_response.metrics,
         )
 
         metadata.status = ProcessingStateEnum.PLAN_PROPOSED

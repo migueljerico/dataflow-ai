@@ -11,6 +11,10 @@ import {
   EyeOff,
   Table,
   ArrowRight,
+  Zap,
+  Coins,
+  Clock,
+  Bot,
 } from 'lucide-react';
 import { DatasetMetadata, ProfilingReport, TransformationPlan, TransformationStep } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -89,6 +93,63 @@ export const PlanReview: React.FC<Props> = ({
             {t.plan.source}: <strong style={{ color: 'var(--primary)' }}>{plan.source}</strong> | {t.plan.summary}: {plan.summary}
           </p>
         </div>
+
+        {plan.ai_metrics && (
+          <div
+            data-testid="ai-metrics-banner"
+            style={{
+              width: '100%',
+              display: 'flex',
+              gap: '14px',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              borderRadius: '8px',
+              padding: '8px 14px',
+              marginTop: '4px',
+              fontSize: '0.8rem',
+              color: 'var(--text-color)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--primary)' }}>
+              <Bot size={15} />
+              <span>{plan.ai_metrics.model || 'Gemini 2.5 Flash'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+              <Clock size={14} className="text-primary" />
+              <span>
+                {t.plan?.aiLatency || 'Latencia'}:{' '}
+                <strong style={{ color: 'var(--text-color)' }}>
+                  {plan.ai_metrics.latency_ms >= 1000
+                    ? `${(plan.ai_metrics.latency_ms / 1000).toFixed(2)} s`
+                    : `${plan.ai_metrics.latency_ms.toFixed(0)} ms`}
+                </strong>
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+              <Zap size={14} style={{ color: 'var(--accent-amber, #f59e0b)' }} />
+              <span>
+                {t.plan?.aiTokens || 'Tokens'}:{' '}
+                <strong style={{ color: 'var(--text-color)' }}>
+                  {plan.ai_metrics.total_tokens.toLocaleString()}
+                </strong>{' '}
+                <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>
+                  ({plan.ai_metrics.prompt_tokens} in / {plan.ai_metrics.completion_tokens} out)
+                </span>
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+              <Coins size={14} style={{ color: 'var(--accent-emerald, #10b981)' }} />
+              <span>
+                {t.plan?.aiCost || 'Coste Estimado'}:{' '}
+                <strong style={{ color: 'var(--accent-emerald, #10b981)' }}>
+                  ${plan.ai_metrics.estimated_cost_usd.toFixed(6)} USD
+                </strong>
+              </span>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           {allColumns.length > 0 && (

@@ -140,6 +140,11 @@ export interface Translations {
     viewColPreview?: string;
     hideColPreview?: string;
     schemaDetails?: string;
+    aiMetricsTitle?: string;
+    aiLatency?: string;
+    aiTokens?: string;
+    aiCost?: string;
+    aiModel?: string;
   };
   report: {
     title: string;
@@ -180,6 +185,20 @@ export interface Translations {
     selectColumn: string;
     viewModeBoxplot: string;
     viewModeScatter: string;
+    viewModeDiff?: string;
+    diffSummaryTitle?: string;
+    rawOutliers?: string;
+    cleanOutliers?: string;
+    resolvedOutliers?: string;
+    reductionRate?: string;
+    rawVal?: string;
+    cleanVal?: string;
+    diffStatusResolved?: string;
+    diffStatusClamped?: string;
+    diffStatusUnchanged?: string;
+    diffStatusImputed?: string;
+    filterOnlyModified?: string;
+    filterAllPoints?: string;
     detectedOutliers: string;
     outlierStats: {
       min: string;
@@ -357,6 +376,11 @@ export const translations: Record<Language, Translations> = {
       viewColPreview: 'Ver esquema de columna',
       hideColPreview: 'Ocultar esquema',
       schemaDetails: 'Detalles del Esquema',
+      aiMetricsTitle: 'Métricas de Inferencia Copiloto IA (Gemini)',
+      aiLatency: 'Latencia',
+      aiTokens: 'Tokens Consumidos',
+      aiCost: 'Coste Estimado',
+      aiModel: 'Modelo IA',
     },
     report: {
       title: 'Transformación Completada con Éxito',
@@ -397,6 +421,20 @@ export const translations: Record<Language, Translations> = {
       selectColumn: 'Variable a analizar:',
       viewModeBoxplot: 'Diagrama Box Plot',
       viewModeScatter: 'Gráfico de Dispersión',
+      viewModeDiff: 'Comparador Diff (Crudo vs. Limpio)',
+      diffSummaryTitle: 'Balance Comparativo de Resolución de Outliers',
+      rawOutliers: 'Outliers en Dataset Crudo',
+      cleanOutliers: 'Outliers Remanentes en Limpio',
+      resolvedOutliers: 'Anomalías Resueltas / Acotadas',
+      reductionRate: 'Tasa de Reducción',
+      rawVal: 'Valor Crudo',
+      cleanVal: 'Valor Limpio',
+      diffStatusResolved: 'Anomalía corregida / acotada al rango de negocio',
+      diffStatusClamped: 'Valor acotado por regla clamp',
+      diffStatusUnchanged: 'Sin variación (dentro de rango)',
+      diffStatusImputed: 'Valor ausente o texto imputado a numérico',
+      filterOnlyModified: 'Solo valores modificados / acotados',
+      filterAllPoints: 'Todos los registros muestreados',
       detectedOutliers: 'Outliers Detectados',
       outlierStats: {
         min: 'Mínimo',
@@ -573,6 +611,11 @@ export const translations: Record<Language, Translations> = {
       viewColPreview: 'View column schema',
       hideColPreview: 'Hide schema',
       schemaDetails: 'Schema Details',
+      aiMetricsTitle: 'AI Copilot Inference Metrics (Gemini)',
+      aiLatency: 'Latency',
+      aiTokens: 'Consumed Tokens',
+      aiCost: 'Estimated Cost',
+      aiModel: 'AI Model',
     },
     report: {
       title: 'Transformation Successfully Completed',
@@ -613,6 +656,20 @@ export const translations: Record<Language, Translations> = {
       selectColumn: 'Variable to analyze:',
       viewModeBoxplot: 'Box Plot Chart',
       viewModeScatter: 'Scatter Strip Chart',
+      viewModeDiff: 'Diff Comparator (Raw vs. Clean)',
+      diffSummaryTitle: 'Outlier Resolution Comparative Balance',
+      rawOutliers: 'Raw Dataset Outliers',
+      cleanOutliers: 'Remaining Clean Outliers',
+      resolvedOutliers: 'Resolved / Clamped Anomalies',
+      reductionRate: 'Reduction Rate',
+      rawVal: 'Raw Value',
+      cleanVal: 'Clean Value',
+      diffStatusResolved: 'Anomaly resolved / clamped to business range',
+      diffStatusClamped: 'Value clamped by business rule',
+      diffStatusUnchanged: 'Unchanged (within valid range)',
+      diffStatusImputed: 'Missing or non-numeric value imputed',
+      filterOnlyModified: 'Only modified / clamped values',
+      filterAllPoints: 'All sampled records',
       detectedOutliers: 'Detected Outliers',
       outlierStats: {
         min: 'Minimum',

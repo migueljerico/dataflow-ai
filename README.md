@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Pandas](https://img.shields.io/badge/pandas-2.2-150458?style=for-the-badge&logo=pandas&logoColor=white)
+![Pandas](https://img.shields.io/badge/pandas-3.0-150458?style=for-the-badge&logo=pandas&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)
@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-146%20backend%20%7C%2037%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.9.3-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-151%20backend%20%7C%2038%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.10.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -97,8 +97,9 @@ flowchart TD
 - 🔍 **Data Profiling Automático con Guardrails de Códigos:** Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y detección semántica con protección de ceros iniciales en códigos postales (`08001`), códigos INE y referencias.
 - 📊 **Data Quality Score Explicable:** Puntuación 0-100 ponderada en 5 dimensiones con desglose de anomalías y muestras de evidencia.
 - ⚙️ **Motor ETL Determinista:** Catálogo estricto de 11 operaciones registradas en `TransformationRegistry` con ejecución reproducible.
-- 👤 **Human-in-the-Loop:** Control total para revisar, editar, aprobar o rechazar cada transformación antes de ejecutar.
 - 📈 **Business Analytics & KPIs:** Cálculo en tiempo real con `pandas` de métricas de negocio por dominio (Ventas, RRHH, Contact Center).
+- ⚡ **Observabilidad y Métricas de Inferencia IA:** Diagnóstico en tiempo real de latencia (`ms`/`s`), balance de tokens (`prompt` / `completion` / `total`), cálculo de coste estimado en USD y modelo activo (`gemini-2.5-flash`) en la propuesta de planes asistidos por IA.
+- 🎯 **Comparador Interactivo de Outliers (Scatter Diff):** Diagnóstico visual antes/después entre dataset crudo y limpio en la pestaña de Outliers, con trazado de acotación/clamp, balance global de resolución de anomalías por IQR y tabla interactiva de variación.
 - 🤖 **Copiloto IA Gobernado:** Asistente con Google Gemini para proponer transformaciones óptimas, con fallback 100% determinista sin coste.
 - 🔑 **Seguridad BYOK / Local Vault:** Almacenamiento seguro y ofuscado en `localStorage` del cliente; la clave nunca se almacena en el servidor ni en logs.
 - 🛡️ **Privacidad y RGPD:** Anonimización de datos personales (`[NOMBRE]`, `[EMAIL]`, `[TELÉFONO]`) en las muestras de análisis.
@@ -176,10 +177,12 @@ Disponibles para pruebas de 1 clic en la interfaz o en [`data_samples/`](./data_
 
 ## ⚙️ Instalación y Puesta en Marcha
 
-### Requisitos Previos
+### Requisitos Previos y Dependencias Principales
 
-- **Python 3.11+**
-- **Node.js 18+** (recomendado Node 20)
+- **Python 3.11+** (compatible con Python 3.14)
+  - `pandas >= 3.0.5`, `pydantic >= 2.13.5`, `pyarrow >= 25.0.1`, `pytest >= 9.1.1`, `uvicorn >= 0.52.4`, `fastapi >= 0.115.0`.
+- **Node.js 22.22+ / 24+** (Node.js 24 configurado en CI/CD y Dockerfile multi-stage por requerimiento de `jsdom 30.0.1+`).
+  - `react 19`, `typescript 5.9`, `vite 8`, `vitest 4.1.11`, `@vitejs/plugin-react 6.1.1`, `lucide-react 1.37.0`, `@testing-library/jest-dom 7.0.1`, `jsdom 30.0.1`.
 - *(Opcional)* Docker y Docker Compose
 
 ### 1. Clonar el Repositorio
@@ -210,16 +213,16 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 ### 3. Tests Automatizados (Pytest & Vitest)
 
 ```bash
-# Backend (105 tests)
+# Backend (151 tests)
 cd backend
-pytest
+.\venv\Scripts\pytest -v
 
-# Frontend (9 tests)
+# Frontend (38 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **114 tests automatizados totales (105 backend + 9 frontend) — 100% pasando en verde** (gobernanza determinista, esquemas de transformación, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **189 tests automatizados totales (151 backend + 38 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 
 ### 4. Frontend (React + Vite + TypeScript)
