@@ -10,7 +10,7 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-156%20backend%20%7C%2039%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-163%20backend%20%7C%2041%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.12.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
@@ -159,6 +159,8 @@ flowchart TD
 - 🎯 **Comparador Interactivo de Outliers (Scatter Diff):** Diagnóstico visual antes/después entre dataset crudo y limpio en la pestaña de Outliers, con trazado de acotación/clamp, balance global de resolución de anomalías por IQR y tabla interactiva de variación.
 - 📊 **Exportación de Modelos Semánticos Power BI:** Descarga directa de definiciones TMDL (`.tmdl`), scripts DAX (`.dax`) y proyectos Power BI Developer Mode (`.pbip` en ZIP), además de la guía clásica de medidas DAX y Power Query M.
 - 📗 **Fórmulas Dinámicas Adaptativas para Excel:** Generación multi-categoría (Auditoría Outliers IQR, KPIs & Estadísticas, Participación % y Condicionales) compatible con la configuración regional en español e inglés.
+- 🌐 **Caché de Inferencia Distribuida (Redis / Cloud Memorystore):** Arquitectura de dos niveles (L1 memoria LRU + L2 Redis compartida) que multiplica la tasa de aciertos entre instancias de Cloud Run, con degradación elegante a memoria local si Redis no está disponible.
+- ⭐ **Visualizador de Modelo Estrella (Star Schema):** Diagrama interactivo que previsualiza la estructura semántica antes de cargar el archivo en Power BI: tabla de hechos central, dimensiones de atributo y calendario en órbita, relaciones muchos-a-uno inspeccionables y DAX de tablas calculadas listo para pegar.
 - 🤖 **Copiloto IA Gobernado:** Asistente con Google Gemini para proponer transformaciones óptimas, con fallback 100% determinista sin coste.
 - 🔑 **Seguridad BYOK / Local Vault:** Almacenamiento seguro y ofuscado en `localStorage` del cliente; la clave nunca se almacena en el servidor ni en logs.
 - 🛡️ **Privacidad y RGPD:** Anonimización de datos personales (`[NOMBRE]`, `[EMAIL]`, `[TELÉFONO]`) en las muestras de análisis.
@@ -272,16 +274,16 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 ### 3. Tests Automatizados (Pytest & Vitest)
 
 ```bash
-# Backend (156 tests)
+# Backend (163 tests)
 cd backend
 .\venv\Scripts\pytest -v
 
-# Frontend (39 tests)
+# Frontend (41 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **198 tests automatizados totales (156 backend + 39 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **206 tests automatizados totales (163 backend + 41 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -306,7 +308,7 @@ docker compose up --build
 ```text
 dataflow-ai/
 ├── .github/workflows/
-│   └── ci.yml                 # CI: Pytest backend (156 tests) + Build React Vite
+│   └── ci.yml                 # CI: Pytest backend (163 tests) + Build React Vite
 ├── backend/
 │   ├── app/
 │   │   ├── ai_providers/      # Gemini Provider (BYOK), Mock determinista y caché de inferencia
@@ -316,7 +318,7 @@ dataflow-ai/
 │   │   ├── services/          # Profiler, Quality, ETL determinista, Open Data (CKAN), Analytics, TMDL/PBIP y caché de inferencia
 │   │   ├── transformations/   # Catálogo TransformationRegistry
 │   │   └── main.py            # FastAPI app, middleware CORS y servido SPA
-│   ├── tests/                 # Suite de 156 pruebas automatizadas
+│   ├── tests/                 # Suite de 163 pruebas automatizadas
 │   ├── Dockerfile             # Imagen de backend
 │   └── requirements.txt       # Dependencias Python
 ├── frontend/
@@ -343,7 +345,7 @@ dataflow-ai/
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
 - **Documentación:** Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por **Muse Spark 1.2 Contributor** — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026.
-- **Última mejora de documentación (v1.12.0):** Rediseño integral del README, índice navegable, galería de vistas previas (`docs/capturas/`) y consistencia de métricas realizados con **GLM-5.3-Flash** a través de **[ZCode](https://z.ai)**, la app de desarrollo asistido por IA desde la que se gestionó esta release.
+- **Última mejora (v1.13.0):** Visualizador de modelo estrella (Star Schema), caché de inferencia distribuida Redis/Memorystore, rediseño del README con índice navegable y galería de vistas previas (`docs/capturas/`), desarrollados con **GLM-5.3-Flash** a través de **[ZCode](https://z.ai)**, la app de desarrollo asistido por IA desde la que se gestionó esta release.
 
 ---
 

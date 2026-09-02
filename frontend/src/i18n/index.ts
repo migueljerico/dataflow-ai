@@ -257,6 +257,19 @@ export interface Translations {
     excelCategoryKpis?: string;
     excelCategoryRelative?: string;
     excelCategoryConditional?: string;
+    tabStarSchema?: string;
+    starSchemaDesc?: string;
+    starFactTable?: string;
+    starDimensions?: string;
+    starMeasures?: string;
+    starRelationships?: string;
+    starKeyColumn?: string;
+    starDistinctValues?: string;
+    starSuggestedAttributes?: string;
+    starSelectDimension?: string;
+    starRows?: string;
+    starDaxTablesLabel?: string;
+    starClickHint?: string;
   };
   apiKeyModal: {
     title: string;
@@ -505,6 +518,19 @@ export const translations: Record<Language, Translations> = {
       excelCategoryKpis: 'KPIs & Estadísticas',
       excelCategoryRelative: 'Participación % Total',
       excelCategoryConditional: 'Validación Condicional',
+      tabStarSchema: 'Esquema Estrella',
+      starSchemaDesc: 'Vista previa interactiva del modelo semántico antes de cargarlo en Power BI: tabla de hechos central, dimensiones inferidas y relaciones muchos-a-uno con su DAX listo para pegar.',
+      starFactTable: 'Tabla de Hechos',
+      starDimensions: 'Dimensiones',
+      starMeasures: 'Medidas',
+      starRelationships: 'Relaciones',
+      starKeyColumn: 'Columna Clave',
+      starDistinctValues: 'Valores Distintos',
+      starSuggestedAttributes: 'Atributos Sugeridos',
+      starSelectDimension: 'Selecciona una dimensión del diagrama para inspeccionar su clave, cardinalidad y DAX de creación.',
+      starRows: 'filas',
+      starDaxTablesLabel: 'Tablas Calculadas (DAX)',
+      starClickHint: 'Haz clic en una dimensión para ver su detalle',
     },
     apiKeyModal: {
       title: 'Configuración de Google Gemini API Key',
@@ -752,6 +778,19 @@ export const translations: Record<Language, Translations> = {
       excelCategoryKpis: 'KPIs & Summary',
       excelCategoryRelative: 'Relative % of Total',
       excelCategoryConditional: 'Conditional Checks',
+      tabStarSchema: 'Star Schema',
+      starSchemaDesc: 'Interactive preview of the semantic model before loading it into Power BI: central fact table, inferred dimensions and many-to-one relationships with ready-to-paste DAX.',
+      starFactTable: 'Fact Table',
+      starDimensions: 'Dimensions',
+      starMeasures: 'Measures',
+      starRelationships: 'Relationships',
+      starKeyColumn: 'Key Column',
+      starDistinctValues: 'Distinct Values',
+      starSuggestedAttributes: 'Suggested Attributes',
+      starSelectDimension: 'Select a dimension from the diagram to inspect its key, cardinality and creation DAX.',
+      starRows: 'rows',
+      starDaxTablesLabel: 'Calculated Tables (DAX)',
+      starClickHint: 'Click a dimension to inspect its details',
     },
     apiKeyModal: {
       title: 'Google Gemini API Key Configuration',

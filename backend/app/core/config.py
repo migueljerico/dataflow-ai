@@ -6,7 +6,7 @@ from typing import List, Optional
 
 class Settings:
     PROJECT_NAME: str = "DataFlow AI"
-    VERSION: str = "1.12.0"
+    VERSION: str = "1.13.0"
     API_V1_STR: str = "/api/v1"
 
     # File limits
@@ -17,6 +17,14 @@ class Settings:
     ALLOWED_EXTENSIONS: set = {".csv", ".xlsx"}
     MAX_RECOMMENDED_ROWS: int = 100_000
     MAX_RECOMMENDED_COLS: int = 50
+
+    # Cache de inferencia distribuida (L2 Redis / Cloud Memorystore).
+    # Con INFERENCE_CACHE_BACKEND=memory (defecto) se usa solo la capa L1 local.
+    # Con "redis" se activa la capa L2 compartida entre instancias de Cloud Run,
+    # con degradacion elegante a memoria si Redis no esta disponible.
+    INFERENCE_CACHE_BACKEND: str = os.getenv("INFERENCE_CACHE_BACKEND", "memory").lower()
+    REDIS_URL: Optional[str] = os.getenv("REDIS_URL", None)
+    REDIS_SOCKET_TIMEOUT_SECONDS: float = float(os.getenv("REDIS_SOCKET_TIMEOUT_SECONDS", "2.0"))
 
     # Storage paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent

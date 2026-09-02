@@ -28,6 +28,9 @@ from app.models.analytics import (
     OutlierDiffSummary,
     OutlierScatterPoint,
     OutlierVisualization,
+    StarSchemaDiagram,
+    StarSchemaDimension,
+    StarSchemaRelationship,
 )
 from app.models.etl import ExecutionResult
 from app.services.dataset_service import DatasetService
@@ -1262,7 +1265,15 @@ class AnalyticsService:
                 )
             )
 
-        # 5. Generación de Definiciones TMDL y Script DAX
+        # 5. Inferencia del Modelo Estrella (Star Schema) para vista previa en Power BI
+        star_schema = AnalyticsService._build_star_schema(
+            table_name=table_name,
+            columns_info=columns_info,
+            df=df,
+            row_count=row_count,
+        )
+
+        # 6. Generación de Definiciones TMDL y Script DAX
         tmdl_table = AnalyticsService._build_tmdl_table_definition(
             table_name=table_name,
             clean_fn=clean_fn,
@@ -1270,7 +1281,7 @@ class AnalyticsService:
             dax_measures=dax_measures,
             power_query_m_csv=power_query_m_csv,
         )
-        tmdl_model = AnalyticsService._build_tmdl_model_definition(table_name=table_name)
+        tmdl_model = AnalyticsService._build_tmdl_model_definition(table_name=table_name, star_schema=star_schema)
         dax_script = AnalyticsService._build_dax_script(
             table_name=table_name,
             row_count=row_count,
@@ -1290,6 +1301,133 @@ class AnalyticsService:
             tmdl_table_definition=tmdl_table,
             tmdl_model_definition=tmdl_model,
             dax_script=dax_script,
+            star_schema=star_schema,
+        )
+
+    @staticmethod
+    def _sanitize_model_name(raw: str) -> str:
+        """Normaliza un nombre de columna al identificador seguro de modelo Power BI."""
+        sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", raw).strip("_")
+        if not sanitized or sanitized[0].isdigit():
+            sanitized = f"C_{sanitized}"
+        return "_".join(word.capitalize() for word in sanitized.split("_"))
+
+    @staticmethod
+    def _build_star_schema(
+        table_name: str,
+        columns_info: List[IntegrationColumn],
+        df: pd.DataFrame,
+        row_count: int,
+    ) -> StarSchemaDiagram:
+        """
+        Infiere un modelo estrella (star schema) a partir de los roles semánticos del
+        dataset limpio: tabla de hechos central, dimensiones de atributo y calendario,
+        con relaciones many-to-one, DAX de tablas calculadas y fragmento TMDL de
+        relaciones listo para Power BI Desktop / Developer Mode.
+        """
+        measures = [c.name for c in columns_info if c.semantic_role == "numeric"]
+        id_or_cat_cols = [c for c in columns_info if c.semantic_role in ("id", "category")]
+        date_cols = [c.name for c in columns_info if c.semantic_role == "date"]
+
+        dimensions: List[StarSchemaDimension] = []
+        relationships: List[StarSchemaRelationship] = []
+
+        # Dimensión Calendario: una sola por dataset, derivada de la primera columna de fecha
+        if date_cols:
+            date_col = date_cols[0]
+            calendar_dax = (
+                f"Dim_Fecha = \n"
+                f"ADDCOLUMNS(\n"
+                f"    CALENDAR(MIN('{table_name}'[{date_col}]), MAX('{table_name}'[{date_col}])),\n"
+                f'    "Año", YEAR([Date]),\n'
+                f'    "Trimestre", "T" & QUARTER([Date]),\n'
+                f'    "Mes", FORMAT([Date], "MMM"),\n'
+                f'    "Número de Mes", MONTH([Date]),\n'
+                f'    "Día", DAY([Date]),\n'
+                f'    "Día de Semana", FORMAT([Date], "ddd")\n'
+                f")"
+            )
+            dimensions.append(
+                StarSchemaDimension(
+                    name="Dim_Fecha",
+                    kind="calendar",
+                    source_column=date_col,
+                    key_column="Date",
+                    distinct_count=0,
+                    suggested_attributes=["Año", "Trimestre", "Mes", "Número de Mes", "Día", "Día de Semana"],
+                    dax_definition=calendar_dax,
+                )
+            )
+            relationships.append(
+                StarSchemaRelationship(
+                    from_table=table_name,
+                    from_column=date_col,
+                    to_table="Dim_Fecha",
+                    to_column="Date",
+                )
+            )
+
+        # Dimensiones de atributo: columnas id/categoría con cardinalidad razonable
+        max_attribute_dims = 6 - len(dimensions)
+        added = 0
+        for col in id_or_cat_cols:
+            if added >= max_attribute_dims:
+                break
+            distinct = int(df[col.name].nunique(dropna=True)) if col.name in df.columns else 0
+            if distinct < 2 or distinct > 10000:
+                continue
+            dim_name = f"Dim_{AnalyticsService._sanitize_model_name(col.name)}"
+            if any(d.name == dim_name for d in dimensions):
+                continue
+            dimensions.append(
+                StarSchemaDimension(
+                    name=dim_name,
+                    kind="attribute",
+                    source_column=col.name,
+                    key_column=col.name,
+                    distinct_count=distinct,
+                    suggested_attributes=[col.name],
+                    dax_definition=f"{dim_name} = DISTINCT('{table_name}'[{col.name}])",
+                )
+            )
+            relationships.append(
+                StarSchemaRelationship(
+                    from_table=table_name,
+                    from_column=col.name,
+                    to_table=dim_name,
+                    to_column=col.name,
+                )
+            )
+            added += 1
+
+        # Script DAX consolidado de tablas calculadas
+        dax_blocks: List[str] = []
+        for dim in dimensions:
+            if dim.dax_definition:
+                header = f"// Tabla calculada: {dim.name}" + (" (Calendario)" if dim.kind == "calendar" else "")
+                dax_blocks.append(f"{header}\n{dim.dax_definition}")
+        dax_calculated_tables = "\n\n".join(dax_blocks)
+
+        # Fragmento TMDL de relaciones para el modelo semántico
+        tmdl_lines: List[str] = []
+        for rel in relationships:
+            rel_name = AnalyticsService._sanitize_model_name(f"{rel.from_table}_{rel.from_column}_{rel.to_table}")
+            tmdl_lines.append(
+                f"relationship {rel_name}\n"
+                f"\tfromColumn: {rel.from_table}.{rel.from_column}\n"
+                f"\ttoColumn: {rel.to_table}.{rel.to_column}"
+            )
+        tmdl_relationships = "\n\n".join(tmdl_lines) if tmdl_lines else None
+
+        return StarSchemaDiagram(
+            fact_table=table_name,
+            fact_rows=row_count,
+            measures=measures,
+            dimension_count=len(dimensions),
+            dimensions=dimensions,
+            relationships=relationships,
+            dax_calculated_tables=dax_calculated_tables,
+            tmdl_relationships=tmdl_relationships,
         )
 
     @staticmethod
@@ -1366,14 +1504,37 @@ class AnalyticsService:
         return "\n".join(lines)
 
     @staticmethod
-    def _build_tmdl_model_definition(table_name: str) -> str:
-        """Genera el archivo model.tmdl para el proyecto de modelo semántico."""
-        return (
-            "model Model\n"
-            "\tculture: es-ES\n"
-            "\tdefaultPowerBIDataSourceVersion: powerBI_V3\n\n"
-            f"ref table '{table_name}'\n"
-        )
+    def _build_tmdl_model_definition(table_name: str, star_schema: Optional[StarSchemaDiagram] = None) -> str:
+        """Genera el archivo model.tmdl para el proyecto de modelo semántico,
+        incluyendo referencias a las tablas de dimensión y sus relaciones many-to-one
+        cuando hay un modelo estrella inferido."""
+
+        def _tmdl_rel_name(from_table: str, from_column: str, to_table: str) -> str:
+            return AnalyticsService._sanitize_model_name(f"{from_table}_{from_column}_{to_table}")
+
+        lines: List[str] = [
+            "model Model",
+            "\tculture: es-ES",
+            "\tdefaultPowerBIDataSourceVersion: powerBI_V3",
+        ]
+
+        if star_schema and star_schema.dimensions:
+            lines.append("")
+            lines.append(f"ref table '{table_name}'")
+            for dim in star_schema.dimensions:
+                lines.append(f"ref table '{dim.name}'")
+        else:
+            lines.append("")
+            lines.append(f"ref table '{table_name}'")
+
+        if star_schema and star_schema.relationships:
+            lines.append("")
+            for rel in star_schema.relationships:
+                lines.append(f"relationship {_tmdl_rel_name(rel.from_table, rel.from_column, rel.to_table)}")
+                lines.append(f"\tfromColumn: {rel.from_table}.{rel.from_column}")
+                lines.append(f"\ttoColumn: {rel.to_table}.{rel.to_column}")
+
+        return "\n".join(lines) + "\n"
 
     @staticmethod
     def _build_dax_script(table_name: str, row_count: int, dax_measures: List[DaxMeasureItem]) -> str:

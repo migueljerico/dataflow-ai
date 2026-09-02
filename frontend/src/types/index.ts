@@ -287,6 +287,37 @@ export interface ExcelFormulaItem {
   target_cell?: string;
 }
 
+export interface StarSchemaDimension {
+  name: string;
+  kind: string; // 'attribute' | 'calendar'
+  source_column: string;
+  key_column: string;
+  distinct_count: number;
+  suggested_attributes: string[];
+  dax_definition?: string;
+}
+
+export interface StarSchemaRelationship {
+  from_table: string;
+  from_column: string;
+  to_table: string;
+  to_column: string;
+  cardinality: string; // 'many-to-one'
+  cross_filter: string;
+  is_active: boolean;
+}
+
+export interface StarSchemaDiagram {
+  fact_table: string;
+  fact_rows: number;
+  measures: string[];
+  dimension_count: number;
+  dimensions: StarSchemaDimension[];
+  relationships: StarSchemaRelationship[];
+  dax_calculated_tables: string;
+  tmdl_relationships?: string;
+}
+
 export interface IntegrationGuide {
   table_name: string;
   clean_filename: string;
@@ -300,6 +331,7 @@ export interface IntegrationGuide {
   tmdl_table_definition?: string;
   tmdl_model_definition?: string;
   dax_script?: string;
+  star_schema?: StarSchemaDiagram;
 }
 
 export interface ExecutiveAnalyticsReport {

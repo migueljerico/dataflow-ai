@@ -347,6 +347,130 @@ describe('BusinessInsights component', () => {
     expect(screen.getAllByText(/Total Suma — Ventas/i).length).toBeGreaterThanOrEqual(1);
   });
 
+  it('renders interactive Star Schema preview with dimensions, relationships and DAX when available', async () => {
+    const reportWithStarSchema: ExecutiveAnalyticsReport = {
+      ...mockReport,
+      integration_guide: {
+        table_name: 'Ventas_Comerciales',
+        clean_filename: 'Ventas_Comerciales.csv',
+        row_count: 1500,
+        columns: [
+          { name: 'Fecha', python_dtype: 'datetime64[ns]', power_bi_m_type: 'type datetime', semantic_role: 'date' },
+          { name: 'Segmento', python_dtype: 'object', power_bi_m_type: 'type text', semantic_role: 'category' },
+          { name: 'Ventas', python_dtype: 'float64', power_bi_m_type: 'type number', semantic_role: 'numeric' },
+        ],
+        power_query_m_csv: 'let\n    Source = Csv.Document(...)\nin\n    #"Changed Type"',
+        dax_measures: [],
+        excel_formulas: [],
+        star_schema: {
+          fact_table: 'Ventas_Comerciales',
+          fact_rows: 1500,
+          measures: ['Ventas'],
+          dimension_count: 3,
+          dimensions: [
+            {
+              name: 'Dim_Fecha',
+              kind: 'calendar',
+              source_column: 'Fecha',
+              key_column: 'Date',
+              distinct_count: 0,
+              suggested_attributes: ['Año', 'Mes', 'Trimestre'],
+              dax_definition: "Dim_Fecha = \nADDCOLUMNS(\n    CALENDAR(MIN('Ventas_Comerciales'[Fecha]), MAX('Ventas_Comerciales'[Fecha])),\n    \"Año\", YEAR([Date])\n)",
+            },
+            {
+              name: 'Dim_Segmento',
+              kind: 'attribute',
+              source_column: 'Segmento',
+              key_column: 'Segmento',
+              distinct_count: 5,
+              suggested_attributes: ['Segmento'],
+              dax_definition: "Dim_Segmento = DISTINCT('Ventas_Comerciales'[Segmento])",
+            },
+            {
+              name: 'Dim_Tienda',
+              kind: 'attribute',
+              source_column: 'Tienda',
+              key_column: 'Tienda',
+              distinct_count: 12,
+              suggested_attributes: ['Tienda'],
+              dax_definition: "Dim_Tienda = DISTINCT('Ventas_Comerciales'[Tienda])",
+            },
+          ],
+          relationships: [
+            { from_table: 'Ventas_Comerciales', from_column: 'Fecha', to_table: 'Dim_Fecha', to_column: 'Date', cardinality: 'many-to-one', cross_filter: 'single', is_active: true },
+            { from_table: 'Ventas_Comerciales', from_column: 'Segmento', to_table: 'Dim_Segmento', to_column: 'Segmento', cardinality: 'many-to-one', cross_filter: 'single', is_active: true },
+          ],
+          dax_calculated_tables: "Dim_Fecha = \nADDCOLUMNS(\n    CALENDAR(...)\n)\n\nDim_Segmento = DISTINCT('Ventas_Comerciales'[Segmento])",
+          tmdl_relationships: 'relationship Ventas_Comerciales_Fecha_Dim_Fecha\n\tfromColumn: Ventas_Comerciales.Fecha\n\ttoColumn: Dim_Fecha.Date',
+        },
+      },
+    };
+
+    vi.spyOn(api, 'getBusinessAnalytics').mockResolvedValue(reportWithStarSchema);
+
+    render(
+      <LanguageProvider>
+        <BusinessInsights runId="run-star-123" />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Facturación Total Estimada')).toBeInTheDocument();
+    });
+
+    const integrationTab = screen.getByRole('tab', { name: /Integración Power BI \/ Excel/i });
+    fireEvent.click(integrationTab);
+
+    // El botón de la vista Esquema Estrella aparece con el número de dimensiones
+    const starBtn = screen.getByTestId('star-schema-view-btn');
+    expect(starBtn).toHaveTextContent(/Esquema Estrella \(3\)/i);
+    fireEvent.click(starBtn);
+
+    // El diagrama muestra la tabla de hechos, las 3 dimensiones y su DAX consolidado
+    expect(screen.getByTestId('star-schema-visual')).toBeInTheDocument();
+    expect(screen.getByText(/Esquema Estrella — Ventas_Comerciales/i)).toBeInTheDocument();
+    expect(screen.getByTestId('star-dim-Dim_Fecha')).toBeInTheDocument();
+    expect(screen.getByTestId('star-dim-Dim_Segmento')).toBeInTheDocument();
+    expect(screen.getByTestId('star-dim-Dim_Tienda')).toBeInTheDocument();
+    expect(screen.getByText(/Dim_Segmento = DISTINCT\('Ventas_Comerciales'\[Segmento\]\)/i)).toBeInTheDocument();
+
+    // Al hacer clic en una dimensión se inspecciona su clave y su DAX de creación
+    fireEvent.click(screen.getByTestId('star-dim-Dim_Segmento'));
+    expect(screen.getAllByText(/Dim_Segmento/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Atributos Sugeridos:/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/DISTINCT\('Ventas_Comerciales'\[Segmento\]\)/i).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does not show the Star Schema view button when the guide has no star schema', async () => {
+    const reportWithGuide: ExecutiveAnalyticsReport = {
+      ...mockReport,
+      integration_guide: {
+        table_name: 'Ventas_Comerciales',
+        clean_filename: 'Ventas_Comerciales.csv',
+        row_count: 1500,
+        columns: [],
+        power_query_m_csv: 'let\n    Source = Csv.Document(...)\nin\n    #"Changed Type"',
+        dax_measures: [],
+        excel_formulas: [],
+      },
+    };
+
+    vi.spyOn(api, 'getBusinessAnalytics').mockResolvedValue(reportWithGuide);
+
+    render(
+      <LanguageProvider>
+        <BusinessInsights runId="run-no-star" />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Facturación Total Estimada')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: /Integración Power BI \/ Excel/i }));
+    expect(screen.queryByTestId('star-schema-view-btn')).not.toBeInTheDocument();
+  });
+
   it('does not crash and renders defaults when report.integration_guide is undefined', async () => {
     const reportWithoutGuide: ExecutiveAnalyticsReport = {
       ...mockReport,

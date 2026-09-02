@@ -16,6 +16,8 @@ import {
   Check,
   Layers,
   ArrowLeftRight,
+  Star,
+  Table2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
@@ -27,6 +29,8 @@ import {
   IntegrationColumn,
   DaxMeasureItem,
   ExcelFormulaItem,
+  StarSchemaDiagram,
+  StarSchemaDimension,
 } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -44,6 +48,302 @@ const CLUSTER_COLORS = [
   '#f97316', // Naranja
   '#14b8a6', // Teal
 ];
+
+const STAR_DIM_STYLES: Record<string, { border: string; fill: string; fillSelected: string; label: string }> = {
+  calendar: { border: '#10b981', fill: 'rgba(16, 185, 129, 0.14)', fillSelected: 'rgba(16, 185, 129, 0.32)', label: 'Calendario' },
+  attribute: { border: '#3b82f6', fill: 'rgba(59, 130, 246, 0.14)', fillSelected: 'rgba(59, 130, 246, 0.32)', label: 'Atributo' },
+};
+
+const STAR_TEXT_MAIN = '#e2e8f0';
+const STAR_TEXT_MUTED = '#94a3b8';
+const STAR_LINE = '#475569';
+
+const truncateModelText = (value: string, max: number): string =>
+  value.length > max ? `${value.slice(0, max - 1)}…` : value;
+
+/**
+ * Diagrama interactivo del modelo estrella (Star Schema) para previsualizar la
+ * estructura semántica antes de cargar el archivo en Power BI: tabla de hechos
+ * central, dimensiones en órbita y relaciones muchos-a-uno con su DAX de creación.
+ */
+const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) => {
+  const { t } = useLanguage();
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [copiedDax, setCopiedDax] = useState<string | null>(null);
+
+  const W = 860;
+  const H = 520;
+  const cx = W / 2;
+  const cy = H / 2;
+  const factW = 250;
+  const factH = 140;
+  const dimW = 168;
+  const dimH = 72;
+  const rx = 320;
+  const ry = 195;
+
+  const total = Math.max(schema.dimensions.length, 1);
+  const positions = schema.dimensions.map((dim, idx) => {
+    const angle = ((-90 + (360 / total) * idx) * Math.PI) / 180;
+    return { dim, x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) };
+  });
+
+  const selectedDim: StarSchemaDimension | null =
+    schema.dimensions.find((d) => d.name === selectedName) || null;
+
+  const copyDax = (label: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedDax(label);
+    setTimeout(() => setCopiedDax(null), 2000);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }} data-testid="star-schema-visual">
+      {/* Diagrama SVG: hechos al centro, dimensiones alrededor, relaciones *:1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px', alignItems: 'start' }}>
+        <div
+          style={{
+            backgroundColor: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '10px',
+            padding: '10px',
+          }}
+        >
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label="Diagrama de modelo estrella">
+            {/* Relaciones (debajo de las cajas) */}
+            {positions.map(({ dim, x, y }) => (
+              <g key={`rel-${dim.name}`}>
+                <line x1={cx} y1={cy} x2={x} y2={y} stroke={STAR_LINE} strokeWidth={1.5} strokeDasharray="5 4" />
+                <text
+                  x={cx + (x - cx) * 0.22}
+                  y={cy + (y - cy) * 0.22 - 6}
+                  fill="#f59e0b"
+                  fontSize={15}
+                  fontWeight={700}
+                  textAnchor="middle"
+                >
+                  *
+                </text>
+                <text
+                  x={cx + (x - cx) * 0.82}
+                  y={cy + (y - cy) * 0.82 - 6}
+                  fill="#10b981"
+                  fontSize={15}
+                  fontWeight={700}
+                  textAnchor="middle"
+                >
+                  1
+                </text>
+              </g>
+            ))}
+
+            {/* Tabla de Hechos (centro) */}
+            <g>
+              <rect x={cx - factW / 2} y={cy - factH / 2} width={factW} height={factH} rx={12} fill="rgba(245, 158, 11, 0.14)" stroke="#f59e0b" strokeWidth={2.5} />
+              <text x={cx} y={cy - factH / 2 + 26} fill="#f59e0b" fontSize={15} fontWeight={700} textAnchor="middle">
+                {truncateModelText(schema.fact_table, 24)}
+              </text>
+              <text x={cx} y={cy - factH / 2 + 44} fill={STAR_TEXT_MUTED} fontSize={11} textAnchor="middle">
+                {t.powerBiExcel?.starFactTable || 'Tabla de Hechos'} · {schema.fact_rows.toLocaleString()} {t.powerBiExcel?.starRows || 'filas'}
+              </text>
+              <line x1={cx - factW / 2 + 16} y1={cy - factH / 2 + 56} x2={cx + factW / 2 - 16} y2={cy - factH / 2 + 56} stroke={STAR_LINE} strokeWidth={1} />
+              <text x={cx} y={cy - factH / 2 + 76} fill={STAR_TEXT_MAIN} fontSize={11} fontWeight={600} textAnchor="middle">
+                {t.powerBiExcel?.starMeasures || 'Medidas'}: {schema.measures.length}
+              </text>
+              {schema.measures.slice(0, 2).map((m, idx) => (
+                <text key={m} x={cx} y={cy - factH / 2 + 94 + idx * 16} fill={STAR_TEXT_MUTED} fontSize={10} textAnchor="middle">
+                  {truncateModelText(m, 26)}
+                </text>
+              ))}
+              {schema.measures.length > 2 && (
+                <text x={cx} y={cy - factH / 2 + 94 + 2 * 16} fill={STAR_TEXT_MUTED} fontSize={10} textAnchor="middle">
+                  +{schema.measures.length - 2} más
+                </text>
+              )}
+            </g>
+
+            {/* Dimensiones en órbita */}
+            {positions.map(({ dim, x, y }) => {
+              const style = STAR_DIM_STYLES[dim.kind] || STAR_DIM_STYLES.attribute;
+              const isSelected = selectedName === dim.name;
+              return (
+                <g
+                  key={dim.name}
+                  onClick={() => setSelectedName(isSelected ? null : dim.name)}
+                  style={{ cursor: 'pointer' }}
+                  data-testid={`star-dim-${dim.name}`}
+                >
+                  <rect
+                    x={x - dimW / 2}
+                    y={y - dimH / 2}
+                    width={dimW}
+                    height={dimH}
+                    rx={10}
+                    fill={isSelected ? style.fillSelected : style.fill}
+                    stroke={style.border}
+                    strokeWidth={isSelected ? 3 : 1.8}
+                  />
+                  <text x={x} y={y - dimH / 2 + 22} fill={style.border} fontSize={12.5} fontWeight={700} textAnchor="middle">
+                    {truncateModelText(dim.name, 20)}
+                  </text>
+                  <text x={x} y={y - dimH / 2 + 40} fill={STAR_TEXT_MUTED} fontSize={10} textAnchor="middle">
+                    {truncateModelText(dim.source_column, 22)}
+                  </text>
+                  <text x={x} y={y - dimH / 2 + 58} fill={STAR_TEXT_MAIN} fontSize={10} textAnchor="middle">
+                    {dim.kind === 'calendar'
+                      ? style.label
+                      : `${dim.distinct_count.toLocaleString()} ${t.powerBiExcel?.starDistinctValues || 'valores distintos'}`}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center', fontSize: '0.725rem', color: 'var(--text-muted)', padding: '6px 4px 2px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.14)', display: 'inline-block' }} />
+              {t.powerBiExcel?.starFactTable || 'Tabla de Hechos'}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.14)', display: 'inline-block' }} />
+              {t.powerBiExcel?.starDimensions || 'Dimensiones'} (atributo)
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #10b981', backgroundColor: 'rgba(16, 185, 129, 0.14)', display: 'inline-block' }} />
+              Calendario
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <strong style={{ color: '#f59e0b' }}>*</strong> → <strong style={{ color: '#10b981' }}>1</strong> many-to-one
+            </span>
+          </div>
+        </div>
+
+        {/* Panel de detalle de la dimensión seleccionada */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '10px',
+            padding: '14px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            minHeight: '220px',
+          }}
+        >
+          {selectedDim ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                <strong style={{ color: (STAR_DIM_STYLES[selectedDim.kind] || STAR_DIM_STYLES.attribute).border, fontSize: '0.9rem' }}>
+                  {selectedDim.name}
+                </strong>
+                <span className="badge badge-blue">{(STAR_DIM_STYLES[selectedDim.kind] || STAR_DIM_STYLES.attribute).label}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.775rem' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>{t.powerBiExcel?.starKeyColumn || 'Columna Clave'}:</span>{' '}
+                  <code style={{ color: 'var(--primary)' }}>{selectedDim.key_column}</code>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>{t.powerBiExcel?.starDistinctValues || 'Valores Distintos'}:</span>{' '}
+                  <strong>{selectedDim.kind === 'calendar' ? '—' : selectedDim.distinct_count.toLocaleString()}</strong>
+                </div>
+              </div>
+              <div style={{ fontSize: '0.775rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{t.powerBiExcel?.starSuggestedAttributes || 'Atributos Sugeridos'}:</span>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '5px' }}>
+                  {selectedDim.suggested_attributes.map((attr) => (
+                    <span key={attr} className="badge badge-blue" style={{ fontSize: '0.675rem' }}>{attr}</span>
+                  ))}
+                </div>
+              </div>
+              {selectedDim.dax_definition && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.725rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                      {t.powerBiExcel?.starDaxTablesLabel || 'Tablas Calculadas (DAX)'}:
+                    </span>
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '3px 8px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => copyDax(selectedDim.name, selectedDim.dax_definition || '')}
+                    >
+                      {copiedDax === selectedDim.name ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
+                      {copiedDax === selectedDim.name ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+                    </button>
+                  </div>
+                  <pre
+                    style={{
+                      backgroundColor: 'var(--bg-main)',
+                      border: '1px solid var(--border-color)',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--primary)',
+                      overflowX: 'auto',
+                      margin: 0,
+                      maxHeight: '170px',
+                      whiteSpace: 'pre',
+                    }}
+                  >
+                    {selectedDim.dax_definition}
+                  </pre>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+              <Star size={28} style={{ color: '#f59e0b' }} />
+              <p style={{ margin: 0 }}>{t.powerBiExcel?.starSelectDimension || 'Selecciona una dimensión del diagrama para ver su detalle.'}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Script consolidado de todas las tablas calculadas */}
+      {schema.dax_calculated_tables && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Table2 size={14} style={{ color: '#10b981' }} />
+              {t.powerBiExcel?.starDaxTablesLabel || 'Tablas Calculadas (DAX)'} ({schema.dimension_count})
+            </span>
+            <button
+              className="btn btn-outline"
+              style={{ padding: '3px 8px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+              onClick={() => copyDax('__all__', schema.dax_calculated_tables)}
+            >
+              {copiedDax === '__all__' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
+              {copiedDax === '__all__' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
+            </button>
+          </div>
+          <pre
+            style={{
+              backgroundColor: 'var(--bg-main)',
+              border: '1px solid var(--border-color)',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              fontSize: '0.725rem',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--primary)',
+              overflowX: 'auto',
+              margin: 0,
+              maxHeight: '260px',
+              whiteSpace: 'pre',
+            }}
+          >
+            {schema.dax_calculated_tables}
+          </pre>
+          {schema.tmdl_relationships && (
+            <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>
+              Las relaciones <strong>many-to-one</strong> ya vienen incluidas en el archivo <code>model.tmdl</code> del proyecto PBIP exportable de esta misma tarjeta: al abrirlo en Power BI Desktop, el modelo estrella se reconstruye solo.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const BusinessInsights: React.FC<Props> = ({ runId }) => {
   const { t, language } = useLanguage();
@@ -83,7 +383,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
 
   // Estados de Integración Power BI / Excel adaptativa
   const [selectedPqFormat, setSelectedPqFormat] = useState<'csv' | 'parquet'>('csv');
-  const [powerBiCodeView, setPowerBiCodeView] = useState<'dax' | 'powerquery' | 'tmdl'>('dax');
+  const [powerBiCodeView, setPowerBiCodeView] = useState<'dax' | 'powerquery' | 'tmdl' | 'star'>('dax');
   const [selectedExcelCategory, setSelectedExcelCategory] = useState<string>('all');
   const [selectedExcelMeasureIndex, setSelectedExcelMeasureIndex] = useState<number>(0);
 
@@ -1586,6 +1886,16 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                   >
                     {t.powerBiExcel?.tabTmdl || 'Modelo TMDL'}
                   </button>
+                  {guide?.star_schema && guide.star_schema.dimensions.length > 0 && (
+                    <button
+                      className={`btn ${powerBiCodeView === 'star' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.725rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => setPowerBiCodeView('star')}
+                      data-testid="star-schema-view-btn"
+                    >
+                      <Star size={12} /> {t.powerBiExcel?.tabStarSchema || 'Esquema Estrella'} ({guide.star_schema.dimension_count})
+                    </button>
+                  )}
                 </div>
 
                 {/* VISTA 1: Medidas DAX Adaptadas */}
@@ -1804,6 +2114,14 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                     </pre>
                   </div>
                 )}
+
+                {/* VISTA 4: Esquema Estrella (diagrama a ancho completo bajo la rejilla) */}
+                {powerBiCodeView === 'star' && guide?.star_schema && (
+                  <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Star size={14} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                    {t.powerBiExcel?.starSchemaDesc || 'Vista previa interactiva del modelo semántico antes de cargarlo en Power BI.'}
+                  </p>
+                )}
               </div>
 
               {/* Tarjeta Microsoft Excel (Multi-Categoría Dinámica) */}
@@ -2001,6 +2319,35 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                 </div>
               </div>
             </div>
+
+            {/* Diagrama interactivo del Modelo Estrella (a ancho completo) */}
+            {powerBiCodeView === 'star' && guide?.star_schema && guide.star_schema.dimensions.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                    <Network size={16} /> {t.powerBiExcel?.tabStarSchema || 'Esquema Estrella'} — {guide.star_schema.fact_table}
+                  </h5>
+                  <span className="badge badge-amber">Vista Previa del Modelo Semántico</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                  {t.powerBiExcel?.starClickHint || 'Haz clic en una dimensión para ver su detalle'} · {guide.star_schema.dimension_count}{' '}
+                  {(t.powerBiExcel?.starDimensions || 'Dimensiones').toLowerCase()} · {guide.star_schema.measures.length}{' '}
+                  {(t.powerBiExcel?.starMeasures || 'Medidas').toLowerCase()} · {guide.star_schema.relationships.length}{' '}
+                  {(t.powerBiExcel?.starRelationships || 'Relaciones').toLowerCase()}
+                </p>
+                <StarSchemaVisual schema={guide.star_schema} />
+              </div>
+            )}
           </div>
         );
       })()}

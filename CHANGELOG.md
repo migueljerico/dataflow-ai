@@ -4,6 +4,35 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.13.0] — 2026-09-02
+
+### ⭐ Visualizador de Modelo Estrella (Star Schema) para Power BI y Caché de Inferencia Distribuida (Redis / Cloud Memorystore)
+
+> **Integración Power BI & Escalabilidad Multi-Instancia:** Incorporación de un diagrama interactivo de modelo estrella que permite previsualizar la estructura semántica del dataset (tabla de hechos, dimensiones, relaciones y DAX de tablas calculadas) antes de cargar el archivo en Power BI; y de una capa de caché de inferencia distribuida en dos niveles (L1 memoria + L2 Redis) para compartir aciertos entre instancias de Cloud Run con degradación elegante.
+
+#### ⭐ Visualizador de Modelo Estrella (Star Schema)
+- **Modelos Pydantic (`backend/app/models/analytics.py`):**
+  - Nuevos `StarSchemaDiagram`, `StarSchemaDimension` y `StarSchemaRelationship` con campo `star_schema` en `IntegrationGuide`.
+- **Inferencia del Modelo Estrella (`backend/app/services/analytics_service.py`):**
+  - Tabla de hechos central con filas y medidas del dataset; dimensiones de atributo inferidas de columnas id/categoría con cardinalidad razonable (`DISTINCT` DAX) y dimensión calendario `Dim_Fecha` con `CALENDAR` + `ADDCOLUMNS` (Año, Trimestre, Mes, Día, Día de Semana).
+  - Relaciones muchos-a-uno (`*:1`) desde los hechos hacia cada dimensión, script DAX consolidado de tablas calculadas y fragmento TMDL de relaciones.
+  - `model.tmdl` del proyecto PBIP exportable ahora incluye las referencias a tablas de dimensión y sus relaciones, reconstruyendo el modelo estrella automáticamente en Power BI Desktop.
+- **Frontend Interactivo (`frontend/src/components/BusinessInsights.tsx`):**
+  - Nueva vista "Esquema Estrella" en la tarjeta de Power BI con diagrama SVG: hechos al centro, dimensiones en órbita con código de color (calendario esmeralda / atributo azul), cardinalidad `* → 1` sobre cada relación y leyenda.
+  - Panel de detalle al hacer clic en una dimensión: columna clave, valores distintos, atributos sugeridos y DAX de creación con copiado al portapapeles; botón de copiado del script consolidado.
+  - Claves i18n en español e inglés con fallback.
+
+#### 🌐 Caché de Inferencia Distribuida (L2 Redis / Cloud Memorystore)
+- **Arquitectura de Dos Niveles (`backend/app/services/inference_cache.py`):**
+  - L1 memoria LRU local (siempre activa, < 1 ms) + L2 Redis compartida entre instancias de Cloud Run, con promoción automática de hits L2 a L1.
+  - Activación mediante `INFERENCE_CACHE_BACKEND=redis` y `REDIS_URL` (compatible con `rediss://` TLS de Memorystore); serialización JSON del `AISuggestionResponse` con TTL y metadato `stored_at`.
+  - Degradación elegante: si `redis` no está instalado, la URL no existe o la conexión falla, el servicio opera solo-memoria sin interrumpir jamás la inferencia, con cooldown de reintento y contador de errores.
+- **Observabilidad Ampliada:** `get_stats()` expone `backend`, `distributed`, `redis_hits` y `redis_errors` además de las métricas clásicas de aciertos y ahorro.
+- **Configuración:** Nuevas variables en `Settings`, `.env.example` (`INFERENCE_CACHE_BACKEND`, `REDIS_URL`, `REDIS_SOCKET_TIMEOUT_SECONDS`) y dependencia `redis>=5.2.1` en `requirements.txt`.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** GLM-5.3-Flash (vía ZCode, app de desarrollo asistido por IA).
+
 ## [1.12.0] — 2026-09-02
 
 ### 📸 Mejora Integral de la Documentación: Galería de Vistas Previas en el README y Consistencia de Métricas

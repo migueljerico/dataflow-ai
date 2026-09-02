@@ -135,6 +135,38 @@ class IntegrationGuide(BaseModel):
     tmdl_table_definition: Optional[str] = None
     tmdl_model_definition: Optional[str] = None
     dax_script: Optional[str] = None
+    star_schema: Optional["StarSchemaDiagram"] = None
+
+
+class StarSchemaDimension(BaseModel):
+    name: str  # 'Dim_Cliente', 'Dim_Fecha'
+    kind: str  # 'attribute' | 'calendar'
+    source_column: str  # Columna original en la tabla de hechos
+    key_column: str  # Columna clave de la dimension ('Date' en calendarios)
+    distinct_count: int
+    suggested_attributes: List[str] = []
+    dax_definition: Optional[str] = None
+
+
+class StarSchemaRelationship(BaseModel):
+    from_table: str  # Lado muchos (tabla de hechos)
+    from_column: str
+    to_table: str  # Lado uno (dimension)
+    to_column: str
+    cardinality: str = "many-to-one"  # '*:1'
+    cross_filter: str = "single"  # Direccion del filtro en Power BI
+    is_active: bool = True
+
+
+class StarSchemaDiagram(BaseModel):
+    fact_table: str
+    fact_rows: int
+    measures: List[str]
+    dimension_count: int
+    dimensions: List[StarSchemaDimension]
+    relationships: List[StarSchemaRelationship]
+    dax_calculated_tables: str  # Script DAX consolidado de tablas calculadas
+    tmdl_relationships: Optional[str] = None  # Fragmento TMDL de relaciones del modelo
 
 
 class ExecutiveAnalyticsReport(BaseModel):

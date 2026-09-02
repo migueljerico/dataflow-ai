@@ -8,3 +8,4 @@ pytest>=9.1.1
 httpx>=0.28.1
 charset-normalizer>=3.5.1
 pyarrow>=25.0.1
+redis>=5.2.1
