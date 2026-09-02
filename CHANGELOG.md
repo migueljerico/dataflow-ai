@@ -4,6 +4,19 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.9.3] — 2026-09-02
+
+### 🐛 Corrección de Exclusión en `.dockerignore` para Inclusión de Datasets de Demostración en Contenedor Cloud Run
+
+> **Solución de Empaquetado Docker y CI/CD:** Eliminación de la regla de exclusión de `data_samples` en `.dockerignore`, resolviendo el fallo de compilación `ERROR: "/data_samples": not found` en el pipeline de GitHub Actions (`docker-build`) y en el disparador de Cloud Build para Cloud Run, garantizando la disponibilidad completa de las muestras empresariales en el contenedor de producción.
+
+#### 🐳 Infraestructura & Contenedores
+- **Configuración de Contexto de Construcción (`.dockerignore`):**
+  - Se removió `data_samples` de `.dockerignore` para permitir que la instrucción `COPY data_samples ./data_samples` en `Dockerfile` encuentre los ficheros en el contexto de compilación.
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
 ## [1.9.2] — 2026-09-02
 
 ### 🔍 Botones de Previsualización de Esquema en Plan ETL, Optimización de Despliegue en Cloud Run con Datasets Empresariales Variados y Alineación de Terminología DQS
