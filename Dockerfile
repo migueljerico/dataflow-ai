@@ -27,8 +27,9 @@ WORKDIR /app
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código backend
+# Copiar código backend y datasets de muestra empresariales
 COPY backend/app ./app
+COPY data_samples ./data_samples
 RUN mkdir -p ./uploads
 
 # Copiar frontend compilado desde Stage 1 a /app/static

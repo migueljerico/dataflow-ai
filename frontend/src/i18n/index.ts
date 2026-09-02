@@ -123,6 +123,23 @@ export interface Translations {
     parameters: string;
     warningsTitle: string;
     noSteps: string;
+    previewSchemaBtn?: string;
+    hideSchemaBtn?: string;
+    projectedSchemaTitle?: string;
+    projectedSchemaDesc?: string;
+    colOriginal?: string;
+    colSamples?: string;
+    colQuality?: string;
+    colAppliedOps?: string;
+    colProjectedState?: string;
+    stateUnchanged?: string;
+    stateModified?: string;
+    stateRenamed?: string;
+    stateDropped?: string;
+    stateNew?: string;
+    viewColPreview?: string;
+    hideColPreview?: string;
+    schemaDetails?: string;
   };
   report: {
     title: string;
@@ -323,6 +340,23 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parámetros',
       warningsTitle: 'Avisos y Guardrails de Seguridad',
       noSteps: 'No hay pasos disponibles en este plan.',
+      previewSchemaBtn: 'Previsualizar Esquema',
+      hideSchemaBtn: 'Ocultar Esquema',
+      projectedSchemaTitle: 'Esquema Proyectado de Columnas (Antes vs. Después)',
+      projectedSchemaDesc: 'Previsualiza cómo cada transformación aprobada modificará el esquema, tipos de datos y nombres antes de ejecutar.',
+      colOriginal: 'Columna Original',
+      colSamples: 'Muestras',
+      colQuality: 'Calidad Inicial',
+      colAppliedOps: 'Operaciones Aprobadas',
+      colProjectedState: 'Estado Proyectado',
+      stateUnchanged: 'Sin cambios',
+      stateModified: 'Modificada',
+      stateRenamed: 'Renombrada',
+      stateDropped: 'Eliminada',
+      stateNew: 'Nueva Columna',
+      viewColPreview: 'Ver esquema de columna',
+      hideColPreview: 'Ocultar esquema',
+      schemaDetails: 'Detalles del Esquema',
     },
     report: {
       title: 'Transformación Completada con Éxito',
@@ -522,6 +556,23 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parameters',
       warningsTitle: 'Security Warnings & Guardrails',
       noSteps: 'No steps available in this plan.',
+      previewSchemaBtn: 'Preview Schema',
+      hideSchemaBtn: 'Hide Schema',
+      projectedSchemaTitle: 'Projected Column Schema (Before vs. After)',
+      projectedSchemaDesc: 'Preview how each approved transformation will modify the schema, data types, and names before executing.',
+      colOriginal: 'Original Column',
+      colSamples: 'Samples',
+      colQuality: 'Initial Quality',
+      colAppliedOps: 'Approved Operations',
+      colProjectedState: 'Projected State',
+      stateUnchanged: 'Unchanged',
+      stateModified: 'Modified',
+      stateRenamed: 'Renamed',
+      stateDropped: 'Dropped',
+      stateNew: 'New Column',
+      viewColPreview: 'View column schema',
+      hideColPreview: 'Hide schema',
+      schemaDetails: 'Schema Details',
     },
     report: {
       title: 'Transformation Successfully Completed',

@@ -7,6 +7,7 @@ import {
   PhoneCall, 
   ShoppingCart, 
   Users, 
+  Truck,
   Play,
   Globe,
   Link2,
@@ -197,6 +198,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   const getSampleIcon = (id: string) => {
     if (id === 'contact_center') return <PhoneCall size={20} className="text-primary" />;
     if (id === 'sales') return <ShoppingCart size={20} className="text-primary" />;
+    if (id === 'logistics') return <Truck size={20} className="text-primary" />;
     return <Users size={20} className="text-primary" />;
   };
 

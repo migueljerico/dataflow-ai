@@ -4,6 +4,57 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.9.3] — 2026-09-02
+
+### 🐛 Corrección de Exclusión en `.dockerignore` para Inclusión de Datasets de Demostración en Contenedor Cloud Run
+
+> **Solución de Empaquetado Docker y CI/CD:** Eliminación de la regla de exclusión de `data_samples` en `.dockerignore`, resolviendo el fallo de compilación `ERROR: "/data_samples": not found` en el pipeline de GitHub Actions (`docker-build`) y en el disparador de Cloud Build para Cloud Run, garantizando la disponibilidad completa de las muestras empresariales en el contenedor de producción.
+
+#### 🐳 Infraestructura & Contenedores
+- **Configuración de Contexto de Construcción (`.dockerignore`):**
+  - Se removió `data_samples` de `.dockerignore` para permitir que la instrucción `COPY data_samples ./data_samples` en `Dockerfile` encuentre los ficheros en el contexto de compilación.
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
+## [1.9.2] — 2026-09-02
+
+### 🔍 Botones de Previsualización de Esquema en Plan ETL, Optimización de Despliegue en Cloud Run con Datasets Empresariales Variados y Alineación de Terminología DQS
+
+> **Visibilidad de Esquemas y Excelencia en Producción Cloud:** Incorporación de botones de previsualización de esquema de columnas previo a la ejecución del plan ETL en el Paso 3 (`PlanReview`), tanto a nivel global con proyección antes/después como mediante visor contextual por paso; resolución de rutas y empaquetado de `data_samples` en el contenedor `Dockerfile` para Cloud Run; adición de un 4º dataset empresarial de demostración para Logística & Cadena de Suministro B2B; y actualización exhaustiva de la documentación del Data Quality Score con los 5 términos en castellano natural consolidados en la aplicación.
+
+#### 🖥️ Frontend: Previsualización de Esquemas y Experiencia de Usuario
+- **Previsualización Global del Esquema Proyectado (`frontend/src/components/PlanReview.tsx`):**
+  - Nuevo botón en la cabecera del plan ETL (`Previsualizar Esquema ({N})`) que conmuta un panel completo con la tabla comparativa de columnas.
+  - Proyección determinista del estado final de cada columna tras aplicar los pasos aprobados: *Sin cambios*, *Modificada ({N} ops)*, *Renombrada a {nuevo_nombre}*, *Eliminada* o *Nueva Columna* (ej. `cluster` en segmentación K-Means).
+  - Visualización del tipo inferido, categoría semántica, porcentaje y conteo de nulos, valores únicos y muestras de valores reales por columna.
+- **Visor Contextual por Paso y Columna:**
+  - Botón individual `Ver esquema de columna` en cada tarjeta de transformación para inspeccionar instantáneamente la distribución y muestra de datos de la columna antes de ejecutar el pipeline.
+- **Soporte de Iconos y Datasets Demostrativos (`FileUpload.tsx`):**
+  - Integración del icono `Truck` para el dataset demo de Logística.
+- **Internacionalización i18n (`frontend/src/i18n/index.ts`):**
+  - Cadenas y etiquetas agregadas para los botones y paneles de previsualización en español e inglés.
+- **Suite de Pruebas Unitarias Frontend (`frontend/src/components/PlanReview.test.tsx`):**
+  - 3 nuevos tests unitarios validando la conmutación del panel global de esquema proyectado, el visor por paso y la ejecución del plan aprobado. Total: 37 tests pasando al 100%.
+
+#### ☁️ Backend & Contenedores: Despliegue en Cloud Run
+- **Empaquetado de Datasets en Dockerfile (`Dockerfile`):**
+  - Inclusión de `COPY data_samples ./data_samples` en el contenedor de producción para garantizar la disponibilidad de las muestras en Google Cloud Run.
+- **Resolución Multiplataforma de Rutas (`backend/app/api/v1/endpoints/datasets.py`):**
+  - Eliminación de rutas fijas dependientes del sistema operativo anfitrión y soporte explícito para rutas de contenedor `/app/data_samples` y rutas de entorno local.
+- **4º Dataset Demostrativo Empresarial (`data_samples/logistics_pedidos_corrupted.csv`):**
+  - Cobertura de pedidos B2B, acrónimos mercantiles (`S.L.U.`), valores atípicos, marcadores universales de nulos (`--`), divisas múltiples (`€`, `$`) y plazos de entrega negativos.
+- **Suite de Pruebas Backend (`backend/tests/test_analytics.py`):**
+  - Verificación del listado y carga de los 4 datasets empresariales de muestra y prueba integral end-to-end de logística. Total: 146 tests pasando al 100%.
+
+#### 📚 Documentación
+- **Alineación del Modelo de Data Quality Score (`README.md`):**
+  - Actualización de la fórmula y tabla con los 5 términos consolidados en castellano: Datos Completos (30%), Formatos Válidos (25%), Formato Homogéneo (20%), Registros Únicos (15%) y Reglas de Negocio (10%), acompañados de sus métricas de ejemplo.
+  - Inclusión del nuevo dataset demo de Logística y actualización de badges a 146 backend / 37 frontend.
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
 ## [1.9.1] — 2026-09-01
 
 ### 🐛 Corrección de Excepción en Renderizado de Integración Power BI / Excel y Alineación de Esquema
