@@ -10,11 +10,12 @@ def test_list_and_load_demo_sample():
     list_res = client.get("/api/v1/datasets/samples")
     assert list_res.status_code == 200
     samples = list_res.json()
-    assert len(samples) == 3
+    assert len(samples) == 4
     sample_ids = [s["id"] for s in samples]
     assert "contact_center" in sample_ids
     assert "sales" in sample_ids
     assert "people_analytics" in sample_ids
+    assert "logistics" in sample_ids
 
     # 2. Load people_analytics sample
     load_res = client.post("/api/v1/datasets/samples/people_analytics/load")
@@ -23,6 +24,14 @@ def test_list_and_load_demo_sample():
     assert meta["filename"] == "people_analytics_corrupted.csv"
     assert meta["column_count"] == 9
     assert meta["row_count"] > 0
+
+    # 3. Load logistics sample
+    load_logistics = client.post("/api/v1/datasets/samples/logistics/load")
+    assert load_logistics.status_code == 201
+    meta_log = load_logistics.json()
+    assert meta_log["filename"] == "logistics_pedidos_corrupted.csv"
+    assert meta_log["column_count"] == 9
+    assert meta_log["row_count"] > 0
 
 
 def test_people_analytics_end_to_end_and_business_insights():
@@ -227,3 +236,30 @@ def test_integration_guide_in_executive_analytics_report():
     assert len(guide["dax_measures"]) > 0
     assert len(guide["excel_formulas"]) > 0
     assert any("Total_Registros" in m["name"] for m in guide["dax_measures"])
+
+
+def test_logistics_sample_end_to_end():
+    """Verifica el flujo integral (carga, propuesta de plan, ejecución y analítica) del nuevo dataset demo de Logística."""
+    # 1. Carga
+    load_res = client.post("/api/v1/datasets/samples/logistics/load")
+    assert load_res.status_code == 201
+    dataset_id = load_res.json()["dataset_id"]
+
+    # 2. Plan
+    plan_res = client.post("/api/v1/plans/propose", json={"dataset_id": dataset_id})
+    assert plan_res.status_code == 201
+    plan_data = plan_res.json()
+    assert len(plan_data["steps"]) > 0
+
+    # 3. Aprobación y ejecución
+    approve_res = client.post(f"/api/v1/plans/{plan_data['plan_id']}/approve", json={"steps": plan_data["steps"]})
+    assert approve_res.status_code == 200
+    run_data = approve_res.json()
+    assert run_data["status"] == "completed"
+    assert run_data["rows_after"] > 0
+    assert run_data["clean_filename"] != ""
+
+    # 4. Analítica
+    analytics_res = client.get(f"/api/v1/analytics/{run_data['run_id']}")
+    assert analytics_res.status_code == 200
+    assert "kpis" in analytics_res.json()

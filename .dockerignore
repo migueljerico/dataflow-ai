@@ -45,9 +45,7 @@ frontend/.vite
 .DS_Store
 Thumbs.db
 
-# Dev-only large fixtures — tighten context without affecting Dockerfile COPY
-# (Dockerfile raíz copia explícitamente backend/app y frontend/dist, no necesita esto)
-data_samples
+# Dev-only tests — tighten context without affecting Dockerfile COPY
 backend/tests
 
 # Ephemeral uploads are created at runtime

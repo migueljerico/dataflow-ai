@@ -41,6 +41,13 @@ SAMPLES_MAP = {
         "description": "Plantilla, productividad, salarios y absentismo con fechas no estándar y anomalías de rango.",
         "icon": "Users",
     },
+    "logistics": {
+        "id": "logistics",
+        "title": "Logística & Cadena de Suministro",
+        "filename": "logistics_pedidos_corrupted.csv",
+        "description": "Pedidos B2B, entregas, unidades en stock y descuentos (S.L.U., marcadores '--', divisas y outliers).",
+        "icon": "Truck",
+    },
 }
 
 
@@ -68,11 +75,12 @@ async def load_sample_dataset(sample_id: str):
     sample_filename = sample_info["filename"]
 
     candidate_paths = [
+        Path("/app/data_samples") / sample_filename,
+        Path.cwd() / "data_samples" / sample_filename,
+        Path.cwd().parent / "data_samples" / sample_filename,
         Path(__file__).resolve().parents[4] / "data_samples" / sample_filename,
         Path(__file__).resolve().parents[3] / "data_samples" / sample_filename,
-        Path.cwd().parent / "data_samples" / sample_filename,
-        Path.cwd() / "data_samples" / sample_filename,
-        Path("d:/DataFlow Project/data_samples") / sample_filename,
+        Path(__file__).resolve().parent / "data_samples" / sample_filename,
     ]
     sample_path = next((p for p in candidate_paths if p.exists()), None)
 
