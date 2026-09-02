@@ -4,6 +4,28 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.12.0] — 2026-09-02
+
+### 📸 Mejora Integral de la Documentación: Galería de Vistas Previas en el README y Consistencia de Métricas
+
+> **Documentación:** Renovación completa del `README.md` con galería de capturas reales de la aplicación y actualización de métricas de tests.
+
+#### 📸 Galería de Vistas Previas
+- **Nueva sección "📸 Vista Previa de la Aplicación"** en el README con 6 capturas reales de la interfaz en `docs/capturas/`, ordenadas según el flujo de trabajo de la plataforma:
+  1. Subida de datasets (CSV/XLSX, URL y Open Data CKAN).
+  2. Auditoría de calidad y profiling (Data Quality Score).
+  3. Revisión humana del plan ETL (Human-in-the-Loop).
+  4. Transformación determinista con log de validación y trazabilidad.
+  5. Segmentación de clusters (Business Analytics).
+  6. Guía de integración y fórmulas para Power BI y Excel.
+
+#### 📖 Mejoras de Documentación
+- **README.md:** Adición de índice navegable (TOC), descripciones en español bajo cada captura, actualización de las cifras de tests a los valores reales (156 backend + 39 frontend = 195 + 3 E2E), funcionalidades ampliadas con exportación TMDL/PBIP, fórmulas dinámicas de Excel y caché de inferencia, y estructura del repositorio actualizada (`docs/capturas/`, servicios de exportación y caché).
+- **Nueva sección de Atribución** reconociendo la autoría, la documentación previa y las herramientas de IA utilizadas.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** GLM-5.3-Flash (vía ZCode, app de desarrollo asistido por IA).
+
 ## [1.11.0] — 2026-09-02
 
 ### 📊 Exportación Nativa de Modelos Semánticos Power BI (TMDL / PBIP / DAX), Fórmulas Dinámicas Multi-Categoría para Excel y Caché de Inferencia Gemini
