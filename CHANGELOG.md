@@ -4,6 +4,57 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.10.0] — 2026-09-02
+
+### ⚡ Observabilidad de Inferencia IA (Latencia, Tokens y Coste USD), Comparador Scatter Diff de Outliers (Crudo vs. Limpio) y Actualización de Dependencias a Node 24 / jsdom 30
+
+> **Observabilidad de IA, Diagnóstico Visual de Calidad y Modernización del Stack:** Incorporación de métricas completas de telemetría en la propuesta de planes asistidos por el Copiloto IA (Gemini 2.5 Flash); implementación de un comparador interactivo de dispersión (Scatter Diff) en la pestaña de Outliers contrastando el dataset crudo con el limpio; y consolidación exhaustiva de las actualizaciones de dependencias de Dependabot (PRs #12 al #21) con actualización a Node.js 24 en CI/CD y en el Dockerfile multi-stage para compatibilidad con `jsdom 30.0.1`.
+
+#### 🤖 Copiloto IA & Observabilidad
+- **Modelo de Telemetría e Inferencia (`backend/app/ai_providers/base.py`):**
+  - Creación del contrato Pydantic `AIMetrics` con `latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `estimated_cost_usd`, `model` y `provider`.
+- **Integración con Gemini 2.5 Flash (`backend/app/ai_providers/gemini_provider.py`):**
+  - Cronometrado de alta precisión mediante `time.perf_counter()`.
+  - Extracción de metadatos de uso (`usageMetadata.promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) desde la API de Gemini.
+  - Cálculo determinista del coste estimado en USD (\$0.10 por 1M tokens de entrada, \$0.40 por 1M tokens de salida).
+- **Soporte Mock Determinista (`backend/app/ai_providers/mock_provider.py`):**
+  - Generación de métricas y estimación de tokens para pruebas unitarias sin dependencias externas.
+- **Trazabilidad en Planes ETL (`backend/app/models/etl.py` & `backend/app/services/ai_service.py`):**
+  - Campo `ai_metrics` incorporado en `TransformationPlan` y propagado en la respuesta JSON de la API.
+- **Visualización en Frontend (`frontend/src/components/PlanReview.tsx`):**
+  - Franja informativa de observabilidad con badges para modelo (`gemini-2.5-flash`), latencia (`ms` o `s`), tokens de entrada/salida y coste estimado en dólares.
+
+#### 🎯 Analytics: Comparador Interactivo de Dispersión (Scatter Diff)
+- **Contratos y Modelos de Visualización (`backend/app/models/analytics.py`):**
+  - Adición de `raw_y_value`, `was_modified` y `diff_status` a `OutlierScatterPoint`.
+  - Creación del modelo `OutlierDiffSummary` (`raw_outliers_count`, `clean_outliers_count`, `resolved_outliers_count`, `reduction_percentage`).
+- **Motor Estadístico de Comparación (`backend/app/services/analytics_service.py`):**
+  - Carga del dataframe original crudo (`raw_df`) para calcular IQR comparativo, balance de resolución de anomalías y etiquetado individual por registro (`resolved_outlier`, `clamped`, `unchanged`, `imputed`).
+- **Componente Interactivo en Frontend (`frontend/src/components/BusinessInsights.tsx`):**
+  - Selector de vista con tercer modo: `Comparador Diff (Crudo vs. Limpio)`.
+  - Resumen KPI con conteo de outliers en crudo frente a limpio, anomalías resueltas y tasa porcentual de reducción.
+  - Diagrama SVG interactivo con puntos crudos (ámbar/rosa), puntos limpios (azul/verde), líneas conectoras discontinuas de ajuste/clamp, límites IQR e información contextual en tooltip.
+  - Filtro interactivo para alternar entre todas las observaciones o solo las modificadas.
+  - Mini tabla de evidencia con registro, valor crudo, valor limpio, variación $\Delta$ y estado.
+
+#### 📦 Dependencias, CI/CD y Entorno de Ejecución (PRs #12 al #21)
+- **Resolución de Conflicto en PR #21 (`jsdom 30.0.1`):**
+  - Actualización de entorno Node.js a versión 24 en GitHub Actions (`.github/workflows/ci.yml`) y en la fase de compilación del `Dockerfile` multi-stage (`node:24-alpine`).
+- **Actualizaciones Dependabot Consolidadas:**
+  - `pandas >= 3.0.5`
+  - `pydantic >= 2.13.5`
+  - `pyarrow >= 25.0.1`
+  - `pytest >= 9.1.1`
+  - `uvicorn >= 0.52.4`
+  - `vitest 4.1.11`
+  - `@vitejs/plugin-react 6.1.1`
+  - `lucide-react 1.37.0`
+  - `@testing-library/jest-dom 7.0.1`
+  - `jsdom 30.0.1`
+- **Atribución del Modelo:** Antigravity (Advanced Agentic Coding).
+
+---
+
 ## [1.9.3] — 2026-09-02
 
 ### 🐛 Corrección de Exclusión en `.dockerignore` para Inclusión de Datasets de Demostración en Contenedor Cloud Run

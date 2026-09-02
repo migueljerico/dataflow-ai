@@ -13,12 +13,25 @@ class AIOperationSuggestion(BaseModel):
     risk: str = Field(default="low", description="Riesgo de la transformación (low, medium, high)")
 
 
+class AIMetrics(BaseModel):
+    latency_ms: float = Field(default=0.0, description="Latencia de inferencia en milisegundos")
+    prompt_tokens: int = Field(default=0, description="Tokens consumidos en el prompt de entrada")
+    completion_tokens: int = Field(default=0, description="Tokens generados en la respuesta")
+    total_tokens: int = Field(default=0, description="Total de tokens consumidos")
+    estimated_cost_usd: float = Field(default=0.0, description="Coste estimado en dólares estadounidenses (USD)")
+    model: str = Field(default="", description="Identificador del modelo empleado")
+    provider: str = Field(default="", description="Nombre del proveedor (gemini, mock, etc.)")
+
+
 class AISuggestionResponse(BaseModel):
     dataset_summary: str = Field(..., description="Resumen ejecutivo del dataset interpretado por la IA")
     suggestions: List[AIOperationSuggestion] = Field(
         default_factory=list, description="Lista de transformaciones propuestas"
     )
     warnings: List[str] = Field(default_factory=list, description="Advertencias de la IA")
+    metrics: Optional[AIMetrics] = Field(
+        None, description="Métricas de observabilidad de la inferencia (latencia, tokens, costes)"
+    )
 
 
 class LLMProvider(ABC):

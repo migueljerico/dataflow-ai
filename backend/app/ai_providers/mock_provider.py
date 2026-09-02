@@ -1,7 +1,8 @@
 import re
+import time
 from typing import Any, Dict, List
 
-from app.ai_providers.base import AIOperationSuggestion, AISuggestionResponse, LLMProvider
+from app.ai_providers.base import AIMetrics, AIOperationSuggestion, AISuggestionResponse, LLMProvider
 from app.core.number_parsing import is_missing_value
 from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
 
@@ -16,6 +17,7 @@ class MockProvider(LLMProvider):
         quality_issues: List[Dict[str, Any]],
         sample_rows: List[Dict[str, Any]],
     ) -> AISuggestionResponse:
+        start_time = time.perf_counter()
         suggestions: List[AIOperationSuggestion] = []
 
         # 1. Sugerencias basadas en Quality Issues
@@ -262,8 +264,24 @@ class MockProvider(LLMProvider):
                         )
                     )
 
+        elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        # Estimación realista de tokens para MockProvider
+        estimated_prompt_tokens = max(120, len(str(columns_schema) + str(quality_issues) + str(sample_rows)) // 4)
+        estimated_completion_tokens = max(60, len(str(suggestions)) // 4)
+        total_tokens = estimated_prompt_tokens + estimated_completion_tokens
+        metrics = AIMetrics(
+            latency_ms=elapsed_ms,
+            prompt_tokens=estimated_prompt_tokens,
+            completion_tokens=estimated_completion_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=0.0,
+            model="mock-deterministic",
+            provider=self.provider_name,
+        )
+
         return AISuggestionResponse(
             dataset_summary=f"Dataset '{filename}' analizado por el Copiloto de IA mediante heurística semántica de negocio.",
             suggestions=suggestions,
             warnings=["Sugerencia generada por el proveedor MockProvider mediante análisis semántico generalizado."],
+            metrics=metrics,
         )

@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.ai_providers.base import AIMetrics
+
 
 def utc_now() -> datetime:
     """Datetime UTC consciente de zona (datetime.utcnow está deprecado)."""
@@ -41,6 +43,9 @@ class TransformationPlan(BaseModel):
     created_at: datetime = Field(default_factory=utc_now, description="Fecha de creación")
     warnings: List[str] = Field(
         default_factory=list, description="Advertencias del plan (p. ej. operaciones IA descartadas por guardrails)"
+    )
+    ai_metrics: Optional[AIMetrics] = Field(
+        None, description="Métricas de observabilidad de la inferencia IA (latencia, tokens y coste estimado)"
     )
 
 

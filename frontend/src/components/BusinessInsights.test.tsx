@@ -110,9 +110,15 @@ const mockReport: ExecutiveAnalyticsReport = {
     ],
     active_column: 'Precio_Unidad',
     scatter_points: [
-      { row_index: 0, x_value: 1, y_value: 100.0, is_outlier: false, label: 'Fila #1' },
-      { row_index: 1, x_value: 2, y_value: 1200.0, is_outlier: true, label: 'Fila #2' },
+      { row_index: 0, x_value: 1, y_value: 100.0, is_outlier: false, label: 'Fila #1', raw_y_value: 100.0, was_modified: false, diff_status: 'unchanged' },
+      { row_index: 1, x_value: 2, y_value: 425.0, is_outlier: false, label: 'Fila #2', raw_y_value: 1200.0, was_modified: true, diff_status: 'resolved_outlier' },
     ],
+    diff_summary: {
+      raw_outliers_count: 2,
+      clean_outliers_count: 0,
+      resolved_outliers_count: 2,
+      reduction_percentage: 100.0,
+    },
     total_outliers_detected: 2,
     detection_method: 'IQR (1.5x) / Z-Score (>3.0)',
   },
@@ -188,6 +194,16 @@ describe('BusinessInsights component', () => {
     fireEvent.click(scatterBtn);
 
     expect(screen.getByRole('img', { name: /Scatter de outliers para Precio_Unidad/i })).toBeInTheDocument();
+
+    // Cambiar a modo comparador diff (Crudo vs Limpio)
+    const diffBtn = screen.getByRole('button', { name: /Comparador Diff/i });
+    fireEvent.click(diffBtn);
+
+    expect(screen.getByTestId('outlier-diff-container')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Comparador scatter diff para Precio_Unidad/i })).toBeInTheDocument();
+    expect(screen.getByText(/Anomalías Resueltas/i)).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
+    expect(screen.getByTestId('toggle-diff-modified-btn')).toBeInTheDocument();
   });
 
   it('renders error message when API fails', async () => {
