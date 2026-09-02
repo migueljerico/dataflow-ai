@@ -7,4 +7,4 @@ python-multipart>=0.0.32
 pytest>=8.3.0
 httpx>=0.28.1
 charset-normalizer>=3.5.1
-pyarrow>=25.0.0
+pyarrow>=25.0.1
