@@ -4,6 +4,19 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.13.1] — 2026-09-02
+
+### 📸 Corrección del Badge de Versión y Nueva Captura del Esquema Estrella en el README
+
+> **Documentación:** Parche de documentación que sincroniza el badge de versión del README con la versión real del proyecto y añade la séptima captura a la galería de vistas previas.
+
+#### 📖 Mejoras de Documentación
+- **README.md:** Badge de versión actualizado a 1.13.1 (había quedado desfasado en 1.12.0 respecto a `backend/app/core/config.py` y `frontend/package.json` desde la v1.13.0).
+- **Galería de Vistas Previas:** Nueva sección «7️⃣ Esquema Estrella del Modelo Semántico (Star Schema Preview)» con la captura del visualizador interactivo incorporado en la v1.13.0 (`docs/capturas/captura_dataflow_ai_esquema_estrella.png`): diagrama SVG con tabla de hechos, dimensiones y relaciones `*:1`, panel de inspección y DAX de tablas calculadas propagado al `model.tmdl` del PBIP.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** GLM-5.3-Flash (vía ZCode, app de desarrollo asistido por IA).
+
 ## [1.13.0] — 2026-09-02
 
 ### ⭐ Visualizador de Modelo Estrella (Star Schema) para Power BI y Caché de Inferencia Distribuida (Redis / Cloud Memorystore)

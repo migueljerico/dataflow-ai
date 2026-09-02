@@ -11,7 +11,7 @@
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-163%20backend%20%7C%2041%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.12.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.13.1-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -108,6 +108,12 @@ Recorrido completo por el flujo de trabajo de DataFlow AI, desde la ingesta del 
 *Generación adaptativa de medidas DAX, código Power Query M, modelo semántico TMDL/PBIP y fórmulas dinámicas de Excel localizadas para la configuración regional en español.*
 
 ![Vista Previa — Integración Power BI y Excel](./docs/capturas/captura_dataflow_ai_powerbi.png)
+
+### 7️⃣ Esquema Estrella del Modelo Semántico (Star Schema Preview)
+
+*Visualizador interactivo del modelo estrella en la pestaña de Power BI: diagrama SVG con la tabla de hechos al centro, dimensiones de atributo y calendario en órbita, relaciones `*:1` con cardinalidad, panel de inspección por dimensión y script DAX de las tablas calculadas; el modelo se propaga al `model.tmdl` del proyecto PBIP exportable y se reconstruye solo en Power BI Desktop.*
+
+![Vista Previa — Esquema Estrella del Modelo Semántico](./docs/capturas/captura_dataflow_ai_esquema_estrella.png)
 
 ---
 
