@@ -1,0 +1,10 @@
+Fecha_Pedido,ID_Pedido,Razon_Social,Region,Unidades_Stock,Descuento_Pct,Importe_Total,Dias_Entrega,Estado_Pedido
+2026-04-03,PED-201,Distribuciones Marín S.L.U.,Norte,50,10.0%,1250.00 €,3,Entregado
+2026-04-03,PED-201,Distribuciones Marín S.L.U.,Norte,50,10.0%,1250.00 €,3,Entregado
+05/04/2026,PED-202, TALLERES ROBLES SLU ,Sur,--,15.5%,$890.50,-2,Pendiente
+2026/04/06,PED-203,Comercial Iglesias,Centro, 30 ,8.0 %,640.00 €,5,Entregado
+07-04-2026,PED-204,Suministros Del Este,Norte,25,120.0%,410.00 €,1,ENVIADO
+invalid_date,PED-205,ALMACENES PARDO S.L.U.,Sur,40,12.0%,975.25 €,4,entregado
+2026-04-10,PED-206, Comercial Iglesias ,Centro,60,9.5%,1105.00 €,2,Entregado
+2026-04-11,PED-207,Talleres Robles SLU,Sur,15,20.0%,$310.00,0,pendiente
+,,,,,,,,

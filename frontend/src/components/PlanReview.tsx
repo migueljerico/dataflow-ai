@@ -1,18 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, Play, ShieldAlert, Sliders, Sparkles, AlertTriangle } from 'lucide-react';
-import { TransformationPlan, TransformationStep } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  CheckCircle2,
+  XCircle,
+  Play,
+  ShieldAlert,
+  Sliders,
+  AlertTriangle,
+  Columns,
+  Eye,
+  EyeOff,
+  Table,
+  ArrowRight,
+} from 'lucide-react';
+import { DatasetMetadata, ProfilingReport, TransformationPlan, TransformationStep } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   plan: TransformationPlan;
   onExecutePlan: (approvedSteps: TransformationStep[]) => void;
   executing: boolean;
+  metadata?: DatasetMetadata | null;
+  profiling?: ProfilingReport | null;
 }
 
-export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) => {
+export const PlanReview: React.FC<Props> = ({
+  plan,
+  onExecutePlan,
+  executing,
+  metadata,
+  profiling,
+}) => {
   const { t } = useLanguage();
   const [steps, setSteps] = useState<TransformationStep[]>(plan.steps);
-  useEffect(() => { setSteps(plan.steps); }, [plan.steps]);
+  const [showGlobalSchema, setShowGlobalSchema] = useState<boolean>(false);
+  const [previewStepId, setPreviewStepId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSteps(plan.steps);
+  }, [plan.steps]);
 
   const toggleStepStatus = (stepId: string, newStatus: 'approved' | 'rejected') => {
     setSteps((prev) =>
@@ -28,11 +53,34 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
     );
   };
 
-  const approvedCount = steps.filter((s) => s.status !== 'rejected').length;
+  const approvedSteps = useMemo(() => steps.filter((s) => s.status !== 'rejected'), [steps]);
+  const approvedCount = approvedSteps.length;
+
+  const allColumns = useMemo(() => {
+    if (metadata?.columns && metadata.columns.length > 0) {
+      return metadata.columns;
+    }
+    if (profiling?.columns && profiling.columns.length > 0) {
+      return profiling.columns.map((c) => c.column_name);
+    }
+    const cols = new Set<string>();
+    plan.steps.forEach((s) => {
+      if (s.column) cols.add(s.column);
+      if (Array.isArray(s.parameters?.columns)) {
+        (s.parameters.columns as string[]).forEach((c) => cols.add(c));
+      }
+    });
+    return Array.from(cols);
+  }, [metadata, profiling, plan.steps]);
+
+  const hasNewClusterCol = useMemo(
+    () => approvedSteps.some((s) => s.operation === 'cluster_kmeans'),
+    [approvedSteps]
+  );
 
   return (
     <div className="card">
-      <div className="card-header">
+      <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 className="card-title">
             <Sliders size={20} className="text-primary" /> {t.plan.title}
@@ -41,15 +89,206 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
             {t.plan.source}: <strong style={{ color: 'var(--primary)' }}>{plan.source}</strong> | {t.plan.summary}: {plan.summary}
           </p>
         </div>
-        <button
-          className="btn btn-success"
-          disabled={executing || approvedCount === 0}
-          onClick={() => onExecutePlan(steps)}
-        >
-          <Play size={16} /> {executing ? t.plan.executingBtn : `${t.plan.executeBtn} (${approvedCount})`}
-        </button>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {allColumns.length > 0 && (
+            <button
+              type="button"
+              className={`btn ${showGlobalSchema ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setShowGlobalSchema((prev) => !prev)}
+              aria-expanded={showGlobalSchema}
+              aria-controls="global-schema-preview"
+              data-testid="preview-global-schema-btn"
+              title={t.plan.previewSchemaBtn || 'Previsualizar Esquema'}
+            >
+              <Columns size={16} />
+              {showGlobalSchema
+                ? (t.plan.hideSchemaBtn || 'Ocultar Esquema')
+                : `${t.plan.previewSchemaBtn || 'Previsualizar Esquema'} (${allColumns.length})`}
+            </button>
+          )}
+
+          <button
+            className="btn btn-success"
+            disabled={executing || approvedCount === 0}
+            onClick={() => onExecutePlan(steps)}
+            data-testid="execute-plan-btn"
+          >
+            <Play size={16} /> {executing ? t.plan.executingBtn : `${t.plan.executeBtn} (${approvedCount})`}
+          </button>
+        </div>
       </div>
 
+      {/* Panel Global de Previsualización de Esquema de Columnas (Antes vs. Proyección ETL) */}
+      {showGlobalSchema && (
+        <div
+          id="global-schema-preview"
+          data-testid="global-schema-panel"
+          style={{
+            backgroundColor: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Table size={18} className="text-primary" />
+                {t.plan.projectedSchemaTitle || 'Esquema Proyectado de Columnas (Antes vs. Después)'}
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '4px 0 0 0' }}>
+                {t.plan.projectedSchemaDesc || 'Previsualiza cómo cada transformación aprobada modificará el esquema, tipos de datos y nombres antes de ejecutar.'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', fontSize: '0.75rem', alignItems: 'center' }}>
+              <span className="badge badge-emerald">{allColumns.length} columnas base</span>
+              {hasNewClusterCol && (
+                <span className="badge badge-purple" style={{ backgroundColor: 'rgba(168, 85, 247, 0.18)', color: '#a855f7' }}>
+                  +1 columna proyectada (cluster)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '8px 10px' }}>{t.plan.colOriginal || 'Columna Original'}</th>
+                  <th style={{ padding: '8px 10px' }}>{t.profiling?.colType || 'Tipo Inferido'}</th>
+                  <th style={{ padding: '8px 10px' }}>{t.plan.colSamples || 'Muestras'}</th>
+                  <th style={{ padding: '8px 10px' }}>{t.plan.colQuality || 'Calidad Inicial'}</th>
+                  <th style={{ padding: '8px 10px' }}>{t.plan.colAppliedOps || 'Operaciones Aprobadas'}</th>
+                  <th style={{ padding: '8px 10px' }}>{t.plan.colProjectedState || 'Estado Proyectado'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allColumns.map((colName) => {
+                  const profile = profiling?.columns?.find((c) => c.column_name === colName);
+                  const colApprovedSteps = approvedSteps.filter(
+                    (s) =>
+                      s.column === colName ||
+                      (s.operation === 'cluster_kmeans' &&
+                        ((s.parameters?.columns as string[]) || []).includes(colName))
+                  );
+                  const isDropped = colApprovedSteps.some((s) => s.operation === 'drop_column');
+                  const renameStep = colApprovedSteps.find((s) => s.operation === 'rename_column');
+                  const newName = renameStep?.parameters?.new_name as string | undefined;
+
+                  return (
+                    <tr
+                      key={colName}
+                      style={{
+                        borderBottom: '1px solid var(--border-color)',
+                        opacity: isDropped ? 0.6 : 1,
+                        backgroundColor: isDropped ? 'rgba(244, 63, 94, 0.05)' : 'transparent',
+                      }}
+                    >
+                      <td style={{ padding: '8px 10px', fontWeight: 600 }}>
+                        <span style={{ textDecoration: isDropped ? 'line-through' : 'none' }}>{colName}</span>
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          <span className="badge badge-blue">{profile?.inferred_type || 'desconocido'}</span>
+                          {profile?.semantic_hint && profile.semantic_hint !== 'unknown' && (
+                            <span className="badge badge-amber">{profile.semantic_hint}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px 10px',
+                          color: 'var(--text-muted)',
+                          maxWidth: '180px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {profile?.sample_values && profile.sample_values.length > 0
+                          ? profile.sample_values.slice(0, 3).map((v) => String(v ?? '')).join(', ')
+                          : '—'}
+                      </td>
+                      <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
+                        {profile ? (
+                          <span>
+                            {profile.null_count} nulos ({profile.null_percentage.toFixed(0)}%) · {profile.unique_count} unq
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        {colApprovedSteps.length > 0 ? (
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {colApprovedSteps.map((s) => (
+                              <span key={s.step_id} className="badge badge-emerald" title={s.reason}>
+                                {s.operation}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        {isDropped ? (
+                          <span className="badge badge-rose">{t.plan.stateDropped || 'Eliminada'}</span>
+                        ) : newName ? (
+                          <span className="badge badge-amber" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span>{t.plan.stateRenamed || 'Renombrada'}</span>
+                            <ArrowRight size={12} />
+                            <strong>{newName}</strong>
+                          </span>
+                        ) : colApprovedSteps.length > 0 ? (
+                          <span className="badge badge-blue">
+                            {t.plan.stateModified || 'Modificada'} ({colApprovedSteps.length})
+                          </span>
+                        ) : (
+                          <span className="badge badge-emerald">{t.plan.stateUnchanged || 'Sin cambios'}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {hasNewClusterCol && (
+                  <tr
+                    style={{
+                      borderBottom: '1px solid var(--border-color)',
+                      backgroundColor: 'rgba(168, 85, 247, 0.08)',
+                    }}
+                  >
+                    <td style={{ padding: '8px 10px', fontWeight: 600, color: '#a855f7' }}>
+                      cluster <span style={{ fontSize: '0.75rem' }}>(nueva)</span>
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span className="badge badge-blue">numeric (int)</span>
+                    </td>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>0, 1, 2...</td>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>0 nulos · segmentación K-Means</td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span className="badge badge-emerald">cluster_kmeans</span>
+                    </td>
+                    <td style={{ padding: '8px 10px' }}>
+                      <span
+                        className="badge badge-purple"
+                        style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#a855f7' }}
+                      >
+                        {t.plan.stateNew || 'Nueva Columna'}
+                      </span>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {plan.warnings && plan.warnings.length > 0 && (
         <div
@@ -77,6 +316,11 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {steps.map((step) => {
           const isApproved = step.status !== 'rejected';
+          const isPreviewingThisStep = previewStepId === step.step_id;
+          const stepColProfile = step.column
+            ? profiling?.columns?.find((c) => c.column_name === step.column)
+            : null;
+
           return (
             <div
               key={step.step_id}
@@ -101,6 +345,40 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
                   >
                     Riesgo {step.risk}
                   </span>
+
+                  {/* Botón de Previsualización de Esquema de la Columna Afectada */}
+                  {step.column && (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '0.725rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        height: 'auto',
+                        borderRadius: '6px',
+                        borderColor: isPreviewingThisStep ? 'var(--primary)' : 'var(--border-color)',
+                        color: isPreviewingThisStep ? 'var(--primary)' : 'var(--text-main)',
+                      }}
+                      onClick={() => setPreviewStepId(isPreviewingThisStep ? null : step.step_id)}
+                      aria-expanded={isPreviewingThisStep}
+                      data-testid={`preview-col-btn-${step.step_id}`}
+                      title={
+                        isPreviewingThisStep
+                          ? (t.plan.hideColPreview || 'Ocultar esquema')
+                          : (t.plan.viewColPreview || 'Ver esquema de columna')
+                      }
+                    >
+                      {isPreviewingThisStep ? <EyeOff size={12} /> : <Eye size={12} />}
+                      <span>
+                        {isPreviewingThisStep
+                          ? (t.plan.hideColPreview || 'Ocultar esquema')
+                          : (t.plan.viewColPreview || 'Ver esquema de columna')}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
@@ -133,10 +411,103 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
               <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap', marginTop: '8px' }}>
                 <span>{t.plan.confidence}: {(step.confidence * 100).toFixed(0)}%</span>
                 <span>{t.plan.estimatedRows}: {step.affected_rows_estimate}</span>
-                <span style={{ wordBreak: 'break-word' }}>{t.plan.parameters}: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code></span>
+                <span style={{ wordBreak: 'break-word' }}>
+                  {t.plan.parameters}: <code style={{ color: 'var(--primary)' }}>{JSON.stringify(step.parameters)}</code>
+                </span>
               </div>
 
-              {/* Advertencia interactiva de Protección de Datos (posible descarte de texto libre no recuperable) */}
+              {/* Visor Contextual del Esquema de la Columna Afectada */}
+              {isPreviewingThisStep && step.column && (
+                <div
+                  data-testid={`col-schema-details-${step.step_id}`}
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px 14px',
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--primary)' }}>
+                      <Columns size={14} />
+                      <span>{t.plan.schemaDetails || 'Detalles del Esquema'}: {step.column}</span>
+                    </div>
+                    {stepColProfile && (
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <span className="badge badge-blue">{stepColProfile.inferred_type}</span>
+                        {stepColProfile.semantic_hint && stepColProfile.semantic_hint !== 'unknown' && (
+                          <span className="badge badge-amber">{stepColProfile.semantic_hint}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {stepColProfile ? (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', color: 'var(--text-muted)' }}>
+                        <div>
+                          <strong>Nulos:</strong> {stepColProfile.null_count} ({stepColProfile.null_percentage.toFixed(1)}%)
+                        </div>
+                        <div>
+                          <strong>Únicos:</strong> {stepColProfile.unique_count}
+                        </div>
+                        {stepColProfile.min_value !== undefined && (
+                          <div>
+                            <strong>Mín:</strong> {stepColProfile.min_value}
+                          </div>
+                        )}
+                        {stepColProfile.max_value !== undefined && (
+                          <div>
+                            <strong>Máx:</strong> {stepColProfile.max_value}
+                          </div>
+                        )}
+                      </div>
+
+                      {stepColProfile.sample_values && stepColProfile.sample_values.length > 0 && (
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontSize: '0.75rem' }}>
+                            {t.plan.colSamples || 'Valores de muestra (antes de transformación):'}
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {stepColProfile.sample_values.slice(0, 5).map((val, idx) => (
+                              <code
+                                key={idx}
+                                style={{
+                                  backgroundColor: 'var(--bg-input)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  border: '1px solid var(--border-color)',
+                                  color: 'var(--text-main)',
+                                }}
+                              >
+                                {String(val ?? 'null')}
+                              </code>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {stepColProfile.warnings && stepColProfile.warnings.length > 0 && (
+                        <div style={{ color: '#f59e0b', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <ShieldAlert size={12} /> {stepColProfile.warnings.join(' · ')}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.775rem' }}>
+                      Información detallada de perfilado no disponible para esta columna.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Advertencia interactiva de Protección de Datos */}
               {step.data_loss_warning && (
                 <div
                   style={{
@@ -304,4 +675,3 @@ export const PlanReview: React.FC<Props> = ({ plan, onExecutePlan, executing }) 
     </div>
   );
 };
-

@@ -143,6 +143,8 @@ const AppContent: React.FC = () => {
               plan={plan}
               onExecutePlan={handleExecutePlan}
               executing={executing}
+              metadata={metadata}
+              profiling={profiling}
             />
           )}
           {step === 4 && executionResult && (
