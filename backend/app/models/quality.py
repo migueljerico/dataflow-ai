@@ -55,3 +55,51 @@ class QualityReport(BaseModel):
     issues: List[QualityIssue] = Field(default_factory=list, description="Lista de problemas detectados")
     issues_count: int = Field(..., description="Total de problemas detectados")
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Fecha de análisis")
+
+
+class DimensionComparison(BaseModel):
+    dimension: QualityDimensionEnum = Field(..., description="Dimensión evaluada")
+    score_before: float = Field(..., description="Puntuación antes de la transformación")
+    score_after: float = Field(..., description="Puntuación después de la transformación")
+    delta: float = Field(..., description="Variación absoluta de puntuación (+ o -)")
+    issues_before: int = Field(..., description="Problemas detectados antes")
+    issues_after: int = Field(..., description="Problemas restantes tras la transformación")
+    summary: str = Field(..., description="Resumen explicativo del cambio en la dimensión")
+
+
+class QualityComparisonReport(BaseModel):
+    run_id: str = Field(..., description="ID de la ejecución")
+    dataset_id: str = Field(..., description="ID del dataset original")
+    overall_score_before: float = Field(..., description="Puntuación global antes")
+    overall_score_after: float = Field(..., description="Puntuación global después")
+    delta_score: float = Field(..., description="Incremento o variación en el score general")
+    dimensions: List[DimensionComparison] = Field(default_factory=list, description="Comparativa por dimensión")
+    issues_count_before: int = Field(..., description="Total de anomalías antes")
+    issues_count_after: int = Field(..., description="Total de anomalías tras la transformación")
+    issues_resolved_count: int = Field(..., description="Cantidad de anomalías subsanadas")
+    explanation: str = Field(..., description="Resumen cualitativo de la mejora de calidad")
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Fecha de cálculo")
+
+
+class ExecutionSummaryItem(BaseModel):
+    run_id: str = Field(..., description="ID único de la ejecución")
+    dataset_id: str = Field(..., description="ID del dataset fuente")
+    filename: str = Field(..., description="Nombre del archivo original")
+    clean_filename: str = Field(..., description="Nombre del archivo limpio generado")
+    status: str = Field(..., description="Estado de la ejecución")
+    started_at: datetime = Field(..., description="Momento de inicio")
+    finished_at: datetime = Field(..., description="Momento de finalización")
+    execution_time_seconds: float = Field(..., description="Tiempo de ejecución en segundos")
+    rows_before: int = Field(..., description="Filas iniciales")
+    rows_after: int = Field(..., description="Filas resultantes")
+    columns_before: int = Field(..., description="Columnas iniciales")
+    columns_after: int = Field(..., description="Columnas finales")
+    applied_steps_count: int = Field(..., description="Pasos de transformación aplicados")
+    score_before: float = Field(..., description="Quality score original")
+    score_after: float = Field(..., description="Quality score limpio")
+    score_delta: float = Field(..., description="Variación del quality score")
+    input_hash_md5: str = Field(..., description="MD5 del dataset crudo")
+    output_hash_md5: str = Field(..., description="MD5 del dataset transformado")
+    download_url: str = Field(..., description="URL de descarga CSV")
+    parquet_url: Optional[str] = Field(None, description="URL de descarga Parquet")
+    script_url: Optional[str] = Field(None, description="URL de descarga script Python")

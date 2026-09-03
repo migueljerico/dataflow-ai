@@ -9,7 +9,9 @@ import {
   ExecutiveAnalyticsReport,
   OpenDatasetItem,
   OpenDataSearchResponse,
-  CacheStats
+  CacheStats,
+  ExecutionSummaryItem,
+  QualityComparisonReport,
 } from '../types';
 import { getApiKey } from '../utils/security';
 
@@ -144,11 +146,27 @@ export const api = {
 
   getRunQualityReport: async (runId: string): Promise<ExecutionResult | null> => {
     try {
-      const res = await fetch(`${API_BASE}/runs/${runId}`);
+      const res = await fetch(`${API_BASE}/runs/${runId}/report`);
       return handleResponse<ExecutionResult>(res);
     } catch {
       return null;
     }
+  },
+
+  getQualityComparison: async (runId: string): Promise<QualityComparisonReport> => {
+    const res = await fetch(`${API_BASE}/runs/${runId}/quality-comparison`);
+    return handleResponse<QualityComparisonReport>(res);
+  },
+
+  getRunsHistory: async (datasetId?: string): Promise<ExecutionSummaryItem[]> => {
+    const url = datasetId ? `${API_BASE}/runs?dataset_id=${encodeURIComponent(datasetId)}` : `${API_BASE}/runs`;
+    const res = await fetch(url);
+    return handleResponse<ExecutionSummaryItem[]>(res);
+  },
+
+  compareRuns: async (runA: string, runB: string): Promise<QualityComparisonReport> => {
+    const res = await fetch(`${API_BASE}/runs/compare?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`);
+    return handleResponse<QualityComparisonReport>(res);
   },
 
   // Business Analytics

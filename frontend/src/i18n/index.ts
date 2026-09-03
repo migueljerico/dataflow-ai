@@ -317,6 +317,56 @@ export interface Translations {
     generatePlan: string;
     executePlan: string;
   };
+  historyModal?: {
+    title: string;
+    subtitle: string;
+    viewHistoryBtn: string;
+    runsCount: string;
+    compareVersions: string;
+    selectRunsToCompare: string;
+    runA: string;
+    runB: string;
+    scoreBefore: string;
+    scoreAfter: string;
+    delta: string;
+    rowsBefore: string;
+    rowsAfter: string;
+    appliedSteps: string;
+    date: string;
+    close: string;
+    noHistory: string;
+    downloadCsv: string;
+    downloadParquet: string;
+    downloadScript: string;
+  };
+  driftAnalytics?: {
+    tabTitle: string;
+    tabSubtitle: string;
+    overallStatusTitle: string;
+    stableStatus: string;
+    moderateStatus: string;
+    criticalStatus: string;
+    stableCols: string;
+    totalAlerts: string;
+    proactiveRecsTitle: string;
+    proactiveRecsSubtitle: string;
+    percentilesTitle: string;
+    percentilesSubtitle: string;
+    selectColumn: string;
+    copyRecommendation: string;
+    copiedRecommendation: string;
+    anomalyRate: string;
+    ksStatistic: string;
+    maxPercentileShift: string;
+    p50Shift: string;
+    columnsTableTitle: string;
+    colName: string;
+    colStatus: string;
+    colP50Shift: string;
+    colMaxShift: string;
+    colAnomalies: string;
+    colKs: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -602,6 +652,56 @@ export const translations: Record<Language, Translations> = {
       generatePlan: 'Error al generar plan de transformaciones.',
       executePlan: 'Error al ejecutar plan ETL.',
     },
+    historyModal: {
+      title: 'Historial de Ejecuciones y Control de Versiones',
+      subtitle: 'Auditoría cronológica de transformaciones y comparador de métricas de calidad entre versiones.',
+      viewHistoryBtn: 'Historial & Comparar Versiones',
+      runsCount: 'Ejecuciones Registradas',
+      compareVersions: 'Comparar 2 Versiones',
+      selectRunsToCompare: 'Selecciona 2 ejecuciones para analizar la evolución de métricas y calidad:',
+      runA: 'Versión Base (A)',
+      runB: 'Versión Comparada (B)',
+      scoreBefore: 'Score Inicial',
+      scoreAfter: 'Score Limpio',
+      delta: 'Variación',
+      rowsBefore: 'Filas Base',
+      rowsAfter: 'Filas Final',
+      appliedSteps: 'Pasos ETL',
+      date: 'Fecha',
+      close: 'Cerrar',
+      noHistory: 'No hay ejecuciones registradas en esta sesión.',
+      downloadCsv: 'CSV',
+      downloadParquet: 'Parquet',
+      downloadScript: 'Script Python',
+    },
+    driftAnalytics: {
+      tabTitle: 'Alertas & Data Drift',
+      tabSubtitle: 'Control estadístico de distribución de percentiles y anomalías proactivas.',
+      overallStatusTitle: 'Estado Global del Data Drift',
+      stableStatus: 'Distribución Estadística Estable',
+      moderateStatus: 'Desplazamiento Moderado de Percentiles',
+      criticalStatus: 'Drift Crítico Detectado',
+      stableCols: 'Variables Estables',
+      totalAlerts: 'Alertas Totales',
+      proactiveRecsTitle: 'Recomendaciones Proactivas de la IA',
+      proactiveRecsSubtitle: 'Acciones de gobernanza y optimización generadas de forma determinista para analítica.',
+      percentilesTitle: 'Desplazamiento de Percentiles (P05 a P95)',
+      percentilesSubtitle: 'Comparativa de percentiles entre datos originales y datos limpios.',
+      selectColumn: 'Seleccionar Variable Numérica:',
+      copyRecommendation: 'Copiar Recomendación',
+      copiedRecommendation: '¡Copiada!',
+      anomalyRate: 'Tasa de Anomalías',
+      ksStatistic: 'Estadístico Kolmogorov-Smirnov (KS)',
+      maxPercentileShift: 'Desplazamiento Máx.',
+      p50Shift: 'Variación Mediana (P50)',
+      columnsTableTitle: 'Estabilidad Estadística por Variable',
+      colName: 'Columna',
+      colStatus: 'Estado Drift',
+      colP50Shift: 'Δ P50',
+      colMaxShift: 'Δ Máx',
+      colAnomalies: 'Anomalías',
+      colKs: 'KS Stat',
+    },
   },
 
   en: {
@@ -885,6 +985,56 @@ export const translations: Record<Language, Translations> = {
       fetchProfiling: 'Error retrieving dataset profiling.',
       generatePlan: 'Error generating transformation plan.',
       executePlan: 'Error executing ETL plan.',
+    },
+    historyModal: {
+      title: 'Execution History & Version Control',
+      subtitle: 'Chronological audit of transformations and quality metrics comparison across versions.',
+      viewHistoryBtn: 'History & Compare Versions',
+      runsCount: 'Recorded Executions',
+      compareVersions: 'Compare 2 Versions',
+      selectRunsToCompare: 'Select 2 executions to analyze metric evolution and quality deltas:',
+      runA: 'Base Version (A)',
+      runB: 'Compared Version (B)',
+      scoreBefore: 'Initial Score',
+      scoreAfter: 'Clean Score',
+      delta: 'Delta',
+      rowsBefore: 'Base Rows',
+      rowsAfter: 'Final Rows',
+      appliedSteps: 'ETL Steps',
+      date: 'Date',
+      close: 'Close',
+      noHistory: 'No execution runs recorded in this session.',
+      downloadCsv: 'CSV',
+      downloadParquet: 'Parquet',
+      downloadScript: 'Python Script',
+    },
+    driftAnalytics: {
+      tabTitle: 'Alerts & Data Drift',
+      tabSubtitle: 'Statistical percentile distribution control and proactive anomaly alerts.',
+      overallStatusTitle: 'Overall Data Drift Status',
+      stableStatus: 'Stable Statistical Distribution',
+      moderateStatus: 'Moderate Percentile Shift',
+      criticalStatus: 'Critical Drift Detected',
+      stableCols: 'Stable Variables',
+      totalAlerts: 'Total Alerts',
+      proactiveRecsTitle: 'Proactive AI Recommendations',
+      proactiveRecsSubtitle: 'Deterministic governance and optimization actions generated for analytics.',
+      percentilesTitle: 'Percentile Shift (P05 to P95)',
+      percentilesSubtitle: 'Comparison of distribution percentiles between raw and cleaned data.',
+      selectColumn: 'Select Numeric Variable:',
+      copyRecommendation: 'Copy Recommendation',
+      copiedRecommendation: 'Copied!',
+      anomalyRate: 'Anomaly Rate',
+      ksStatistic: 'Kolmogorov-Smirnov Statistic (KS)',
+      maxPercentileShift: 'Max Shift',
+      p50Shift: 'Median Shift (P50)',
+      columnsTableTitle: 'Statistical Stability by Variable',
+      colName: 'Column',
+      colStatus: 'Drift Status',
+      colP50Shift: 'Δ P50',
+      colMaxShift: 'Max Δ',
+      colAnomalies: 'Anomalies',
+      colKs: 'KS Stat',
     },
   },
 

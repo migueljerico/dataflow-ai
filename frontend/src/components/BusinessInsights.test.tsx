@@ -122,6 +122,82 @@ const mockReport: ExecutiveAnalyticsReport = {
     total_outliers_detected: 2,
     detection_method: 'IQR (1.5x) / Z-Score (>3.0)',
   },
+  drift_analysis: {
+    overall_drift_status: 'stable',
+    stable_columns_count: 1,
+    moderate_columns_count: 0,
+    critical_columns_count: 0,
+    total_alerts: 1,
+    alerts: [],
+    generated_at: '2026-09-03T12:00:00Z',
+    global_recommendations: [
+      {
+        id: 'rec_01',
+        priority: 'medium',
+        category: 'capping',
+        action_type: 'capping',
+        title: 'Acotar valores atípicos en Precio_Unidad',
+        rationale: 'Se detectaron outliers leves en la cola superior P95.',
+        column: 'Precio_Unidad',
+        suggested_step: 'cap_outliers(column="Precio_Unidad", method="iqr")',
+      },
+    ],
+    columns: [
+      {
+        column_name: 'Precio_Unidad',
+        drift_score: 4.2,
+        drift_status: 'stable',
+        ks_statistic: 0.042,
+        raw_percentiles: {
+          min_val: 5.0,
+          max_val: 600.0,
+          p05: 10.0,
+          p25: 50.0,
+          p50: 100.0,
+          p75: 200.0,
+          p95: 500.0,
+          mean: 150.0,
+          std: 120.0,
+          iqr: 150.0,
+        },
+        clean_percentiles: {
+          min_val: 5.0,
+          max_val: 550.0,
+          p05: 10.0,
+          p25: 50.0,
+          p50: 100.0,
+          p75: 200.0,
+          p95: 500.0,
+          mean: 150.0,
+          std: 120.0,
+          iqr: 150.0,
+        },
+        shift: {
+          p05_shift_pct: 0.0,
+          p25_shift_pct: 0.0,
+          p50_shift_pct: 0.0,
+          p75_shift_pct: 0.0,
+          p95_shift_pct: 0.0,
+          max_shift_pct: 0.0,
+        },
+        anomaly_count: 1,
+        anomaly_percentage: 1.2,
+        alerts: [
+          {
+            id: 'alt_01',
+            severity: 'info',
+            title: 'Anomalías Leves',
+            message: '1 anomalías detectadas en Precio_Unidad',
+            column: 'Precio_Unidad',
+            metric: 'anomaly_rate',
+            value: 1.2,
+            threshold: 5.0,
+          },
+        ],
+        recommendations: [],
+      },
+    ],
+  },
 };
 
 describe('BusinessInsights component', () => {
@@ -502,5 +578,28 @@ describe('BusinessInsights component', () => {
     expect(screen.getByText(/Microsoft Power BI/i)).toBeInTheDocument();
     expect(screen.getByText(/Microsoft Excel/i)).toBeInTheDocument();
     expect(screen.getByText(/Total_Registros = COUNTROWS/i)).toBeInTheDocument();
+  });
+
+  it('allows switching to drift tab, displays drift status, proactive recommendations and percentiles', async () => {
+    vi.spyOn(api, 'getBusinessAnalytics').mockResolvedValue(mockReport);
+
+    render(
+      <LanguageProvider>
+        <BusinessInsights runId="run-test-123" />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Facturación Total Estimada')).toBeInTheDocument();
+    });
+
+    const driftTab = screen.getByRole('tab', { name: /Alertas & Data Drift/i });
+    fireEvent.click(driftTab);
+
+    expect(screen.getByText(/Distribución Estadística Estable/i)).toBeInTheDocument();
+    expect(screen.getByText(/Acotar valores atípicos en Precio_Unidad/i)).toBeInTheDocument();
+    expect(screen.getByText(/Desplazamiento de Percentiles \(P05 a P95\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/P50 \(Mediana Central\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText('4.2%').length).toBeGreaterThanOrEqual(1);
   });
 });

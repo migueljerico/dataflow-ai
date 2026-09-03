@@ -19,6 +19,11 @@ import {
   Star,
   Table2,
   Download,
+  Activity,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  Sliders,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
@@ -32,6 +37,10 @@ import {
   ExcelFormulaItem,
   StarSchemaDiagram,
   StarSchemaDimension,
+  ColumnDriftReport,
+  DriftAnalysisReport,
+  DriftAlert,
+  ProactiveRecommendation,
 } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -433,8 +442,12 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
   const [report, setReport] = useState<ExecutiveAnalyticsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'kpis' | 'clusters' | 'outliers' | 'integration'>('kpis');
+  const [activeTab, setActiveTab] = useState<'kpis' | 'clusters' | 'outliers' | 'integration' | 'drift'>('kpis');
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
+  // Estados de visualización de Data Drift y Percentiles
+  const [selectedDriftCol, setSelectedDriftCol] = useState<string>('');
+  const [copiedRecId, setCopiedRecId] = useState<string | null>(null);
 
   // Estados de visualización de Clusters
   const [selectedClusterFilter, setSelectedClusterFilter] = useState<number | null>(null);
@@ -506,6 +519,21 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
       report.outlier_visualization.columns[0]
     );
   }, [report, selectedOutlierCol]);
+
+  useEffect(() => {
+    if (report?.drift_analysis?.columns && report.drift_analysis.columns.length > 0 && !selectedDriftCol) {
+      setSelectedDriftCol(report.drift_analysis.columns[0].column_name);
+    }
+  }, [report, selectedDriftCol]);
+
+  // Selección de datos de Drift activos
+  const activeDriftColReport: ColumnDriftReport | undefined = useMemo(() => {
+    if (!report?.drift_analysis?.columns) return undefined;
+    return (
+      report.drift_analysis.columns.find((c) => c.column_name === selectedDriftCol) ||
+      report.drift_analysis.columns[0]
+    );
+  }, [report, selectedDriftCol]);
 
   if (loading) {
     return (
@@ -624,6 +652,26 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
           style={{ fontSize: '0.85rem', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <Layers size={16} /> {t.analytics?.tabIntegration || 'Integración Power BI / Excel'}
+        </button>
+
+        <button
+          role="tab"
+          aria-selected={activeTab === 'drift'}
+          onClick={() => setActiveTab('drift')}
+          className={`btn ${activeTab === 'drift' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ fontSize: '0.85rem', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Activity size={16} /> {t.driftAnalytics?.tabTitle || 'Alertas & Data Drift'}
+          {report?.drift_analysis && report.drift_analysis.total_alerts > 0 && (
+            <span
+              className={`badge ${
+                report.drift_analysis.critical_columns_count > 0 ? 'badge-rose' : 'badge-amber'
+              }`}
+              style={{ fontSize: '0.65rem', padding: '1px 6px', marginLeft: '4px' }}
+            >
+              {report.drift_analysis.total_alerts}
+            </span>
+          )}
         </button>
       </div>
 
@@ -2434,6 +2482,472 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
           </div>
         );
       })()}
+
+      {/* PESTAÑA 5: ALERTAS VISUALES, CONTROL DE DATA DRIFT Y RECOMENDACIONES PROACTIVAS */}
+      {activeTab === 'drift' && (
+        <div>
+          {!report?.drift_analysis || report.drift_analysis.columns.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: 'var(--bg-input)',
+                border: '1px dashed var(--border-color)',
+                padding: '32px',
+                textAlign: 'center',
+                borderRadius: '10px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              No se detectaron variables numéricas para calcular análisis de Data Drift.
+            </div>
+          ) : (
+            <div>
+              {/* Banner de Estado Global de Data Drift */}
+              {(() => {
+                const drift = report.drift_analysis;
+                const isCrit = drift.overall_drift_status === 'critical';
+                const isMod = drift.overall_drift_status === 'moderate';
+
+                const bannerBg = isCrit
+                  ? 'rgba(239, 68, 68, 0.12)'
+                  : isMod
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(16, 185, 129, 0.12)';
+                const bannerBorder = isCrit
+                  ? 'var(--accent-rose)'
+                  : isMod
+                  ? 'var(--accent-amber)'
+                  : 'var(--accent-emerald)';
+                const statusText = isCrit
+                  ? (t.driftAnalytics?.criticalStatus || 'Drift Crítico Detectado')
+                  : isMod
+                  ? (t.driftAnalytics?.moderateStatus || 'Desplazamiento Moderado de Percentiles')
+                  : (t.driftAnalytics?.stableStatus || 'Distribución Estadística Estable');
+
+                return (
+                  <div
+                    style={{
+                      backgroundColor: bannerBg,
+                      border: `1px solid ${bannerBorder}`,
+                      borderRadius: '10px',
+                      padding: '16px 20px',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {isCrit ? (
+                        <AlertCircle size={28} className="text-rose" />
+                      ) : isMod ? (
+                        <AlertTriangle size={28} style={{ color: 'var(--accent-amber)' }} />
+                      ) : (
+                        <CheckCircle2 size={28} className="text-emerald" />
+                      )}
+                      <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>{statusText}</div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                          Evaluación de {drift.columns.length} variables numéricas con percentiles (P05 a P95) y test Kolmogorov-Smirnov.
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <span className="badge badge-emerald">
+                        {drift.stable_columns_count} {t.driftAnalytics?.stableCols || 'Estables'}
+                      </span>
+                      {drift.moderate_columns_count > 0 && (
+                        <span className="badge badge-amber">{drift.moderate_columns_count} Moderadas</span>
+                      )}
+                      {drift.critical_columns_count > 0 && (
+                        <span className="badge badge-rose">{drift.critical_columns_count} Críticas</span>
+                      )}
+                      <span className="badge badge-blue">
+                        {drift.total_alerts} {t.driftAnalytics?.totalAlerts || 'Alertas Totales'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Recomendaciones Proactivas Accionables */}
+              {report.drift_analysis.global_recommendations.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Lightbulb size={18} className="text-primary" /> {t.driftAnalytics?.proactiveRecsTitle || 'Recomendaciones Proactivas de la IA'}
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {t.driftAnalytics?.proactiveRecsSubtitle || 'Acciones de gobernanza y optimización generadas de forma determinista para analítica.'}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
+                    {report.drift_analysis.global_recommendations.map((rec) => {
+                      const isHigh = rec.priority === 'high';
+                      const isMed = rec.priority === 'medium';
+                      const isCopied = copiedRecId === rec.id;
+                      return (
+                        <div
+                          key={rec.id}
+                          style={{
+                            backgroundColor: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '10px',
+                            padding: '14px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            gap: '10px',
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <span
+                                className={`badge ${isHigh ? 'badge-rose' : isMed ? 'badge-amber' : 'badge-emerald'}`}
+                                style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}
+                              >
+                                Prioridad {rec.priority}
+                              </span>
+                              {rec.column && (
+                                <code style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>
+                                  {rec.column}
+                                </code>
+                              )}
+                            </div>
+                            <h5 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '4px' }}>{rec.title}</h5>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                              {rec.rationale}
+                            </p>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                            {rec.suggested_step ? (
+                              <code style={{ fontSize: '0.7rem', color: 'var(--accent-emerald)', wordBreak: 'break-all' }}>
+                                {rec.suggested_step}
+                              </code>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Gobernanza de Calidad</span>
+                            )}
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: '4px 8px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${rec.title}: ${rec.rationale}`);
+                                setCopiedRecId(rec.id);
+                                setTimeout(() => setCopiedRecId(null), 2000);
+                              }}
+                            >
+                              {isCopied ? <Check size={12} className="text-emerald" /> : <Copy size={12} />}
+                              {isCopied ? (t.driftAnalytics?.copiedRecommendation || '¡Copiada!') : (t.driftAnalytics?.copyRecommendation || 'Copiar')}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Inspector Interactivo de Percentiles y Shift */}
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  padding: '18px',
+                  marginBottom: '24px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sliders size={18} className="text-primary" /> {t.driftAnalytics?.percentilesTitle || 'Desplazamiento de Percentiles (P05 a P95)'}
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {t.driftAnalytics?.percentilesSubtitle || 'Comparativa de percentiles entre datos originales y datos limpios.'}
+                    </p>
+                  </div>
+
+                  {/* Selector de Columna */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label htmlFor="drift-col-select" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {t.driftAnalytics?.selectColumn || 'Variable:'}
+                    </label>
+                    <select
+                      id="drift-col-select"
+                      className="form-select"
+                      value={selectedDriftCol}
+                      onChange={(e) => setSelectedDriftCol(e.target.value)}
+                      style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                    >
+                      {report.drift_analysis.columns.map((c) => (
+                        <option key={c.column_name} value={c.column_name}>
+                          {c.column_name} ({c.drift_status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {activeDriftColReport && (
+                  <div>
+                    {/* Tarjetas KPI de la Columna Seleccionada */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+                      <div style={{ backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Drift Score</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '2px' }}>
+                          {activeDriftColReport.drift_score}%
+                        </div>
+                        <span
+                          className={`badge ${
+                            activeDriftColReport.drift_status === 'critical'
+                              ? 'badge-rose'
+                              : activeDriftColReport.drift_status === 'moderate'
+                              ? 'badge-amber'
+                              : 'badge-emerald'
+                          }`}
+                          style={{ marginTop: '4px', textTransform: 'uppercase', fontSize: '0.65rem' }}
+                        >
+                          {activeDriftColReport.drift_status}
+                        </span>
+                      </div>
+
+                      <div style={{ backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Kolmogorov-Smirnov (KS)</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '2px', color: 'var(--primary)' }}>
+                          {activeDriftColReport.ks_statistic !== undefined ? activeDriftColReport.ks_statistic : 'N/A'}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          Distancia de distribución
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Δ Mediana (P50)</div>
+                        <div
+                          style={{
+                            fontSize: '1.3rem',
+                            fontWeight: 800,
+                            marginTop: '2px',
+                            color:
+                              (activeDriftColReport.shift?.p50_shift_pct ?? 0) === 0
+                                ? 'var(--accent-emerald)'
+                                : Math.abs(activeDriftColReport.shift?.p50_shift_pct ?? 0) > 15
+                                ? 'var(--accent-rose)'
+                                : 'var(--accent-amber)',
+                          }}
+                        >
+                          {activeDriftColReport.shift ? `${activeDriftColReport.shift.p50_shift_pct > 0 ? '+' : ''}${activeDriftColReport.shift.p50_shift_pct}%` : '0%'}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          Desvío tendencia central
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Anomalías (IQR/P99)</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '2px' }}>
+                          {activeDriftColReport.anomaly_count}{' '}
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            ({activeDriftColReport.anomaly_percentage}%)
+                          </span>
+                        </div>
+                        <span
+                          className={`badge ${
+                            activeDriftColReport.anomaly_percentage >= 10
+                              ? 'badge-rose'
+                              : activeDriftColReport.anomaly_percentage >= 3
+                              ? 'badge-amber'
+                              : 'badge-emerald'
+                          }`}
+                          style={{ marginTop: '4px', fontSize: '0.65rem' }}
+                        >
+                          {activeDriftColReport.anomaly_percentage >= 3 ? 'Outliers detectados' : 'Normal'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Visualizador Comparativo de los 5 Percentiles */}
+                    <div
+                      style={{
+                        backgroundColor: 'var(--bg-main)',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        padding: '16px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <h5 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '14px', color: 'var(--text-main)' }}>
+                        Comparador Detallado de Percentiles (Datos Crudos vs. Limpios)
+                      </h5>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {[
+                          {
+                            label: 'P05 (Cola Inferior)',
+                            rawVal: activeDriftColReport.raw_percentiles?.p05,
+                            cleanVal: activeDriftColReport.clean_percentiles.p05,
+                            shiftVal: activeDriftColReport.shift?.p05_shift_pct,
+                          },
+                          {
+                            label: 'P25 (Primer Cuartil Q1)',
+                            rawVal: activeDriftColReport.raw_percentiles?.p25,
+                            cleanVal: activeDriftColReport.clean_percentiles.p25,
+                            shiftVal: activeDriftColReport.shift?.p25_shift_pct,
+                          },
+                          {
+                            label: 'P50 (Mediana Central)',
+                            rawVal: activeDriftColReport.raw_percentiles?.p50,
+                            cleanVal: activeDriftColReport.clean_percentiles.p50,
+                            shiftVal: activeDriftColReport.shift?.p50_shift_pct,
+                            isCenter: true,
+                          },
+                          {
+                            label: 'P75 (Tercer Cuartil Q3)',
+                            rawVal: activeDriftColReport.raw_percentiles?.p75,
+                            cleanVal: activeDriftColReport.clean_percentiles.p75,
+                            shiftVal: activeDriftColReport.shift?.p75_shift_pct,
+                          },
+                          {
+                            label: 'P95 (Cola Superior)',
+                            rawVal: activeDriftColReport.raw_percentiles?.p95,
+                            cleanVal: activeDriftColReport.clean_percentiles.p95,
+                            shiftVal: activeDriftColReport.shift?.p95_shift_pct,
+                          },
+                        ].map((row, idx) => {
+                          const shift = row.shiftVal ?? 0;
+                          const isHigh = Math.abs(shift) > 20;
+                          const isMod = Math.abs(shift) > 5;
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '180px 1fr 1fr 100px',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                backgroundColor: row.isCenter ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-input)',
+                                border: row.isCenter ? '1px solid rgba(59, 130, 246, 0.3)' : undefined,
+                                fontSize: '0.8rem',
+                              }}
+                            >
+                              <div style={{ fontWeight: row.isCenter ? 700 : 500, color: row.isCenter ? 'var(--primary)' : undefined }}>
+                                {row.label}
+                              </div>
+                              <div>
+                                <span style={{ color: 'var(--text-muted)' }}>Crudo: </span>
+                                <span style={{ fontWeight: 600 }}>{row.rawVal !== undefined ? row.rawVal : 'N/D'}</span>
+                              </div>
+                              <div>
+                                <span style={{ color: 'var(--text-muted)' }}>Limpio: </span>
+                                <span className="text-emerald" style={{ fontWeight: 700 }}>{row.cleanVal}</span>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <span
+                                  className={`badge ${isHigh ? 'badge-rose' : isMod ? 'badge-amber' : 'badge-emerald'}`}
+                                  style={{ fontSize: '0.7rem' }}
+                                >
+                                  {shift > 0 ? `+${shift}` : shift}%
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tabla de Estabilidad Estadística de Todas las Variables */}
+              <div>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '12px' }}>
+                  {t.driftAnalytics?.columnsTableTitle || 'Estabilidad Estadística por Variable'}
+                </h4>
+                <div className="table-wrapper">
+                  <table style={{ width: '100%', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr>
+                        <th>{t.driftAnalytics?.colName || 'Columna'}</th>
+                        <th>{t.driftAnalytics?.colStatus || 'Estado Drift'}</th>
+                        <th>Drift Score</th>
+                        <th>{t.driftAnalytics?.colP50Shift || 'Δ P50'}</th>
+                        <th>{t.driftAnalytics?.colMaxShift || 'Δ Máx'}</th>
+                        <th>{t.driftAnalytics?.colKs || 'KS Stat'}</th>
+                        <th>{t.driftAnalytics?.colAnomalies || 'Anomalías'}</th>
+                        <th>Alertas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.drift_analysis.columns.map((col) => (
+                        <tr
+                          key={col.column_name}
+                          style={{
+                            backgroundColor: col.column_name === selectedDriftCol ? 'rgba(59, 130, 246, 0.08)' : undefined,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setSelectedDriftCol(col.column_name)}
+                        >
+                          <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{col.column_name}</td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                col.drift_status === 'critical'
+                                  ? 'badge-rose'
+                                  : col.drift_status === 'moderate'
+                                  ? 'badge-amber'
+                                  : 'badge-emerald'
+                              }`}
+                              style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}
+                            >
+                              {col.drift_status}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{col.drift_score}%</td>
+                          <td>
+                            {col.shift ? `${col.shift.p50_shift_pct > 0 ? '+' : ''}${col.shift.p50_shift_pct}%` : '0%'}
+                          </td>
+                          <td>
+                            {col.shift ? `${col.shift.max_shift_pct}%` : '0%'}
+                          </td>
+                          <td>{col.ks_statistic !== undefined ? col.ks_statistic : 'N/A'}</td>
+                          <td>
+                            {col.anomaly_count > 0 ? (
+                              <span className={col.anomaly_percentage > 5 ? 'text-rose' : 'text-amber'}>
+                                {col.anomaly_count} ({col.anomaly_percentage}%)
+                              </span>
+                            ) : (
+                              <span className="text-emerald">0 (0%)</span>
+                            )}
+                          </td>
+                          <td>
+                            {col.alerts.length > 0 ? (
+                              <span
+                                className={`badge ${
+                                  col.alerts.some((a) => a.severity === 'critical') ? 'badge-rose' : 'badge-amber'
+                                }`}
+                                style={{ fontSize: '0.65rem' }}
+                              >
+                                {col.alerts.length} alertas
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-dim)' }}>0</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

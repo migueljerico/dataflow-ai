@@ -354,6 +354,128 @@ export interface IntegrationGuide {
   star_schema?: StarSchemaDiagram;
 }
 
+export interface DimensionComparison {
+  dimension: QualityDimension;
+  score_before: number;
+  score_after: number;
+  delta: number;
+  issues_before: number;
+  issues_after: number;
+  summary: string;
+}
+
+export interface QualityComparisonReport {
+  run_id: string;
+  dataset_id: string;
+  overall_score_before: number;
+  overall_score_after: number;
+  delta_score: number;
+  dimensions: DimensionComparison[];
+  issues_count_before: number;
+  issues_count_after: number;
+  issues_resolved_count: number;
+  explanation: string;
+  generated_at: string;
+}
+
+export interface ExecutionSummaryItem {
+  run_id: string;
+  dataset_id: string;
+  filename: string;
+  clean_filename: string;
+  status: string;
+  started_at: string;
+  finished_at: string;
+  execution_time_seconds: number;
+  rows_before: number;
+  rows_after: number;
+  columns_before: number;
+  columns_after: number;
+  applied_steps_count: number;
+  score_before: number;
+  score_after: number;
+  score_delta: number;
+  input_hash_md5: string;
+  output_hash_md5: string;
+  download_url: string;
+  parquet_url?: string;
+  script_url?: string;
+}
+
+export interface PercentileMetrics {
+  p05: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p95: number;
+  mean: number;
+  std: number;
+  iqr: number;
+  min_val: number;
+  max_val: number;
+}
+
+export interface PercentileShift {
+  p05_shift_pct: number;
+  p25_shift_pct: number;
+  p50_shift_pct: number;
+  p75_shift_pct: number;
+  p95_shift_pct: number;
+  max_shift_pct: number;
+}
+
+export type DriftStatus = 'stable' | 'moderate' | 'critical';
+export type DriftAlertSeverity = 'info' | 'warning' | 'critical';
+
+export interface DriftAlert {
+  id: string;
+  column: string;
+  severity: DriftAlertSeverity;
+  title: string;
+  message: string;
+  metric: string;
+  value: number;
+  threshold: number;
+}
+
+export interface ProactiveRecommendation {
+  id: string;
+  column?: string;
+  category: string;
+  priority: 'high' | 'medium' | 'low';
+  action_type: string;
+  title: string;
+  rationale: string;
+  suggested_step?: string;
+}
+
+export interface ColumnDriftReport {
+  column_name: string;
+  raw_percentiles?: PercentileMetrics;
+  clean_percentiles: PercentileMetrics;
+  shift?: PercentileShift;
+  drift_score: number;
+  drift_status: DriftStatus;
+  ks_statistic?: number;
+  p_value?: number;
+  anomaly_count: number;
+  anomaly_percentage: number;
+  alerts: DriftAlert[];
+  recommendations: ProactiveRecommendation[];
+}
+
+export interface DriftAnalysisReport {
+  columns: ColumnDriftReport[];
+  overall_drift_status: DriftStatus;
+  stable_columns_count: number;
+  moderate_columns_count: number;
+  critical_columns_count: number;
+  total_alerts: number;
+  alerts: DriftAlert[];
+  global_recommendations: ProactiveRecommendation[];
+  generated_at: string;
+}
+
 export interface ExecutiveAnalyticsReport {
   run_id: string;
   dataset_name: string;
@@ -365,6 +487,7 @@ export interface ExecutiveAnalyticsReport {
   cluster_visualization?: ClusterVisualization;
   outlier_visualization?: OutlierVisualization;
   integration_guide?: IntegrationGuide;
+  drift_analysis?: DriftAnalysisReport;
 }
 
 export interface OpenDatasetItem {
@@ -383,4 +506,5 @@ export interface OpenDataSearchResponse {
   results: OpenDatasetItem[];
   source: string;
 }
+
 

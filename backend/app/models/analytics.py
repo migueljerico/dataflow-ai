@@ -1,6 +1,8 @@
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BusinessKPI(BaseModel):
@@ -170,6 +172,89 @@ class StarSchemaDiagram(BaseModel):
     tmdl_relationships: Optional[str] = None  # Fragmento TMDL de relaciones del modelo
 
 
+class PercentileMetrics(BaseModel):
+    p05: float
+    p25: float
+    p50: float
+    p75: float
+    p95: float
+    mean: float
+    std: float
+    iqr: float
+    min_val: float
+    max_val: float
+
+
+class PercentileShift(BaseModel):
+    p05_shift_pct: float
+    p25_shift_pct: float
+    p50_shift_pct: float
+    p75_shift_pct: float
+    p95_shift_pct: float
+    max_shift_pct: float
+
+
+class DriftStatusEnum(str, Enum):
+    STABLE = "stable"
+    MODERATE = "moderate"
+    CRITICAL = "critical"
+
+
+class DriftAlertSeverityEnum(str, Enum):
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class DriftAlert(BaseModel):
+    id: str
+    column: str
+    severity: DriftAlertSeverityEnum
+    title: str
+    message: str
+    metric: str
+    value: float
+    threshold: float
+
+
+class ProactiveRecommendation(BaseModel):
+    id: str
+    column: Optional[str] = None
+    category: str  # 'drift', 'anomaly', 'distribution', 'governance'
+    priority: str  # 'high', 'medium', 'low'
+    action_type: str  # 'capping', 'segmentation', 'imputation_review', 'verified_stable'
+    title: str
+    rationale: str
+    suggested_step: Optional[str] = None
+
+
+class ColumnDriftReport(BaseModel):
+    column_name: str
+    raw_percentiles: Optional[PercentileMetrics] = None
+    clean_percentiles: PercentileMetrics
+    shift: Optional[PercentileShift] = None
+    drift_score: float  # 0.0 a 100.0 (porcentaje de desvío de distribución)
+    drift_status: DriftStatusEnum
+    ks_statistic: Optional[float] = None
+    p_value: Optional[float] = None
+    anomaly_count: int
+    anomaly_percentage: float
+    alerts: List[DriftAlert] = []
+    recommendations: List[ProactiveRecommendation] = []
+
+
+class DriftAnalysisReport(BaseModel):
+    columns: List[ColumnDriftReport]
+    overall_drift_status: DriftStatusEnum
+    stable_columns_count: int
+    moderate_columns_count: int
+    critical_columns_count: int
+    total_alerts: int
+    alerts: List[DriftAlert] = []
+    global_recommendations: List[ProactiveRecommendation] = []
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class ExecutiveAnalyticsReport(BaseModel):
     run_id: str
     dataset_name: str
@@ -181,3 +266,4 @@ class ExecutiveAnalyticsReport(BaseModel):
     cluster_visualization: Optional[ClusterVisualization] = None
     outlier_visualization: Optional[OutlierVisualization] = None
     integration_guide: Optional[IntegrationGuide] = None
+    drift_analysis: Optional[DriftAnalysisReport] = None

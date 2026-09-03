@@ -4,6 +4,56 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.15.0] — 2026-09-03
+
+### 📊 Historial de Ejecuciones, Comparador Dimensional de Calidad, Control de Data Drift por Percentiles y Alertas Proactivas
+
+> **Gobernanza & Control Estadístico:** Incorporación del historial cronológico de ejecuciones y comparador visual de calidad multidimensional entre versiones en la UI; motor determinista de detección de Data Drift y anomalías basado en percentiles ($P_{05}$ a $P_{95}$) y estadístico Kolmogorov-Smirnov sin dependencias pesadas; alertas visuales y recomendaciones proactivas en el dashboard de analítica; e integración de la captura real descargada del Esquema Estrella en la documentación.
+
+#### 📜 Historial de Ejecuciones y Comparador de Versiones (UI & API)
+- **Modelos de Calidad y Registro (`backend/app/models/quality.py`):**
+  - Nuevos esquemas Pydantic `DimensionComparison`, `QualityComparisonReport` y `ExecutionSummaryItem`.
+  - Estructuración de las 5 dimensiones fundamentales de calidad (Completitud, Validez, Consistencia, Unicidad, Integridad) con deltas numéricos, conteos de anomalías resueltas y explicación textual.
+- **Servicio y Endpoints REST (`backend/app/services/etl_service.py`, `backend/app/api/v1/endpoints/runs.py`):**
+  - `GET /api/v1/runs/`: Listado cronológico de ejecuciones filtrable por `dataset_id`.
+  - `GET /api/v1/runs/compare?run_a={id}&run_b={id}`: Comparador bidireccional entre dos ejecuciones arbitrarias del histórico.
+  - `GET /api/v1/runs/{run_id}/quality-comparison`: Comparativa de calidad detallada antes vs después de la ejecución.
+  - Enriquecimiento de `GET /api/v1/runs/{run_id}/report` con `score_before`, `score_after` y `score_delta` calculados deterministamente.
+- **Frontend Interactivo (`frontend/src/components/ExecutionHistoryModal.tsx`):**
+  - Modal accesible con tabla de ejecuciones (Run ID, fecha, variación de filas, evolución de Quality Score, pasos aplicados y botones directos de descarga CSV, Parquet y Script).
+  - Selector por radio buttons para comparar versión A vs versión B en vivo.
+  - Panel comparativo con barras de evolución para cada una de las 5 dimensiones y delta global de calidad (+pts).
+- **Integración en Reporte (`frontend/src/components/ExecutionReport.tsx`):**
+  - Sustitución de valores estáticos de referencia por métricas reales calculadas por `QualityService` sobre el dataset limpio.
+  - Tarjetas de evolución por dimensión y nuevo botón de acceso directo al modal de historial.
+
+#### 📈 Control de Data Drift por Percentiles y Alertas Proactivas
+- **Motor de Drift Determinista (`backend/app/services/drift_service.py`):**
+  - Algoritmo de 2 muestras para el test Kolmogorov-Smirnov (`_compute_ks_statistic`) implementado directamente en NumPy vectorizado sin requerir dependencias externas pesadas como SciPy.
+  - Cálculo de percentiles estadísticos ($P_{05}, P_{25}, P_{50}, P_{75}, P_{95}$), media, desviación estándar y Rango Intercuartílico (IQR).
+  - Cálculo de desplazamiento de percentiles ($\Delta P$) respecto al dataset original crudo.
+  - Clasificación determinista en estados `STABLE` (< 5% shift), `MODERATE` (5%-20%) y `CRITICAL` (> 20%).
+  - Detección de anomalías en datos limpios basada en IQR y percentiles extremos.
+  - Generador de recomendaciones proactivas accionables de gobernanza (`imputation_review`, `capping`, `segmentation`, `verified_stable`).
+- **Dashboard de Analítica y Nueva Pestaña (`frontend/src/components/BusinessInsights.tsx`):**
+  - Pestaña «Alertas & Data Drift» integrada en el panel directivo con contador de alertas.
+  - Banner global de estado (Estable, Moderado, Crítico) con conteo de variables analizadas y alertas.
+  - Tarjetas de recomendaciones proactivas categorizadas con botón de copia rápida al portapapeles.
+  - Inspector interactivo con selector de variable, score de drift, KS stat, variación de mediana y anomalías.
+  - Comparador detallado de los 5 percentiles (Crudo vs Limpio con tags de $\Delta \%$).
+  - Tabla de estabilidad estadística completa para todas las variables numéricas.
+
+#### 📸 Actualización de Captura del Esquema Estrella
+- Sustitución de la imagen de vista previa del esquema estrella (`docs/capturas/captura_dataflow_ai_esquema_estrella.png`) con el archivo PNG real exportado directamente desde el visualizador interactivo del sistema (tabla de hechos de ventas, 6 dimensiones y relaciones `*:1`).
+
+#### 🧪 Verificación Integral y Pruebas
+- **Backend:** 171 pruebas unitarias y de integración pasando al 100% (+5 pruebas nuevas en `test_drift_service.py` y `test_runs_history_and_comparison.py`).
+- **Frontend:** 47 pruebas con Vitest pasando al 100% (+2 pruebas nuevas en `ExecutionHistoryModal.test.tsx` y `BusinessInsights.test.tsx`).
+- **Linters & SAST:** Ruff 0 errores, Black 0 diferencias de formato, Bandit 0 vulnerabilidades. Compilación estricta TypeScript + Vite en 1.34s sin errores.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** Gemini 3.8 Flash (High) (vía Google Antigravity).
+
 ## [1.14.0] — 2026-09-03
 
 ### ⚡ Panel de Observabilidad de Caché Distribuida y Exportación PNG / TMDL para Power BI Desktop

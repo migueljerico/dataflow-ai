@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-166%20backend%20%7C%2045%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.14.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-171%20backend%20%7C%2047%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.15.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -350,7 +350,8 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última mejora (v1.14.0):** Panel interactivo de observabilidad de la caché distribuida (L1/L2), exportación PNG en alta resolución (2x Retina) del diagrama interactivo de Esquema Estrella y validación canónica de definiciones TMDL de dimensiones calculadas y relaciones para Power BI Desktop real, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
+- **Última mejora (v1.15.0):** Historial cronológico de ejecuciones y comparador de métricas de calidad entre versiones del dataset en la UI; control estadístico de Data Drift por percentiles (P05 a P95, test Kolmogorov-Smirnov sin dependencias pesadas), alertas visuales y recomendaciones proactivas de gobernanza en el dashboard; y actualización de la captura del modelo estrella con la descarga real en PNG, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
+- **Versión v1.14.0:** Panel interactivo de observabilidad de la caché distribuida (L1/L2), exportación PNG en alta resolución (2x Retina) del diagrama interactivo de Esquema Estrella y validación canónica de definiciones TMDL de dimensiones calculadas y relaciones para Power BI Desktop real.
 - **Versión v1.13.0:** Visualizador de modelo estrella (Star Schema), caché de inferencia distribuida Redis/Memorystore, rediseño del README con índice navegable y galería de vistas previas (`docs/capturas/`), desarrollados con **GLM-5.3-Flash** a través de **[ZCode](https://z.ai)**, la app de desarrollo asistido por IA desde la que se gestionó esa release.
 - **Contribuciones previas y documentación:** Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por **Muse Spark 1.2 Contributor** — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026.
 

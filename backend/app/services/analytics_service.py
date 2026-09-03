@@ -34,6 +34,7 @@ from app.models.analytics import (
 )
 from app.models.etl import ExecutionResult
 from app.services.dataset_service import DatasetService
+from app.services.drift_service import DriftService
 from app.services.etl_service import ETLService
 from app.transformations.cluster_ops import _kmeans_numpy
 
@@ -391,6 +392,7 @@ class AnalyticsService:
         cluster_viz = AnalyticsService._build_cluster_visualization(df)
         outlier_viz = AnalyticsService._build_outlier_visualization(df, raw_df=raw_df)
         integration_guide = AnalyticsService._build_integration_guide(df, run_result, domain)
+        drift_analysis = DriftService.analyze_drift(clean_df=df, raw_df=raw_df)
 
         report = ExecutiveAnalyticsReport(
             run_id=run_id,
@@ -403,6 +405,7 @@ class AnalyticsService:
             cluster_visualization=cluster_viz,
             outlier_visualization=outlier_viz,
             integration_guide=integration_guide,
+            drift_analysis=drift_analysis,
         )
 
         ANALYTICS_CACHE[run_id] = report
