@@ -223,6 +223,24 @@ class ScriptGeneratorService:
                 code_lines.append("        except ImportError:")
                 code_lines.append(f"            df[{out_lit}] = np.arange(len(df)) % {n_clusters}")
 
+            elif op == "split_column":
+                sep = params.get("separator", "-")
+                sep_lit = json.dumps(sep)
+                new_cols = params.get("new_columns") or []
+                if len(new_cols) == 2:
+                    a_lit, b_lit = json.dumps(new_cols[0]), json.dumps(new_cols[1])
+                else:
+                    a_lit, b_lit = json.dumps(f"{col}_Part1"), json.dumps(f"{col}_Part2")
+                keep = bool(params.get("keep_original", False))
+                code_lines.append(f"    if {col_lit} in df.columns:")
+                code_lines.append(f"        _parts = df[{col_lit}].astype(str).str.split({sep_lit}, n=1, expand=True)")
+                code_lines.append(f"        df[{a_lit}] = _parts[0].str.strip().str.title()")
+                code_lines.append(
+                    f"        df[{b_lit}] = _parts[1].str.strip().str.title() if 1 in _parts.columns else None"
+                )
+                if not keep:
+                    code_lines.append(f"        df = df.drop(columns=[{col_lit}])")
+
             code_lines.append("")
 
         code_lines.extend(

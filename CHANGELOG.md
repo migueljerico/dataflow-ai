@@ -4,6 +4,30 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.15.2] — 2026-09-03
+
+### ✂️ División Automática de Columnas Compuestas: `Department_Region` → `Department` + `Region`
+
+> **Modelado Dimensional:** Nueva transformación determinista `split_column` que divide columnas compuestas por un separador en dos dimensiones atómicas listas para Power BI (ej. `Sales-Florida` → `Sales` | `Florida`).
+
+#### ✨ Nueva Transformación `split_column`
+- **Nueva clase `SplitColumnTransformation` (`backend/app/transformations/split_ops.py`):**
+  - Divide una columna por un separador (`-`, `_`, etc.) en dos columnas nuevas con `Title Case` por segmento y eliminación opcional de la original (`keep_original`).
+  - Validación de columnas destino y prevención de colisiones con el esquema existente.
+- **Registro y Catálogo (`backend/app/transformations/registry.py`):**
+  - Nueva operación `split_column` disponible en `TransformationRegistry` y expuesta en el catálogo/manifest para la UI.
+- **Generación de Script (`backend/app/services/script_generator.py`):**
+  - Plantilla reproducible para `split_column` usando `str.split(n=1, expand=True)` con `Title` por parte.
+- **Heurística de Proposición Automática (`backend/app/services/etl_service.py`):**
+  - `Department_Region` (y variantes `dept_region`, `department-region`) se propone automáticamente como `split_column` con separador `-` → `Department` + `Region`, tras el resto de heurísticas y sin colisionar con columnas ya existentes.
+
+#### 🧪 Verificación
+- **Dataset Validado:** `Messy_Employee_dataset.csv` (1020 filas): `Department_Region` ahora se divide en `Department` (`Sales`, `Admin`…) y `Region` (`Florida`, `Nevada`…) con tipos `TEXT` correctos para modelo estrella en Power BI.
+- **Suite:** 171 backend + 47 frontend en verde.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** Gemini 3.8 Flash (High) (vía Google Antigravity).
+
 ## [1.15.1] — 2026-09-03
 
 ### 🛠️ Corrección del Motor Determinista: Crash de Parquet y Tipos Boolean para Datasets Corporativos

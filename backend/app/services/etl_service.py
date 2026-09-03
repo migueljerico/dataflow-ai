@@ -468,6 +468,39 @@ class ETLService:
                             )
                         )
 
+        # 3. Columnas compuestas con separador (ej. Department_Region → Department + Region)
+        for col_name in list(df.columns):
+            if col_name.lower() in ("department_region", "dept_region", "department-region"):
+                if not any(s.operation == "split_column" and s.column == col_name for s in steps):
+                    sample_vals = df[col_name].dropna().astype(str).head(20)
+                    sep = "-" if sample_vals.str.contains("-", na=False).mean() >= 0.5 else "_"
+                    # Derivar nombres: Department, Region
+                    parts = re.split(r"[-_]", col_name, maxsplit=1)
+                    new_cols = (
+                        [parts[0].strip(), parts[1].strip()] if len(parts) == 2 else [f"{col_name}_1", f"{col_name}_2"]
+                    )
+                    # Capitalizar
+                    new_cols = [c.capitalize() if c.islower() else c for c in new_cols]
+                    # Evitar colisión con columnas existentes
+                    if not any(nc in df.columns for nc in new_cols):
+                        steps.append(
+                            TransformationStep(
+                                step_id=f"STEP-{len(steps)+1:03d}",
+                                operation="split_column",
+                                column=col_name,
+                                parameters={
+                                    "column": col_name,
+                                    "separator": sep,
+                                    "new_columns": new_cols,
+                                    "keep_original": False,
+                                },
+                                reason=f"Dividir la columna compuesta '{col_name}' en '{new_cols[0]}' y '{new_cols[1]}' usando el separador '{sep}' para análisis dimensional en Power BI.",
+                                confidence=0.98,
+                                risk="low",
+                                affected_rows_estimate=len(df),
+                            )
+                        )
+
         plan_id = f"PLAN-{uuid.uuid4().hex[:8]}"
         plan = TransformationPlan(
             plan_id=plan_id,
@@ -618,6 +651,13 @@ class ETLService:
                         modified = len(df_current)
                     audit_logs.append(
                         f"[VALIDACIÓN OK] Operación 'trim_text' en '{target_col}': {modified} celda(s) limpiadas de espacios sobrantes."
+                    )
+
+                elif step.operation == "split_column" and target_col:
+                    cols_before = len(df_current.columns)
+                    # Audit: nuevas columnas creadas
+                    audit_logs.append(
+                        f"[VALIDACIÓN OK] Operación 'split_column' en '{target_col}': columna dividida en {cols_before} columnas totales (ej. Department + Region)."
                     )
 
                 else:
