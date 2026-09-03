@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-171%20backend%20%7C%2047%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.15.2-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-224%20backend%20%7C%2055%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.16.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -159,7 +159,7 @@ flowchart TD
 - 🌐 **Detección Estadística de Codificación (`charset-normalizer`):** Reconocimiento transparente de `UTF-8`, `UTF-8 con BOM`, `Windows-1252` e `ISO-8859-1/15` con normalización automática a UTF-8 y preservación de `ñ`, tildes y monedas (`€`).
 - 🔍 **Data Profiling Automático con Guardrails de Códigos:** Inferencia de tipos (`numeric`, `datetime`, `text`, `boolean`, `categorical`) y detección semántica con protección de ceros iniciales en códigos postales (`08001`), códigos INE y referencias.
 - 📊 **Data Quality Score Explicable:** Puntuación 0-100 ponderada en 5 dimensiones con desglose de anomalías y muestras de evidencia.
-- ⚙️ **Motor ETL Determinista:** Catálogo estricto de 11 operaciones registradas en `TransformationRegistry` con ejecución reproducible.
+- ⚙️ **Motor ETL Determinista:** Catálogo estricto de 15 operaciones registradas en `TransformationRegistry` con ejecución reproducible, incluida la división automática de columnas compuestas (`split_column`: `Department_Region` → `Department` + `Region`) con casing inteligente que preserva siglas (`HR`) y camelCase (`DevOps`).
 - 📈 **Business Analytics & KPIs:** Cálculo en tiempo real con `pandas` de métricas de negocio por dominio (Ventas, RRHH, Contact Center), segmentación de clusters con centroides y diagrama de dispersión interactivo.
 - ⚡ **Observabilidad y Métricas de Inferencia IA:** Diagnóstico en tiempo real de latencia (`ms`/`s`), balance de tokens (`prompt` / `completion` / `total`), cálculo de coste estimado en USD y modelo activo (`gemini-2.5-flash`) en la propuesta de planes asistidos por IA, con caché semántica LRU/TTL que reduce la latencia a < 1 ms en esquemas repetidos.
 - 🎯 **Comparador Interactivo de Outliers (Scatter Diff):** Diagnóstico visual antes/después entre dataset crudo y limpio en la pestaña de Outliers, con trazado de acotación/clamp, balance global de resolución de anomalías por IQR y tabla interactiva de variación.
@@ -167,6 +167,9 @@ flowchart TD
 - 📗 **Fórmulas Dinámicas Adaptativas para Excel:** Generación multi-categoría (Auditoría Outliers IQR, KPIs & Estadísticas, Participación % y Condicionales) compatible con la configuración regional en español e inglés.
 - 🌐 **Caché de Inferencia Distribuida (Redis / Cloud Memorystore):** Arquitectura de dos niveles (L1 memoria LRU + L2 Redis compartida) que multiplica la tasa de aciertos entre instancias de Cloud Run, con degradación elegante a memoria local si Redis no está disponible.
 - ⭐ **Visualizador de Modelo Estrella (Star Schema):** Diagrama interactivo que previsualiza la estructura semántica antes de cargar el archivo en Power BI: tabla de hechos central, dimensiones de atributo y calendario en órbita, relaciones muchos-a-uno inspeccionables y DAX de tablas calculadas listo para pegar.
+- 📑 **Reportes Ejecutivos Programados (PDF/HTML) & Webhooks:** Exportación determinista del reporte ejecutivo en PDF (fpdf2) y HTML, con programación desatendida periódica y notificaciones webhook (trigger "siempre" o "solo drift crítico") protegidas con validación Anti-SSRF e IP Pinning en cada envío.
+- 🧪 **Simulador de Drift Hipotético:** Simulación interactiva, en tiempo real y sin modificar el dataset, del impacto de los pasos aprobados sobre los percentiles de drift (P05-P95, KS, desplazamientos %) antes de la aprobación formal del plan.
+- 🔏 **Gobernanza de Aprobación Reforzada:** El endpoint de aprobación contrasta cada paso enviado contra la copia canónica del plan (diff controlado por `step_id` con fingerprint MD5): pasos idénticos se ejecutan desde la copia del servidor, las divergencias se registran como `[MODIFICADO POR HUMANO]`, las adiciones como `[AÑADIDO POR HUMANO]` y los duplicados se rechazan (`400`).
 - 🤖 **Copiloto IA Gobernado:** Asistente con Google Gemini para proponer transformaciones óptimas, con fallback 100% determinista sin coste.
 - 🔑 **Seguridad BYOK / Local Vault:** Almacenamiento seguro y ofuscado en `localStorage` del cliente; la clave nunca se almacena en el servidor ni en logs.
 - 🛡️ **Privacidad y RGPD:** Anonimización de datos personales (`[NOMBRE]`, `[EMAIL]`, `[TELÉFONO]`) en las muestras de análisis.
@@ -280,16 +283,16 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 ### 3. Tests Automatizados (Pytest & Vitest)
 
 ```bash
-# Backend (163 tests)
+# Backend (224 tests)
 cd backend
 .\venv\Scripts\pytest -v
 
-# Frontend (41 tests)
+# Frontend (55 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **214 tests automatizados totales (166 backend + 45 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **282 tests automatizados totales (224 backend + 55 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista con aprobación reforzada y diff canónico, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 

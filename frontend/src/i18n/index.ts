@@ -367,6 +367,42 @@ export interface Translations {
     colAnomalies: string;
     colKs: string;
   };
+  driftSim?: {
+    title: string;
+    subtitle: string;
+    simulateBtn: string;
+    simulating: string;
+    overall: string;
+    appliedSteps: string;
+    elapsed: string;
+    rows: string;
+    before: string;
+    after: string;
+    maxShift: string;
+    colName: string;
+    colStatus: string;
+  };
+  scheduledReports?: {
+    title: string;
+    subtitle: string;
+    exportPdf: string;
+    exportHtml: string;
+    format: string;
+    interval: string;
+    trigger: string;
+    triggerCritical: string;
+    triggerAlways: string;
+    webhookUrl: string;
+    createBtn: string;
+    loading: string;
+    noSchedules: string;
+    every: string;
+    executions: string;
+    deliveries: string;
+    runNow: string;
+    lastReport: string;
+    delete: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -702,6 +738,44 @@ export const translations: Record<Language, Translations> = {
       colAnomalies: 'Anomalías',
       colKs: 'KS Stat',
     },
+    driftSim: {
+      title: 'Simulador de Drift (Hipotético)',
+      subtitle:
+        'Anticipa el impacto de los pasos aprobados sobre los percentiles antes de la aprobación formal. No modifica el dataset.',
+      simulateBtn: 'Simular',
+      simulating: 'Simulando…',
+      overall: 'Estado global',
+      appliedSteps: 'Pasos aplicados',
+      elapsed: 'Tiempo',
+      rows: 'Filas',
+      before: 'antes',
+      after: 'después',
+      maxShift: 'Δ máx',
+      colName: 'Columna',
+      colStatus: 'Estado',
+    },
+    scheduledReports: {
+      title: 'Reportes Ejecutivos & Exportación Programada',
+      subtitle:
+        'Descarga el reporte ejecutivo en PDF/HTML o programa su regeneración desatendida con notificación webhook por drift crítico.',
+      exportPdf: 'PDF Ejecutivo',
+      exportHtml: 'HTML Ejecutivo',
+      format: 'Formato',
+      interval: 'Intervalo (min)',
+      trigger: 'Notificar webhook',
+      triggerCritical: 'Solo con drift crítico',
+      triggerAlways: 'En cada regeneración',
+      webhookUrl: 'Webhook URL (opcional, validada anti-SSRF)',
+      createBtn: 'Programar exportación',
+      loading: 'Cargando programaciones…',
+      noSchedules: 'Sin exportaciones programadas para esta ejecución.',
+      every: 'cada',
+      executions: 'Ejecuciones',
+      deliveries: 'Webhooks',
+      runNow: 'Ejecutar ahora',
+      lastReport: 'Último reporte',
+      delete: 'Eliminar',
+    },
   },
 
   en: {
@@ -1035,6 +1109,44 @@ export const translations: Record<Language, Translations> = {
       colMaxShift: 'Max Δ',
       colAnomalies: 'Anomalies',
       colKs: 'KS Stat',
+    },
+    driftSim: {
+      title: 'Drift Simulator (Hypothetical)',
+      subtitle:
+        'Preview the impact of the approved steps on percentiles before formal approval. The dataset is never modified.',
+      simulateBtn: 'Simulate',
+      simulating: 'Simulating…',
+      overall: 'Overall status',
+      appliedSteps: 'Applied steps',
+      elapsed: 'Elapsed',
+      rows: 'Rows',
+      before: 'before',
+      after: 'after',
+      maxShift: 'Max Δ',
+      colName: 'Column',
+      colStatus: 'Status',
+    },
+    scheduledReports: {
+      title: 'Executive Reports & Scheduled Export',
+      subtitle:
+        'Download the executive report as PDF/HTML or schedule unattended regeneration with webhook notification on critical drift.',
+      exportPdf: 'Executive PDF',
+      exportHtml: 'Executive HTML',
+      format: 'Format',
+      interval: 'Interval (min)',
+      trigger: 'Webhook notification',
+      triggerCritical: 'Only on critical drift',
+      triggerAlways: 'On every regeneration',
+      webhookUrl: 'Webhook URL (optional, SSRF-validated)',
+      createBtn: 'Schedule export',
+      loading: 'Loading schedules…',
+      noSchedules: 'No scheduled exports for this run.',
+      every: 'every',
+      executions: 'Executions',
+      deliveries: 'Webhooks',
+      runNow: 'Run now',
+      lastReport: 'Last report',
+      delete: 'Delete',
     },
   },
 

@@ -3,8 +3,59 @@ import re
 from typing import List, Optional
 
 from app.models.etl import TransformationStep
+from app.transformations.casing import BUSINESS_ACRONYMS
 
 _SAFE_COL_RE = re.compile(r"^[A-Za-z0-9_ ]+$")
+
+# Bloque de helpers embebido en los scripts generados: replica exacta de
+# app/transformations/casing.py para que el script reproducible obtenga el
+# mismo resultado determinista que el motor (siglas HR/SLU, camelCase DevOps).
+_SMART_CASE_HELPERS = f"""
+BUSINESS_ACRONYMS = {json.dumps(sorted(BUSINESS_ACRONYMS))}
+_CODE_TOKEN_RE = re.compile(r"^[A-Za-z0-9]{{2,6}}[-_][A-Za-z0-9]{{1,}}$")
+_CAMEL_TOKEN_RE = re.compile(r"^[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+$")
+
+
+def _smart_case_atomic(word):
+    upper = word.upper()
+    if upper in BUSINESS_ACRONYMS:
+        return upper
+    if _CAMEL_TOKEN_RE.match(word):
+        return word
+    return word.capitalize()
+
+
+def _smart_case_word(word):
+    if not word:
+        return word
+    upper = word.upper()
+    if upper in BUSINESS_ACRONYMS:
+        return upper
+    if "-" in word:
+        parts = word.split("-")
+        if all(len(p) >= 2 and p.isalpha() for p in parts):
+            return "-".join(_smart_case_atomic(p) for p in parts)
+    if _CODE_TOKEN_RE.match(word):
+        return upper
+    return _smart_case_atomic(word)
+
+
+def _smart_title_text(value):
+    if value is None or pd.isna(value):
+        return value
+    stripped = str(value).strip()
+    if not stripped:
+        return stripped
+    return " ".join(_smart_case_word(w) for w in stripped.split(" "))
+
+
+def _split_segment(val, sep, idx):
+    if val is None or pd.isna(val):
+        return None
+    parts = str(val).split(sep, 1)
+    seg = parts[idx].strip() if idx < len(parts) else ""
+    return _smart_title_text(seg) if seg else None
+"""
 
 
 def _safe_col_literal(col: str) -> str:
@@ -20,6 +71,11 @@ class ScriptGeneratorService:
     def generate_python_script(filename: str, steps: List[TransformationStep]) -> str:
         filename_literal = json.dumps(filename)
         clean_literal = json.dumps(f"clean_{filename}")
+        needs_smart_case = any(
+            s.operation == "split_column"
+            or (s.operation == "normalize_case" and s.parameters.get("mode", "title") == "title")
+            for s in steps
+        )
         code_lines = [
             "# -*- coding: utf-8 -*-",
             '"""',
@@ -32,17 +88,24 @@ class ScriptGeneratorService:
             "import pandas as pd",
             "import numpy as np",
             "",
-            "def run_etl_pipeline(input_filepath: str, output_filepath: str):",
-            '    print(f"Loading raw dataset from {input_filepath}...")',
-            '    if input_filepath.endswith(".csv"):',
-            '        df = pd.read_csv(input_filepath, on_bad_lines="skip")',
-            "    else:",
-            "        df = pd.read_excel(input_filepath)",
-            "",
-            "    initial_rows, initial_cols = df.shape",
-            '    print(f"Dataset loaded: {initial_rows} rows, {initial_cols} columns.")',
-            "",
         ]
+        if needs_smart_case:
+            code_lines.extend(_SMART_CASE_HELPERS.strip("\n").split("\n"))
+            code_lines.append("")
+        code_lines.extend(
+            [
+                "def run_etl_pipeline(input_filepath: str, output_filepath: str):",
+                '    print(f"Loading raw dataset from {input_filepath}...")',
+                '    if input_filepath.endswith(".csv"):',
+                '        df = pd.read_csv(input_filepath, on_bad_lines="skip")',
+                "    else:",
+                "        df = pd.read_excel(input_filepath)",
+                "",
+                "    initial_rows, initial_cols = df.shape",
+                '    print(f"Dataset loaded: {initial_rows} rows, {initial_cols} columns.")',
+                "",
+            ]
+        )
 
         for idx, step in enumerate(steps, 1):
             op = step.operation
@@ -66,7 +129,7 @@ class ScriptGeneratorService:
                 elif mode == "upper":
                     code_lines.append(f"        df[{col_lit}] = df[{col_lit}].astype(str).str.upper()")
                 else:
-                    code_lines.append(f"        df[{col_lit}] = df[{col_lit}].astype(str).str.title()")
+                    code_lines.append(f"        df[{col_lit}] = df[{col_lit}].apply(_smart_title_text)")
 
             elif op == "normalize_category":
                 mappings = params.get("mappings", {})
@@ -233,10 +296,11 @@ class ScriptGeneratorService:
                     a_lit, b_lit = json.dumps(f"{col}_Part1"), json.dumps(f"{col}_Part2")
                 keep = bool(params.get("keep_original", False))
                 code_lines.append(f"    if {col_lit} in df.columns:")
-                code_lines.append(f"        _parts = df[{col_lit}].astype(str).str.split({sep_lit}, n=1, expand=True)")
-                code_lines.append(f"        df[{a_lit}] = _parts[0].str.strip().str.title()")
                 code_lines.append(
-                    f"        df[{b_lit}] = _parts[1].str.strip().str.title() if 1 in _parts.columns else None"
+                    f"        df[{a_lit}] = df[{col_lit}].apply(lambda v: _split_segment(v, {sep_lit}, 0))"
+                )
+                code_lines.append(
+                    f"        df[{b_lit}] = df[{col_lit}].apply(lambda v: _split_segment(v, {sep_lit}, 1))"
                 )
                 if not keep:
                     code_lines.append(f"        df = df.drop(columns=[{col_lit}])")

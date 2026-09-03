@@ -422,6 +422,9 @@ class AnalyticsService:
             # Excluir columnas con flag booleana de outliers
             if col.endswith("_is_outlier"):
                 continue
+            # Excluir booleanos reales: quantile/median de numpy no operan sobre dtype bool
+            if pd.api.types.is_bool_dtype(df[col]):
+                continue
             s_num = pd.to_numeric(df[col], errors="coerce")
             if s_num.dropna().count() >= 2 and s_num.nunique() > 1:
                 num_cols.append(col)
@@ -570,6 +573,9 @@ class AnalyticsService:
         # Identificar columnas numéricas
         for col in df.columns:
             if col.endswith("_is_outlier") or col.lower() in ["cluster_id", "cluster"]:
+                continue
+            # Excluir booleanos reales: np.quantile falla con resta de booleanos (Remote_Work, flags)
+            if pd.api.types.is_bool_dtype(df[col]):
                 continue
             s_num = pd.to_numeric(df[col], errors="coerce").dropna()
             if len(s_num) < 2 or s_num.nunique() <= 1:

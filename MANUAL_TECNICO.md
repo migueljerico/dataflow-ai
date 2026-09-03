@@ -1,6 +1,6 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.15.2  
+**Versión:** 1.16.0  
 **Fecha de actualización:** 3 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
@@ -267,10 +267,13 @@ migueljerico/dataflow-ai/
 | `dataset_service.py` | Carga y validación de ficheros CSV/XLSX, detección de delimitadores, limpieza de filas vacías, gestión de metadatos. | `DatasetService.process_uploaded_file()`, `_detect_csv_delimiter()`, `_clean_empty_rows()`, `load_dataframe()`, `get_dataset_metadata()`, `DATASET_CACHE`, `EMPTY_ROWS_PURGED_CACHE` |
 | `profiler_service.py` | Profiling automático: inferencia de tipos, detección semántica (email, moneda, fecha, teléfono, etc.), estadísticas por columna, detección de duplicados. | `ProfilerService.get_profiling_report()`, `_detect_semantic_hint()`, `PROFILING_CACHE`, `_safe_float()` |
 | `quality_service.py` | Evaluación de calidad en 5 dimensiones (completitud, validez, consistencia, unicidad, integridad) y generación del Quality Score 0-100. | `QualityService.analyze_quality()`, `get_quality_report()`, `QUALITY_CACHE`, `_safe_evidence_sample()` |
-| `etl_service.py` | Generación de planes ETL desde reglas deterministas, ejecución del plan aprobado, validación de cada paso, auditoría, generación de ficheros limpios y scripts. | `ETLService.propose_plan_from_rules()`, `execute_plan()`, `get_plan()`, `get_run_result()`, `_count_modified_cells()`, `PLANS_CACHE`, `RUNS_CACHE` |
+| `etl_service.py` | Generación de planes ETL desde reglas deterministas, ejecución del plan aprobado, reconciliación canónica de la revisión humana (diff + fingerprint), validación de cada paso, auditoría, generación de ficheros limpios y scripts. | `ETLService.propose_plan_from_rules()`, `reconcile_reviewed_steps()`, `execute_plan()`, `get_plan()`, `get_run_result()`, `_count_modified_cells()`, `PLANS_CACHE`, `RUNS_CACHE` |
 | `ai_service.py` | Orquestación del Copiloto IA: enrutamiento de proveedores, guardrails de operaciones registradas, anonimización de PII. | `AIService.propose_ai_plan()`, `get_provider()`, `anonymize_sample_rows()`, `_mask_scalar()`, `PII_HINT_MASKS` |
-| `analytics_service.py` | Cálculo de KPIs de negocio por dominio (Contact Center, Ventas, People Analytics, General) usando pandas sobre el dataset limpio. | `AnalyticsService.generate_report()`, `ANALYTICS_CACHE` |
-| `script_generator.py` | Generación de script Python standalone reproducible con pandas puro. | `ScriptGeneratorService.generate_python_script()` |
+| `analytics_service.py` | Cálculo de KPIs de negocio por dominio (Contact Center, Ventas, People Analytics, General) usando pandas sobre el dataset limpio. | `AnalyticsService.generate_report()`, `generate_html_report()`, `ANALYTICS_CACHE` |
+| `drift_service.py` | Análisis de Data Drift por percentiles (P05-P95), estadístico KS, alertas por severidad y recomendaciones proactivas. | `DriftService.analyze_drift()`, `compute_percentiles()`, `compute_percentile_shift()` |
+| `report_service.py` | Reportes ejecutivos en PDF (fpdf2) y HTML, exportación programada desatendida (bucle asyncio en lifespan) y notificaciones webhook con validación Anti-SSRF e IP Pinning en cada envío. | `ReportService.generate_pdf_report()`, `create_schedule()`, `execute_schedule()`, `run_due_schedules()`, `send_webhook()`, `REPORT_SCHEDULES`, `SCHEDULE_LOGS` |
+| `simulation_service.py` | Simulación hipotética de transformaciones sobre copia efímera del dataset con análisis de drift resultante; no modifica datos ni crea ejecuciones. | `SimulationService.simulate_drift()` |
+| `script_generator.py` | Generación de script Python standalone reproducible con pandas puro (incluye helpers de casing inteligente idénticos al motor). | `ScriptGeneratorService.generate_python_script()` |
 
 ### 5.4 Proveedores de IA (`backend/app/ai_providers/`)
 
@@ -286,12 +289,14 @@ migueljerico/dataflow-ai/
 | :--- | :--- | :--- |
 | `base.py` | Clase abstracta que define la interfaz de toda transformación. | `BaseTransformation` (ABC), métodos `validate_parameters()`, `apply()` |
 | `registry.py` | Registro central de operaciones permitidas. | `TransformationRegistry.get_transformation()`, `get()`, `list_all()`, `get_catalog_manifest()` |
+| `casing.py` | Fuente única de verdad del casing inteligente: preserva siglas de negocio (`HR`, `SLU`), códigos (`PED-201`), camelCase (`DevOps`) y compuestos con guion (`HR-California`). | `smart_title_text()`, `smart_case_word()`, `BUSINESS_ACRONYMS` |
 | `text_ops.py` | Limpieza y normalización de texto. | `TrimTextTransformation` (trim_text), `NormalizeCaseTransformation` (normalize_case), `NormalizeCategoryTransformation` (normalize_category) |
 | `datetime_ops.py` | Conversión y estandarización de fechas. | `ConvertDatetimeTransformation` (convert_datetime) |
 | `numeric_ops.py` | Conversión, redondeo y acotación numérica. | `ConvertNumericTransformation` (convert_numeric), `RoundNumericTransformation` (round_numeric), `ClampRangeTransformation` (clamp_range) |
 | `missing_ops.py` | Imputación de valores y manipulación de filas/columnas. | `FillMissingTransformation` (fill_missing), `RemoveDuplicatesTransformation` (remove_duplicates), `RenameColumnTransformation` (rename_column), `DropColumnTransformation` (drop_column) |
 | `outlier_ops.py` | Detección y tratamiento de outliers estadísticos (IQR y Z-Score). | `DetectOutliersIQRTransformation` (detect_outliers_iqr), `DetectOutliersZScoreTransformation` (detect_outliers_zscore) |
 | `cluster_ops.py` | Clustering determinista de observaciones en NumPy puro. | `ClusterKMeansTransformation` (cluster_kmeans) |
+| `split_ops.py` | División de columnas compuestas por separador en dos dimensiones atómicas con casing inteligente por segmento. | `SplitColumnTransformation` (split_column) |
 
 ### 5.6 Endpoints API (`backend/app/api/v1/`)
 
@@ -304,6 +309,8 @@ migueljerico/dataflow-ai/
 | `endpoints/plans.py` | Generación de planes por reglas o IA, aprobación y ejecución. |
 | `endpoints/runs.py` | Resultados de ejecución, comparativa de calidad, descarga de dataset limpio y script reproducible. |
 | `endpoints/analytics.py` | Business Analytics por run ID. |
+| `endpoints/reports.py` | Reportes ejecutivos PDF/HTML por run, CRUD de exportaciones programadas, ejecución forzada, logs y descarga del último reporte generado. |
+| `endpoints/simulations.py` | Simulación hipotética de transformaciones con análisis de drift resultante (`POST /simulations/drift`). |
 
 ---
 
@@ -318,8 +325,10 @@ migueljerico/dataflow-ai/
 | `LanguageSelector.tsx` | Menú desplegable interactivo accesible para seleccionar el idioma de la plataforma. |
 | `FileUpload.tsx` | Carga de archivos CSV/XLSX mediante drag-and-drop o selector, listado de datasets demo con un clic. |
 | `ProfilingDashboard.tsx` | Visualización del Quality Score global y las 5 dimensiones, badges de métricas. |
-| `PlanReview.tsx` | Revisión humana del plan ETL: previsualización interactiva de esquemas de columnas (antes vs. después y visor por paso), aprobar/rechazar pasos individuales, configuración de clusters y ejecución del plan. |
+| `PlanReview.tsx` | Revisión humana del plan ETL: previsualización interactiva de esquemas de columnas (antes vs. después y visor por paso), aprobar/rechazar pasos individuales, configuración de clusters, simulación de drift y ejecución del plan. |
+| `DriftSimulator.tsx` | Simulación interactiva e hipotética del impacto de los pasos aprobados sobre los percentiles de drift antes de la aprobación formal (no modifica el dataset). |
 | `ExecutionReport.tsx` | Comparativa antes/después de la ejecución, logs de auditoría, botones de descarga y reinicio. |
+| `ScheduledReportsPanel.tsx` | Exportación ejecutiva PDF/HTML y gestión de exportaciones programadas con webhook (formato, intervalo, trigger `always`/`critical_drift`), ejecución forzada y descarga del último reporte. |
 | `BusinessInsights.tsx` | Visualización de KPIs ejecutivos de negocio calculados por el backend. |
 | `ApiKeyModal.tsx` | Modal para configurar/eliminar la API Key de Google Gemini almacenada en localStorage. |
 
@@ -357,6 +366,7 @@ Todas las operaciones están registradas en `TransformationRegistry` y son las �
 | `detect_outliers_iqr` | Detecta outliers por rango intercuartílico con acciones cap, nullify, drop o flag. | medium | `column`, `multiplier`, `action`, `lower_quantile`, `upper_quantile` |
 | `detect_outliers_zscore` | Detecta outliers mediante puntuación Z con acciones cap, nullify, drop o flag. | medium | `column`, `threshold`, `action` |
 | `cluster_kmeans` | Segmentación determinista K-Means en k clusters sobre variables normalizadas. | low | `columns`, `n_clusters`, `output_column`, `scale_features` |
+| `split_column` | Divide una columna compuesta por un separador en dos columnas nuevas con casing inteligente por segmento (preserva `HR`, `DevOps`, `Cloud Tech`). | low | `column`, `separator`, `new_columns`, `keep_original` |
 
 ---
 
@@ -413,7 +423,7 @@ Base URL: `/api/v1`
 | `POST` | `/plans/propose` | Genera plan ETL desde reglas deterministas. | Body: `{"dataset_id": string}` |
 | `POST` | `/plans/propose/ai` | Genera plan ETL asistido por IA (Gemini/Mock) con guardrails. | Body: `{"dataset_id": string, "provider": "mock"\|"gemini", "api_key": optional}`; Header opcional: `X-Gemini-Api-Key` |
 | `GET` | `/plans/{plan_id}` | Obtiene un plan por su ID. | `plan_id` (path) |
-| `POST` | `/plans/{plan_id}/approve` | Aprueba y ejecuta el plan ETL revisado. | `plan_id` (path); Body: `{"steps": TransformationStep[]}` |
+| `POST` | `/plans/{plan_id}/approve` | Aprueba y ejecuta el plan ETL revisado. Gobernanza reforzada: el servidor reconcilia los pasos recibidos contra la copia canónica del plan (diff por `step_id` con fingerprint MD5); las divergencias se ejecutan como `EDITED` con auditoría `[MODIFICADO POR HUMANO]`, los pasos ajenos al plan como `[AÑADIDO POR HUMANO]` (validados por el Registry), los ausentes se omiten y los `step_id` duplicados se rechazan con `400 DUPLICATE_STEP`. | `plan_id` (path); Body: `{"steps": TransformationStep[]}` |
 
 ### 9.5 Runs
 
@@ -431,13 +441,33 @@ Base URL: `/api/v1`
 | :--- | :--- | :--- | :--- |
 | `GET` | `/analytics/{run_id}` | Obtiene el reporte ejecutivo de Business Analytics y KPIs. | `run_id` (path) |
 
-### 9.7 Health
+### 9.7 Reportes Ejecutivos y Exportación Programada
+
+| Método | Ruta | Descripción | Parámetros |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/reports/{run_id}/pdf` | Reporte ejecutivo en PDF (fpdf2), determinista. | `run_id` (path), `lang` (query: es/en) |
+| `GET` | `/reports/{run_id}/html` | Reporte ejecutivo HTML autocontenido. | `run_id` (path), `lang` (query: es/en) |
+| `POST` | `/reports/schedules` | Alta de exportación programada (valida run y webhook Anti-SSRF). | body: `run_id`, `report_format`, `interval_minutes` (5-1440), `webhook_url?`, `trigger` (always/critical_drift), `lang` |
+| `GET` | `/reports/schedules` | Lista las programaciones con su último estado. | — |
+| `GET` | `/reports/schedules/logs` | Historial de ejecuciones desatendidas y entregas webhook. | `limit` (query) |
+| `GET` | `/reports/schedules/{schedule_id}` | Detalle de una programación. | `schedule_id` (path) |
+| `POST` | `/reports/schedules/{schedule_id}/run-now` | Regeneración inmediata (y entrega según trigger). | `schedule_id` (path) |
+| `GET` | `/reports/schedules/{schedule_id}/last-report` | Descarga el último reporte generado por la programación. | `schedule_id` (path) |
+| `DELETE` | `/reports/schedules/{schedule_id}` | Elimina una programación. | `schedule_id` (path) |
+
+### 9.8 Simulación de Drift
+
+| Método | Ruta | Descripción | Parámetros |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/simulations/drift` | Simula pasos hipotéticos (máx. 50) sobre copia efímera y devuelve el análisis de drift por percentiles raw vs simulado. No modifica el dataset ni crea ejecuciones. | body: `dataset_id`, `steps` |
+
+### 9.9 Health
 
 | Método | Ruta | Descripción | Parámetros |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Healthcheck del servicio (para Cloud Run). | — |
 
-### 9.8 Códigos de Error Comunes
+### 9.10 Códigos de Error Comunes
 
 | Código | Descripción | HTTP Status |
 | :--- | :--- | :---: |
@@ -554,8 +584,12 @@ Ubicación: `backend/tests/`
 | `test_dataset4_verification.py` | 6 | Verificación de marcadores de ausencia, preservación de mayúsculas en identificadores y no corrupción de conteos. |
 | `test_copilot_metrics.py` | 3 | Métricas de inferencia y observabilidad del Copiloto IA (latencia, tokens consumidos, coste USD). |
 | `test_outliers_scatter_diff.py` | 2 | Comparador de dispersión (Scatter Diff) de outliers entre dataset crudo y dataset limpio con trazabilidad de anomalías. |
+| `test_split_column_casing.py` | 16 | Casing inteligente compartido: preservación de `HR`/`DevOps`/`Cloud Tech` en `split_column` y `normalize_case`, fidelidad motor ↔ script generado (compile+exec) y flujo E2E con el patrón del dataset real. |
+| `test_plan_approval_hardening.py` | 11 | Gobernanza reforzada de aprobación: diff canónico por `step_id`, `[MODIFICADO POR HUMANO]`, `[AÑADIDO POR HUMANO]`, `[OMITIDO]`, fingerprint MD5 del plan, duplicados `400` y bloqueo de operaciones no registradas. |
+| `test_executive_reports.py` | 19 | Reportes PDF/HTML por run, CRUD de exportaciones programadas, scheduler de ejecuciones vencidas, triggers de webhook (always/critical_drift) y validación Anti-SSRF en el alta (IP privada, metadatos GCP, esquema no HTTP). |
+| `test_drift_simulation.py` | 7 | Simulación hipotética de drift: validación por paso contra el Registry, tolerancia a pasos inválidos, límite de 50 pasos y garantía de que no modifica el dataset ni crea ejecuciones. |
 
-**Total:** 151 tests backend (Pytest) + 38 tests frontend (Vitest) + 3 suites E2E (Playwright) — 100% pasando en verde.
+**Total:** 224 tests backend (Pytest) + 55 tests frontend (Vitest) + 3 suites E2E (Playwright) — 100% pasando en verde.
 
 ---
 
@@ -581,7 +615,9 @@ Ubicación: `backend/tests/`
 - [ ] Exportación directa a modelos semánticos de Power BI (Power BI REST API / `.pbix`).
 - [ ] Conectores directos a bases de datos SQL (PostgreSQL, Snowflake, BigQuery).
 - [ ] Persistencia de pipelines en base de datos PostgreSQL con autenticación de usuarios.
-- [ ] Programación periódica de pipelines ETL (Cron Jobs / Webhooks).
+- [x] Programación periódica de reportes ejecutivos con notificaciones Webhook (entregado en v1.16.0: schedules desatendidos + trigger por drift crítico con validación Anti-SSRF).
+- [ ] Programación periódica de pipelines ETL completos (Cron Jobs) más allá de la regeneración de reportes.
+- [ ] Persistencia de las programaciones de reportes en almacenamiento durable (actualmente in-memory, coherente con la arquitectura efímera MVP del resto de cachés).
 
 ---
 

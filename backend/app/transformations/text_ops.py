@@ -4,29 +4,7 @@ from typing import Any, Dict, Tuple
 import pandas as pd
 from app.core.exceptions import FunctionalException
 from app.transformations.base import BaseTransformation
-
-BUSINESS_ACRONYMS = {
-    "SA",
-    "S.A.",
-    "SL",
-    "S.L.",
-    "SLU",
-    "S.L.U.",
-    "CIF",
-    "NIF",
-    "DNI",
-    "IVA",
-    "ID",
-    "KPI",
-    "SLA",
-    "AHT",
-    "CRM",
-    "ERP",
-    "USA",
-    "UE",
-    "IA",
-    "AI",
-}
+from app.transformations.casing import BUSINESS_ACRONYMS, smart_title_text  # noqa: F401  (re-export compatibilidad)
 
 
 class TrimTextTransformation(BaseTransformation):
@@ -96,28 +74,9 @@ class NormalizeCaseTransformation(BaseTransformation):
 
     @staticmethod
     def _to_smart_title_case(val: Any) -> Any:
-        if pd.isna(val) or val is None:
-            return val
-        s = str(val).strip()
-        if not s:
-            return s
-        words = s.split(" ")
-        formatted_words = []
-        code_token_re = re.compile(r"^[A-Za-z0-9]{2,6}[-_][A-Za-z0-9]{1,}$")
-        for w in words:
-            clean_w = w.strip()
-            upper_w = clean_w.upper()
-            # Department_Region tipo Sales-Florida (ambos lados palabras) → Title cada lado, no código
-            if "-" in clean_w and len(clean_w) > 6:
-                parts = clean_w.split("-")
-                if all(len(p) >= 2 and p.isalpha() for p in parts if p):
-                    formatted_words.append("-".join(p.capitalize() for p in parts))
-                    continue
-            if upper_w in BUSINESS_ACRONYMS or code_token_re.match(clean_w):
-                formatted_words.append(upper_w)
-            else:
-                formatted_words.append(clean_w.capitalize())
-        return " ".join(formatted_words)
+        # Delega en la lógica compartida de casing.py: preserva siglas (HR, SLU),
+        # códigos (PED-201) y camelCase (DevOps) en compuestos tipo HR-California.
+        return smart_title_text(val)
 
     def apply(self, df: pd.DataFrame, parameters: Dict[str, Any]) -> Tuple[pd.DataFrame, int]:
         self.validate_parameters(df, parameters)

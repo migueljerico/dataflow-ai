@@ -1,4 +1,6 @@
+import asyncio
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,14 +12,31 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import FunctionalException, functional_exception_handler, global_exception_handler
 from app.core.logging_config import request_id_middleware, setup_logging
+from app.services.report_service import ReportService
 
 setup_logging()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Scheduler de exportaciones programadas (reportes ejecutivos + webhooks de drift).
+    # Solo arranca con el servidor real (uvicorn); los TestClient sin context manager
+    # no disparan el lifespan, de modo que la suite de tests permanece determinista.
+    scheduler_task = asyncio.create_task(ReportService.scheduler_loop())
+    yield
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     description="DataFlow AI — Intelligent Data Preparation & Business Analytics API",
+    lifespan=lifespan,
 )
 
 # Middleware de trazabilidad de peticiones HTTP (X-Request-ID)

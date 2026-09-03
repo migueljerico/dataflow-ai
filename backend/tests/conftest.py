@@ -16,6 +16,7 @@ from app.services.dataset_service import DATASET_CACHE, EMPTY_ROWS_PURGED_CACHE
 from app.services.etl_service import PLANS_CACHE, RUNS_CACHE
 from app.services.profiler_service import PROFILING_CACHE
 from app.services.quality_service import QUALITY_CACHE
+from app.services.report_service import REPORT_SCHEDULES, SCHEDULE_LOGS
 
 ALL_CACHES = (
     DATASET_CACHE,
@@ -25,6 +26,8 @@ ALL_CACHES = (
     PROFILING_CACHE,
     QUALITY_CACHE,
     ANALYTICS_CACHE,
+    REPORT_SCHEDULES,
+    SCHEDULE_LOGS,
 )
 
 

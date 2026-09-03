@@ -12,6 +12,11 @@ import {
   CacheStats,
   ExecutionSummaryItem,
   QualityComparisonReport,
+  DriftSimulationResult,
+  ReportSchedule,
+  ReportScheduleCreate,
+  ReportScheduleListResponse,
+  ScheduleExecutionLog,
 } from '../types';
 import { getApiKey } from '../utils/security';
 
@@ -196,4 +201,48 @@ export const api = {
     const res = await fetch(`${API_BASE}/cache/stats`);
     return handleResponse<CacheStats>(res);
   },
+
+  // Simulación interactiva de drift (hipotética, antes de la aprobación formal)
+  simulateDrift: async (datasetId: string, steps: TransformationStep[]): Promise<DriftSimulationResult> => {
+    const res = await fetch(`${API_BASE}/simulations/drift`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset_id: datasetId, steps }),
+    });
+    return handleResponse<DriftSimulationResult>(res);
+  },
+
+  // Reportes ejecutivos PDF/HTML y exportación programada con webhooks
+  getExecutiveReportPdfUrl: (runId: string, lang: string = 'es'): string =>
+    `${API_BASE}/reports/${runId}/pdf?lang=${encodeURIComponent(lang)}`,
+
+  getExecutiveReportHtmlUrl: (runId: string, lang: string = 'es'): string =>
+    `${API_BASE}/reports/${runId}/html?lang=${encodeURIComponent(lang)}`,
+
+  createReportSchedule: async (payload: ReportScheduleCreate): Promise<ReportSchedule> => {
+    const res = await fetch(`${API_BASE}/reports/schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<ReportSchedule>(res);
+  },
+
+  listReportSchedules: async (): Promise<ReportScheduleListResponse> => {
+    const res = await fetch(`${API_BASE}/reports/schedules`);
+    return handleResponse<ReportScheduleListResponse>(res);
+  },
+
+  runReportScheduleNow: async (scheduleId: string): Promise<ScheduleExecutionLog> => {
+    const res = await fetch(`${API_BASE}/reports/schedules/${scheduleId}/run-now`, { method: 'POST' });
+    return handleResponse<ScheduleExecutionLog>(res);
+  },
+
+  deleteReportSchedule: async (scheduleId: string): Promise<{ deleted: boolean }> => {
+    const res = await fetch(`${API_BASE}/reports/schedules/${scheduleId}`, { method: 'DELETE' });
+    return handleResponse<{ deleted: boolean }>(res);
+  },
+
+  getScheduledLastReportUrl: (scheduleId: string): string =>
+    `${API_BASE}/reports/schedules/${scheduleId}/last-report`,
 };

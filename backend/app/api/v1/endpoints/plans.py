@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from app.models.etl import ExecutionResult, StepStatusEnum, TransformationPlan, TransformationStep
+from app.models.etl import ExecutionResult, TransformationPlan, TransformationStep
 from app.services.ai_service import AIService
 from app.services.etl_service import ETLService
 from fastapi import APIRouter, Header, status
@@ -60,18 +60,18 @@ async def approve_and_execute_plan(plan_id: str, req: ApprovePlanRequest):
     Aprobar las transformaciones revisadas por el usuario y desencadenar
     la ejecución determinista del motor ETL en Python/pandas.
 
+    Gobernanza reforzada (v1.16.0): el servidor contrasta los pasos recibidos
+    contra la copia canónica del plan propuesto (diff controlado por step_id):
+    - Contenido idéntico → se ejecuta la copia canónica del servidor como APPROVED.
+    - Contenido divergente → EDITED con registro auditable [MODIFICADO POR HUMANO].
+    - Pasos ajenos al plan → [AÑADIDO POR HUMANO] bajo validación del Registry.
+    - El orden de ejecución es siempre el orden canónico del plan.
+
     Si el plan no existe (p. ej. el backend se reinició y se perdió la sesión),
     se devuelve 404 en lugar de ejecutar contra un dataset arbitrario: nunca
     se transforma un archivo sin trazabilidad completa de su plan asociado.
     """
     plan = ETLService.get_plan(plan_id)
 
-    # Gobernanza: Los pasos propuestos sometidos al endpoint de aprobación se marcan como APPROVED.
-    # Los pasos marcados como REJECTED se mantienen rechazados y no se ejecutarán.
-    reviewed_steps: List[TransformationStep] = []
-    for step in req.steps:
-        if step.status == StepStatusEnum.PROPOSED:
-            step.status = StepStatusEnum.APPROVED
-        reviewed_steps.append(step)
-
-    return ETLService.execute_plan(plan.dataset_id, plan_id, reviewed_steps)
+    reviewed_steps, governance_notes = ETLService.reconcile_reviewed_steps(plan, req.steps)
+    return ETLService.execute_plan(plan.dataset_id, plan_id, reviewed_steps, governance_notes=governance_notes)

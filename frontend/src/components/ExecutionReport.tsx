@@ -15,6 +15,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 import { BusinessInsights } from './BusinessInsights';
 import { ExecutionHistoryModal } from './ExecutionHistoryModal';
+import { ScheduledReportsPanel } from './ScheduledReportsPanel';
 
 interface Props {
   result: ExecutionResult;
@@ -374,6 +375,9 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
           <FileCode size={18} aria-hidden="true" /> {t.report.downloadScript}
         </a>
       </div>
+
+      {/* Reportes ejecutivos PDF/HTML y exportación programada con webhooks (v1.16.0) */}
+      <ScheduledReportsPanel runId={result.run_id} />
 
       {/* Módulo de Business Analytics & Insights Ejecutivos */}
       <BusinessInsights runId={result.run_id} />

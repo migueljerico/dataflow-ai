@@ -1,10 +1,11 @@
 import hashlib
 import io
+import json
 import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -527,7 +528,80 @@ class ETLService:
         return PLANS_CACHE[plan_id]
 
     @staticmethod
-    def execute_plan(dataset_id: str, plan_id: str, steps: List[TransformationStep]) -> ExecutionResult:
+    def reconcile_reviewed_steps(
+        plan: TransformationPlan, incoming_steps: List[TransformationStep]
+    ) -> Tuple[List[TransformationStep], List[str]]:
+        """
+        GOBERNANZA REFORZADA (v1.16.0): contrasta la revisión enviada por el cliente
+        contra la copia canónica del plan propuesto antes de ejecutar (diff controlado).
+
+        Reglas deterministas:
+        - step_id duplicado en el payload → FunctionalException DUPLICATE_STEP.
+        - Paso canónico con contenido idéntico (operation, column, parameters) → APPROVED,
+          ejecutando SIEMPRE la copia canónica del servidor (no la del cliente).
+        - Paso canónico divergente → EDITED con nota [MODIFICADO POR HUMANO] y diff explícito.
+        - Paso canónico REJECTED o ausente del payload → no se ejecuta, con nota [OMITIDO].
+        - step_id ajeno al plan → se admite (el humano decide) como EDITED con nota
+          [AÑADIDO POR HUMANO]; TransformationRegistry valida operación y parámetros.
+        - El orden de ejecución es el orden canónico del plan; los pasos añadidos van al final.
+        """
+        incoming_by_id: Dict[str, TransformationStep] = {}
+        for step in incoming_steps:
+            if step.step_id in incoming_by_id:
+                raise FunctionalException(
+                    message=f"El paso '{step.step_id}' aparece duplicado en la revisión enviada.",
+                    code="DUPLICATE_STEP",
+                )
+            incoming_by_id[step.step_id] = step
+
+        canonical_by_id = {s.step_id: s for s in plan.steps}
+        canonical_dump = json.dumps(
+            [s.model_dump(mode="json", exclude={"status"}) for s in plan.steps], sort_keys=True, default=str
+        )
+        fingerprint = hashlib.md5(canonical_dump.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
+        notes: List[str] = [
+            f"[PLAN CANÓNICO] plan_id={plan.plan_id} fingerprint={fingerprint} "
+            f"pasos_propuestos={len(plan.steps)} pasos_revisados={len(incoming_steps)}"
+        ]
+
+        reviewed: List[TransformationStep] = []
+        for canonical in plan.steps:
+            incoming = incoming_by_id.get(canonical.step_id)
+            if incoming is None:
+                notes.append(
+                    f"[OMITIDO] Paso {canonical.step_id} ({canonical.operation}): ausente de la revisión enviada por el cliente."
+                )
+                continue
+            if incoming.status == StepStatusEnum.REJECTED:
+                reviewed.append(canonical.model_copy(update={"status": StepStatusEnum.REJECTED}))
+                continue
+            diffs: List[str] = []
+            if incoming.operation != canonical.operation:
+                diffs.append(f"operation: '{canonical.operation}' → '{incoming.operation}'")
+            if (incoming.column or None) != (canonical.column or None):
+                diffs.append(f"column: '{canonical.column}' → '{incoming.column}'")
+            if incoming.parameters != canonical.parameters:
+                diffs.append(f"parameters: {canonical.parameters} → {incoming.parameters}")
+            if diffs:
+                reviewed.append(incoming.model_copy(update={"status": StepStatusEnum.EDITED}))
+                notes.append(f"[MODIFICADO POR HUMANO] Paso {canonical.step_id}: " + "; ".join(diffs))
+            else:
+                reviewed.append(canonical.model_copy(update={"status": StepStatusEnum.APPROVED}))
+
+        for step in incoming_steps:
+            if step.step_id in canonical_by_id or step.status == StepStatusEnum.REJECTED:
+                continue
+            reviewed.append(step.model_copy(update={"status": StepStatusEnum.EDITED}))
+            notes.append(
+                f"[AÑADIDO POR HUMANO] Paso {step.step_id} ({step.operation}) sobre '{step.column or 'dataset'}': "
+                "no figuraba en el plan propuesto; se ejecuta bajo validación estricta del TransformationRegistry."
+            )
+        return reviewed, notes
+
+    @staticmethod
+    def execute_plan(
+        dataset_id: str, plan_id: str, steps: List[TransformationStep], governance_notes: Optional[List[str]] = None
+    ) -> ExecutionResult:
         started_at = datetime.now(timezone.utc)
         metadata = DatasetService.get_dataset_metadata(dataset_id)
         df_raw = DatasetService.load_dataframe(dataset_id)
@@ -549,6 +623,11 @@ class ETLService:
             audit_logs.append(
                 f"[VALIDACIÓN OK] Operación 'drop_empty_rows': Se detectaron y descartaron {empty_rows_purged} fila(s) completamente vacías o malformadas (,,,,,,,)."
             )
+
+        # Gobernanza reforzada: notas del diff contra el plan canónico (fingerprint,
+        # pasos MODIFICADO/AÑADIDO POR HUMANO y omitidos) al inicio de la auditoría
+        if governance_notes:
+            audit_logs.extend(governance_notes)
 
         for step in steps:
             # GOBERNANZA ESTRICTA: Solo se ejecutan pasos con estado APPROVED o EDITED

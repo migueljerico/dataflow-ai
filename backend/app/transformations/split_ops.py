@@ -4,6 +4,7 @@ from typing import Any, Dict, Tuple
 import pandas as pd
 from app.core.exceptions import FunctionalException
 from app.transformations.base import BaseTransformation
+from app.transformations.casing import smart_title_text
 
 
 class SplitColumnTransformation(BaseTransformation):
@@ -88,15 +89,19 @@ class SplitColumnTransformation(BaseTransformation):
 
         original_series = df_copy[col]
 
-        # Split solo en la primera ocurrencia del separador, trim y Title cada segmento
+        # Split solo en la primera ocurrencia del separador, trim y casing inteligente
+        # por segmento (preserva siglas HR y camelCase DevOps; nunca .title() crudo)
         def _split_val(val: Any) -> Tuple[Any, Any]:
             if pd.isna(val) or val is None:
                 return (None, None)
             s = str(val)
             if sep not in s:
-                return (s.strip().title() if s.strip() else None, None)
+                left_t = smart_title_text(s.strip()) if s.strip() else None
+                return (left_t, None)
             left, right = s.split(sep, 1)
-            return (left.strip().title() if left.strip() else None, right.strip().title() if right.strip() else None)
+            left_t = smart_title_text(left.strip()) if left.strip() else None
+            right_t = smart_title_text(right.strip()) if right.strip() else None
+            return (left_t, right_t)
 
         split_pairs = original_series.apply(_split_val)
         df_copy[col_a] = [p[0] for p in split_pairs]

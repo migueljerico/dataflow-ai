@@ -19,6 +19,7 @@ import {
 import { DatasetMetadata, ProfilingReport, TransformationPlan, TransformationStep } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { CacheObservabilityModal } from './CacheObservabilityModal';
+import { DriftSimulator } from './DriftSimulator';
 
 interface Props {
   plan: TransformationPlan;
@@ -200,6 +201,9 @@ export const PlanReview: React.FC<Props> = ({
           </button>
         </div>
       </div>
+
+      {/* Simulación interactiva de drift sobre los pasos actualmente aprobados (hipotética, v1.16.0) */}
+      <DriftSimulator datasetId={metadata?.dataset_id} steps={steps} />
 
       {/* Panel Global de Previsualización de Esquema de Columnas (Antes vs. Proyección ETL) */}
       {showGlobalSchema && (

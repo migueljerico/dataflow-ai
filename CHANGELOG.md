@@ -4,6 +4,38 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.16.0] — 2026-09-03
+
+### 📑 Reportes Ejecutivos Programados (PDF/HTML) con Webhooks de Drift + 🧪 Simulador de Drift Hipotético + 🔏 Gobernanza de Aprobación Reforzada
+
+> **Madurez & Evidencia:** Release centrada en cerrar el hueco de gobernanza detectado en la revisión externa del endpoint de aprobación (diff canónico + auditoría explícita), corregir la corrupción de casing de `split_column` sobre el dataset real (`DevOps`→`Devops`, `HR`→`Hr`) y entregar las dos evoluciones priorizadas: exportación programada de reportes ejecutivos con notificaciones webhook por drift crítico, y simulación interactiva de transformaciones hipotéticas sobre los percentiles de drift antes de la aprobación formal.
+
+#### 🐛 Correcciones (Fixes)
+- **Casing inteligente compartido (`backend/app/transformations/casing.py`, nuevo):** Fuente única de verdad para `normalize_case` y `split_column`. Preserva siglas registradas (`HR`, `SLU`, `KPI`), códigos con dígitos (`PED-201`) y camelCase (`DevOps`, `PowerBI`); los compuestos con guion (`HR-California`, `HR-New`) se procesan por segmento. Corrige el bug de v1.15.2 donde `.title()` crudo corrompía 12 de los 36 valores reales de `Department_Region` (`Devops`, `Hr`).
+- **Fidelidad motor ↔ script reproducible (`backend/app/services/script_generator.py`):** El script generado emite el mismo casing inteligente que el motor (antes usaba `.str.title()`, divergente) y replica la semántica exacta de `split_column` (NaN → nulo, valor sin separador → segunda columna nula). Verificado con compile+exec y comparación fila a fila.
+- **Analytics robusto ante booleanos (`backend/app/services/analytics_service.py`):** Las columnas booleanas reales (ej. `Remote_Work`) se excluyen de boxplots/clustering; `np.quantile` fallaba con `TypeError: numpy boolean subtract` (bug latente que rompía `/analytics/{run_id}` y cualquier reporte PDF/HTML con datasets que contuvieran booleanos).
+
+#### 🔏 Gobernanza de Aprobación Reforzada (P0 de la revisión externa)
+- **Reconciliación canónica (`ETLService.reconcile_reviewed_steps`):** `/plans/{id}/approve` ya no ejecuta ciegamente los pasos del cliente: contrasta cada `step_id` contra la copia canónica del plan (fingerprint MD5 auditado), ejecuta la copia del servidor cuando el contenido es idéntico, marca `EDITED` + `[MODIFICADO POR HUMANO]` con diff explícito (operation/column/parameters) cuando diverge, registra `[AÑADIDO POR HUMANO]` para pasos fuera del plan (validados igualmente por `TransformationRegistry`), `[OMITIDO]` para pasos ausentes, rechaza `step_id` duplicados (`400 DUPLICATE_STEP`) y fuerza el orden canónico de ejecución.
+
+#### ✨ Ítem 1 — Reportes Ejecutivos Programados & Webhooks
+- **`ReportService` (`backend/app/services/report_service.py`, nuevo):** Generación determinista de reportes ejecutivos en **PDF** (`fpdf2`, nueva dependencia) y HTML (resumen ejecutivo, KPIs, calidad antes/después por dimensión, drift por percentiles con alertas top-5 y recomendaciones), en español e inglés.
+- **Exportación programada desatendida:** Alta de schedules por run (formato, intervalo 5-1440 min, idioma) con bucle `asyncio` en el lifespan de FastAPI, regeneración periódica persistida en storage y endpoint `run-now` + descarga del último reporte generado.
+- **Webhooks con trigger de drift:** Notificación JSON (métricas de calidad, resumen de drift, top alertas, KPIs y reporte adjunto en base64) con trigger `always` o `critical_drift`. La URL se valida contra **SSRF en el alta y en cada envío** reutilizando `validate_and_resolve_url` + `PinnedAsyncHTTPTransport` (IP Pinning anti DNS-rebinding).
+- **Endpoints (`/api/v1/reports`):** `GET /{run_id}/pdf`, `GET /{run_id}/html`, CRUD de `schedules`, `run-now`, `last-report` y `logs`.
+- **Frontend (`ScheduledReportsPanel.tsx`):** Panel en el paso 4 con botones PDF/HTML, formulario de programación (formato, intervalo, trigger, webhook) y gestión de schedules (ejecutar ahora, último reporte, eliminar).
+
+#### ✨ Ítem 2 — Simulación Interactiva de Drift Hipotética
+- **`SimulationService` (`backend/app/services/simulation_service.py`, nuevo) + `POST /api/v1/simulations/drift`:** Aplica los pasos hipotéticos (máx. 50) sobre una copia efímera del dataset, validando cada paso contra el Registry, y devuelve el análisis de drift por percentiles (raw vs simulado) con resultado paso a paso. **No modifica el dataset, no crea ejecuciones ni alimenta el historial** (nota de gobernanza incluida en la respuesta).
+- **Frontend (`DriftSimulator.tsx`):** Panel en la revisión del plan (paso 3) que simula en tiempo real los pasos no rechazados: estado global de drift, P50 antes→después, Δ por percentil (P05/P95/máx), errores de validación por paso y milisegundos de cálculo.
+
+#### 🧪 Verificación
+- **Dataset real:** `Messy_Employee_dataset.csv` (1020 filas) E2E vía API: `Department` = `['Admin', 'Cloud Tech', 'DevOps', 'Finance', 'HR', 'Sales']`, `Region` = 6 valores correctos (incluido `New York`), 0 nulos, PDF/HTML/analytics/simulación en verde.
+- **Suite:** 224 backend (+53: casing 16, gobernanza 11, reportes 19, simulación 7) + 55 frontend (+8) + 3 E2E — 100% en verde. Ruff, Black y Bandit sin incidencias.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** Qwen 3.8 Max (vía ZCode).
+
 ## [1.15.2] — 2026-09-03
 
 ### ✂️ División Automática de Columnas Compuestas: `Department_Region` → `Department` + `Region`

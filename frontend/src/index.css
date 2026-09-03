@@ -303,6 +303,10 @@ tr:hover td {
 .badge-emerald { background: rgba(16, 185, 129, 0.15); color: #34d399; }
 .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 .badge-rose { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+.badge-slate { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+
+@keyframes dataflow-spin { to { transform: rotate(360deg); } }
+.spin { animation: dataflow-spin 1s linear infinite; }
 
 /* Buttons */
 .btn {

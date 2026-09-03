@@ -508,3 +508,85 @@ export interface OpenDataSearchResponse {
 }
 
 
+
+// ── v1.16.0: Simulación de drift y reportes programados ─────────────────────
+
+export interface SimulatedStepOutcome {
+  step_id: string;
+  operation: string;
+  column?: string | null;
+  applied: boolean;
+  rows_affected: number;
+  error?: string | null;
+}
+
+export interface DriftSimulationResult {
+  dataset_id: string;
+  simulated: boolean;
+  governance_note: string;
+  hypothetical_steps: number;
+  applied_steps: number;
+  step_outcomes: SimulatedStepOutcome[];
+  rows_before: number;
+  rows_after: number;
+  columns_before: number;
+  columns_after: number;
+  drift_report: DriftAnalysisReport;
+  elapsed_ms: number;
+  generated_at: string;
+}
+
+export type ReportFormat = 'html' | 'pdf';
+export type WebhookTrigger = 'always' | 'critical_drift';
+
+export interface ReportScheduleCreate {
+  run_id: string;
+  report_format?: ReportFormat;
+  interval_minutes?: number;
+  webhook_url?: string | null;
+  trigger?: WebhookTrigger;
+  lang?: string;
+}
+
+export interface ReportSchedule {
+  schedule_id: string;
+  run_id: string;
+  dataset_id: string;
+  report_format: ReportFormat;
+  interval_minutes: number;
+  webhook_url?: string | null;
+  trigger: WebhookTrigger;
+  lang: string;
+  enabled: boolean;
+  created_at: string;
+  next_run_at?: string | null;
+  last_executed_at?: string | null;
+  last_status?: string | null;
+  last_drift_status?: DriftStatus | null;
+  last_error?: string | null;
+  executions_count: number;
+  deliveries_count: number;
+  last_report_key?: string | null;
+}
+
+export interface ReportScheduleListResponse {
+  schedules: ReportSchedule[];
+  total: number;
+}
+
+export interface WebhookDeliveryResult {
+  delivered: boolean;
+  reason: string;
+  http_status?: number | null;
+  error?: string | null;
+}
+
+export interface ScheduleExecutionLog {
+  schedule_id: string;
+  executed_at: string;
+  report_format: ReportFormat;
+  drift_status?: DriftStatus | null;
+  report_key?: string | null;
+  webhook?: WebhookDeliveryResult | null;
+  error?: string | null;
+}
