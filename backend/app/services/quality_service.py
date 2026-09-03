@@ -225,7 +225,9 @@ class QualityService:
                         )
                     )
 
-            # Símbolos o marcadores en columnas cuantitativas
+            # Símbolos o marcadores en columnas cuantitativas (nunca BOOLEAN: Remote_Work True/False no es cuantitativa)
+            if col_prof.inferred_type == ColumnTypeEnum.BOOLEAN:
+                continue
             is_quant_column = (
                 col_prof.inferred_type == ColumnTypeEnum.NUMERIC
                 or col_prof.semantic_hint in [SemanticHintEnum.CURRENCY, SemanticHintEnum.PERCENTAGE]
@@ -286,6 +288,12 @@ class QualityService:
         for col_prof in profiling.columns:
             col_name = col_prof.column_name
             col_lower = col_name.lower()
+
+            if col_prof.inferred_type == ColumnTypeEnum.BOOLEAN:
+                continue
+            # Teléfonos nunca son magnitudes a acotar (aunque sean numéricos)
+            if col_prof.semantic_hint == SemanticHintEnum.PHONE:
+                continue
 
             # Parseo centralizado: soporta símbolos y separadores europeos/americanos
             series_num = to_numeric_series(df[col_name]).dropna()

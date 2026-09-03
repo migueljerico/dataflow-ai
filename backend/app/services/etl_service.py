@@ -224,18 +224,56 @@ class ETLService:
                 and col
                 and not any(s.column == col and s.operation == "fill_missing" for s in steps)
             ):
-                steps.append(
-                    TransformationStep(
-                        step_id=step_id,
-                        operation="fill_missing",
-                        column=col,
-                        parameters={"column": col, "strategy": "constant", "value": "Desconocido"},
-                        reason=f"Imputar nulos en '{col}' con valor constante por defecto.",
-                        confidence=0.85,
-                        risk="medium",
-                        affected_rows_estimate=issue.affected_rows,
+                # Columnas numéricas/temporales no se imputan con texto: usan median/mean para no romper dtype/Parquet
+                col_series = df[col] if col in df.columns else None
+                is_numeric_col = False
+                if col_series is not None:
+                    try:
+                        if pd.api.types.is_numeric_dtype(col_series) or pd.api.types.is_bool_dtype(col_series):
+                            is_numeric_col = True
+                        else:
+                            ratio_n, _, tot_n = get_numeric_parseable_ratio(col_series)
+                            if tot_n > 0 and ratio_n >= 0.8:
+                                is_numeric_col = True
+                    except Exception:
+                        is_numeric_col = False
+                    # Fechas también son numéricas en sentido de imputación: no usar 'Desconocido'
+                    if not is_numeric_col:
+                        try:
+                            from app.models.profiling import ColumnTypeEnum
+                            from app.services.profiler_service import ProfilerService
+
+                            inferred = ProfilerService._infer_column_type(col_series.dropna(), col_name=col)
+                            if inferred in (ColumnTypeEnum.NUMERIC, ColumnTypeEnum.DATETIME, ColumnTypeEnum.BOOLEAN):
+                                is_numeric_col = True
+                        except Exception:
+                            pass
+                if is_numeric_col:
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="fill_missing",
+                            column=col,
+                            parameters={"column": col, "strategy": "median"},
+                            reason=f"Imputar nulos en la columna numérica '{col}' con la mediana (estrategia robusta a outliers).",
+                            confidence=0.85,
+                            risk="medium",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
                     )
-                )
+                else:
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="fill_missing",
+                            column=col,
+                            parameters={"column": col, "strategy": "constant", "value": "Desconocido"},
+                            reason=f"Imputar nulos en '{col}' con valor constante por defecto.",
+                            confidence=0.85,
+                            risk="medium",
+                            affected_rows_estimate=issue.affected_rows,
+                        )
+                    )
 
         # 2. Heurística Semántica Universal de Respaldo sobre Columnas
         for col_name in df.columns:
@@ -320,9 +358,24 @@ class ETLService:
                         )
                     )
 
-            # Marcadores N/D / N/A / -- o símbolos en series convertibles a numérico
+            # Marcadores N/D / N/A / -- o símbolos en series convertibles a numérico (nunca BOOLEAN/PHONE)
             if not is_id and not any(s.column == col_name and s.operation == "convert_numeric" for s in steps):
-                ratio, _, total_real = get_numeric_parseable_ratio(df[col_name])
+                # Saltar candidatas booleans o phone antes de evaluar ratio numérico
+                try:
+                    from app.services.profiler_service import ProfilerService as _PF
+
+                    _type_guard = _PF._infer_column_type(df[col_name].dropna(), col_name=col_name)
+                    from app.models.profiling import ColumnTypeEnum as _CT
+                    from app.models.profiling import SemanticHintEnum as _SH
+
+                    _hint_guard = _PF._detect_semantic_hint(col_name, df[col_name], _type_guard)
+                    if _type_guard == _CT.BOOLEAN or _hint_guard == _SH.PHONE:
+                        ratio = 0.0
+                        total_real = 0
+                    else:
+                        ratio, _, total_real = get_numeric_parseable_ratio(df[col_name])
+                except Exception:
+                    ratio, _, total_real = get_numeric_parseable_ratio(df[col_name])
                 if total_real > 0 and ratio >= 0.8:
                     has_dirty = any(
                         is_missing_value(v)
@@ -357,8 +410,20 @@ class ETLService:
                             )
                         )
 
-            # Valores numéricos fuera de rango (excluyendo IDs)
-            if not is_id:
+            # Valores numéricos fuera de rango (excluyendo IDs, booleans y teléfonos)
+            skip_clamp = False
+            try:
+                from app.models.profiling import ColumnTypeEnum as _CT2
+                from app.models.profiling import SemanticHintEnum as _SH2
+                from app.services.profiler_service import ProfilerService as _PF2
+
+                _tg2 = _PF2._infer_column_type(df[col_name].dropna(), col_name=col_name)
+                _hg2 = _PF2._detect_semantic_hint(col_name, df[col_name], _tg2)
+                if _tg2 == _CT2.BOOLEAN or _hg2 == _SH2.PHONE:
+                    skip_clamp = True
+            except Exception:
+                pass
+            if not is_id and not skip_clamp:
                 clean_nums = to_numeric_series(series_raw).dropna()
                 if len(clean_nums) > 0:
                     is_pct = _is_percentage_or_score_column(col_name, df[col_name], clean_nums)
@@ -590,9 +655,16 @@ class ETLService:
         base_stem = Path(metadata.filename).stem
         parquet_filename = f"clean_{base_stem}.parquet"
         parquet_key = f"{run_id}_{parquet_filename}"
-        parquet_buf = io.BytesIO()
-        df_current.to_parquet(parquet_buf, index=False, engine="pyarrow")
-        storage.save_file(parquet_key, parquet_buf.getvalue())
+        try:
+            parquet_buf = io.BytesIO()
+            df_current.to_parquet(parquet_buf, index=False, engine="pyarrow")
+            storage.save_file(parquet_key, parquet_buf.getvalue())
+        except Exception as e:
+            warnings.append(
+                f"Parquet no generado (tipo mixto tras imputación): {str(e)[:120]}. El CSV limpio sigue disponible."
+            )
+            parquet_filename = None
+            parquet_key = None
 
         # Generar y almacenar script reproducible
         script_content = ScriptGeneratorService.generate_script(
@@ -603,6 +675,12 @@ class ETLService:
 
         finished_at = datetime.now(timezone.utc)
         rows_after, cols_after = df_current.shape
+
+        # Si parquet falló, anular referencias para que el cliente no intente descargar un fichero inexistente
+        if parquet_filename is None:
+            parquet_url_val = None
+        else:
+            parquet_url_val = f"/api/v1/runs/{run_id}/download-parquet"
 
         result = ExecutionResult(
             run_id=run_id,
@@ -622,7 +700,7 @@ class ETLService:
             download_url=f"/api/v1/runs/{run_id}/download",
             script_url=f"/api/v1/runs/{run_id}/download-script",
             parquet_filename=parquet_filename,
-            parquet_url=f"/api/v1/runs/{run_id}/download-parquet",
+            parquet_url=parquet_url_val,
             audit_logs=audit_logs,
             errors=errors,
             warnings=warnings,

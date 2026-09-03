@@ -4,6 +4,33 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.15.1] — 2026-09-03
+
+### 🛠️ Corrección del Motor Determinista: Crash de Parquet y Tipos Boolean para Datasets Corporativos
+
+> **Estabilidad & Fidelidad:** Parche crítico que corrige el error interno 500 (ArrowInvalid) al procesar datasets corporativos con columnas booleanas (`Remote_Work` True/False), columnas compuestas con guion (`Department_Region`) y valores nulos numéricos (`Age`, `Salary`).
+
+#### 🐛 Correcciones (Fixes)
+- **Imputación de Nulos (`backend/app/services/etl_service.py`):**
+  - Las columnas numéricas con valores perdidos (`Age` 211 nulos, `Salary` 24 nulos en Messy_Employee) ahora se imputan con estrategia `median` en lugar de la constante textual `Desconocido`. El valor `Desconocido` rompía el dtype float64 y provocaba `ArrowInvalid` al serializar a Parquet.
+- **Profiling de Tipos (`backend/app/services/profiler_service.py`):**
+  - Detección temprana de columnas booleanas (`bool` dtype o valores True/False, Sí/No, 1/0) antes de las reglas de ID y numérico. `Remote_Work` (513 True / 507 False) ya se clasifica como `BOOLEAN` y no como `NUMERIC`.
+- **Motor de Calidad (`backend/app/services/quality_service.py`):**
+  - Exclusión de columnas `BOOLEAN` y `PHONE` de los chequeos de validez cuantitativa e integridad (negativos, rangos). `Remote_Work` ya no genera un issue de validez con 1020 celdas y una sugerencia `convert_numeric` destructiva; `Phone` ya no recibe `clamp_range` a 0.
+- **Motor de Reglas ETL (`backend/app/services/etl_service.py`):**
+  - Guardrails en la heurística de `convert_numeric` y `clamp_range`: las candidatas `BOOLEAN`/`PHONE` se descartan aunque su ratio parseable sea bajo.
+- **Normalización de Texto (`backend/app/transformations/text_ops.py`):**
+  - `Department_Region` del tipo `Sales-Florida` (ambos lados palabras alfabéticas) ya no se trata como código identificador y no se convierte a `SALES-FLORIDA`. Ahora produce `Sales-Florida` con Title en cada segmento. Códigos cortos con dígitos (`PED-201`, `EMP-101`) siguen protegidos como `PED-201`.
+- **Resiliencia de Parquet (`backend/app/services/etl_service.py`):**
+  - `df.to_parquet()` ahora está envuelto en `try/except`: si la serialización columnar falla por tipos mixtos, el pipeline completa igual y reporta el incidente en `warnings` con el CSV limpio intacto. Nunca más un 500 interno por Parquet.
+
+#### 🧪 Verificación
+- **Dataset Afectado:** `Messy_Employee_dataset.csv` (1020 filas, 12 columnas) usado como caso de reproducción: 3 pasos deterministas (`median` en Age/Salary + `convert_datetime` en Join_Date), 0 errores, Parquet generado correctamente y `Department_Region` con `Sales-Florida` intacto.
+- **Suite Completa:** 171 tests backend (pytest) y 47 frontend (Vitest) en verde; linters (Ruff/Black/Bandit) y build de Vite sin incidencias.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** Gemini 3.8 Flash (High) (vía Google Antigravity).
+
 ## [1.15.0] — 2026-09-03
 
 ### 📊 Historial de Ejecuciones, Comparador Dimensional de Calidad, Control de Data Drift por Percentiles y Alertas Proactivas

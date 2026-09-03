@@ -141,6 +141,19 @@ class ProfilerService:
 
         non_null_str = non_null_series.astype(str).str.strip()
 
+        # 0. Boolean (antes que Numeric/ID: columnas True/False no son numéricas ni códigos)
+        if pd.api.types.is_bool_dtype(series):
+            return ColumnTypeEnum.BOOLEAN
+        # bool como texto True/False (CSV carga booleans como strings o bool)
+        try:
+            uniq_lower = set(non_null_str.str.lower().unique())
+            if uniq_lower.issubset({"true", "false", "si", "no", "s", "n", "1", "0", "yes", "y", "true ", "false "}):
+                # Ambas opciones True/False presentes o solo una pero binaria clara (Remote_Work)
+                if len(uniq_lower) <= 3:
+                    return ColumnTypeEnum.BOOLEAN
+        except Exception:
+            pass
+
         # Si es un ID/Código reconocido o contiene ceros a la izquierda (como códigos postales o INE),
         # debe preservarse como TEXT o CATEGORICAL para no truncar ceros ni tratarse como medida sumable en BI
         if col_name and ProfilerService._is_id_or_code(col_name, non_null_str):
@@ -149,8 +162,8 @@ class ProfilerService:
                 return ColumnTypeEnum.CATEGORICAL
             return ColumnTypeEnum.TEXT
 
-        # 1. Numeric
-        if pd.api.types.is_numeric_dtype(series):
+        # 1. Numeric (excluyendo ya-booleans; requiere ratio >=0.8 sobre texto)
+        if pd.api.types.is_numeric_dtype(series) and not pd.api.types.is_bool_dtype(series):
             return ColumnTypeEnum.NUMERIC
 
         # Check if text contains convertible numeric values or symbols

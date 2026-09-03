@@ -107,6 +107,12 @@ class NormalizeCaseTransformation(BaseTransformation):
         for w in words:
             clean_w = w.strip()
             upper_w = clean_w.upper()
+            # Department_Region tipo Sales-Florida (ambos lados palabras) → Title cada lado, no código
+            if "-" in clean_w and len(clean_w) > 6:
+                parts = clean_w.split("-")
+                if all(len(p) >= 2 and p.isalpha() for p in parts if p):
+                    formatted_words.append("-".join(p.capitalize() for p in parts))
+                    continue
             if upper_w in BUSINESS_ACRONYMS or code_token_re.match(clean_w):
                 formatted_words.append(upper_w)
             else:
