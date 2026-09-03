@@ -49,6 +49,8 @@ export interface Translations {
     gdprPrivacy: string;
     gdprTitle: string;
     etlCopilot: string;
+    cacheObservability?: string;
+    cacheObservabilityTitle?: string;
   };
   stepper: {
     step1: string;
@@ -270,6 +272,28 @@ export interface Translations {
     starRows?: string;
     starDaxTablesLabel?: string;
     starClickHint?: string;
+    exportStarSchemaPng?: string;
+    starPngDownloading?: string;
+  };
+  cacheModal?: {
+    title: string;
+    subtitle: string;
+    globalHitRate: string;
+    l1Hits: string;
+    l2Hits: string;
+    misses: string;
+    totalRequests: string;
+    savedTokens: string;
+    savedCost: string;
+    activeEntries: string;
+    backend: string;
+    redisStatus: string;
+    connected: string;
+    notConfigured: string;
+    refresh: string;
+    close: string;
+    twoTierTitle: string;
+    twoTierDesc: string;
   };
   apiKeyModal: {
     title: string;
@@ -310,6 +334,8 @@ export const translations: Record<Language, Translations> = {
       gdprPrivacy: 'Privacidad RGPD',
       gdprTitle: 'Cumplimiento estricto de privacidad: procesamiento efímero y minimización de datos',
       etlCopilot: 'Copiloto ETL',
+      cacheObservability: 'Caché IA',
+      cacheObservabilityTitle: 'Observabilidad de la caché distribuida (L1 Memoria + L2 Redis)',
     },
     stepper: {
       step1: 'Subir Datos',
@@ -531,6 +557,28 @@ export const translations: Record<Language, Translations> = {
       starRows: 'filas',
       starDaxTablesLabel: 'Tablas Calculadas (DAX)',
       starClickHint: 'Haz clic en una dimensión para ver su detalle',
+      exportStarSchemaPng: 'Exportar PNG',
+      starPngDownloading: 'Generando imagen...',
+    },
+    cacheModal: {
+      title: 'Observabilidad de Caché Distribuida',
+      subtitle: 'Métricas operativas y de ahorro en inferencia IA de dos niveles (L1 Memoria + L2 Redis)',
+      globalHitRate: 'Tasa de Acierto Global',
+      l1Hits: 'Aciertos L1 (Memoria Local <1ms)',
+      l2Hits: 'Aciertos L2 (Redis Distribuido)',
+      misses: 'Fallos de Caché (Inferencia LLM)',
+      totalRequests: 'Peticiones Totales',
+      savedTokens: 'Tokens Ahorrados',
+      savedCost: 'Coste Ahorrado (USD)',
+      activeEntries: 'Entradas Activas en L1',
+      backend: 'Motor de Caché',
+      redisStatus: 'Estado Redis L2',
+      connected: 'Conectado y disponible',
+      notConfigured: 'No configurado (Modo Memoria LRU)',
+      refresh: 'Actualizar Métricas',
+      close: 'Cerrar',
+      twoTierTitle: 'Arquitectura de Dos Niveles L1 + L2',
+      twoTierDesc: 'L1 en memoria local ofrece latencia ultrarrápida (<1ms) aislada por réplica. L2 en Redis comparte aciertos entre todas las instancias de Cloud Run con huella canónica determinista (SHA-256).',
     },
     apiKeyModal: {
       title: 'Configuración de Google Gemini API Key',
@@ -570,6 +618,8 @@ export const translations: Record<Language, Translations> = {
       gdprPrivacy: 'GDPR Privacy',
       gdprTitle: 'Strict privacy compliance: ephemeral processing and data minimization',
       etlCopilot: 'ETL Copilot',
+      cacheObservability: 'AI Cache',
+      cacheObservabilityTitle: 'Distributed cache observability (L1 Memory + L2 Redis)',
     },
     stepper: {
       step1: 'Upload Data',
@@ -791,6 +841,28 @@ export const translations: Record<Language, Translations> = {
       starRows: 'rows',
       starDaxTablesLabel: 'Calculated Tables (DAX)',
       starClickHint: 'Click a dimension to inspect its details',
+      exportStarSchemaPng: 'Export PNG',
+      starPngDownloading: 'Generating image...',
+    },
+    cacheModal: {
+      title: 'Distributed Cache Observability',
+      subtitle: 'Operational and savings metrics for two-tier AI inference cache (L1 Memory + L2 Redis)',
+      globalHitRate: 'Global Hit Rate',
+      l1Hits: 'L1 Hits (Local Memory <1ms)',
+      l2Hits: 'L2 Hits (Distributed Redis)',
+      misses: 'Cache Misses (LLM Calls)',
+      totalRequests: 'Total Requests',
+      savedTokens: 'Tokens Saved',
+      savedCost: 'Cost Saved (USD)',
+      activeEntries: 'Active L1 Entries',
+      backend: 'Cache Backend',
+      redisStatus: 'L2 Redis Status',
+      connected: 'Connected and ready',
+      notConfigured: 'Not configured (Memory-only LRU mode)',
+      refresh: 'Refresh Metrics',
+      close: 'Close',
+      twoTierTitle: 'Two-Tier Architecture (L1 + L2)',
+      twoTierDesc: 'L1 in local memory provides ultra-fast latency (<1ms) per replica. L2 in Redis shares cache hits across all Cloud Run instances using deterministic canonical fingerprints (SHA-256).',
     },
     apiKeyModal: {
       title: 'Google Gemini API Key Configuration',

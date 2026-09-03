@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PlanReview } from './PlanReview';
 import { LanguageProvider } from '../context/LanguageContext';
 import { DatasetMetadata, ProfilingReport, TransformationPlan } from '../types';
@@ -231,7 +231,7 @@ describe('PlanReview Component — Schema Previews', () => {
     expect(banner).toHaveTextContent('$0.000086 USD');
   });
 
-  it('renders ai-cached-badge when plan inference was served from cache', () => {
+  it('renders ai-cached-badge when plan inference was served from cache', async () => {
     const handleExecute = vi.fn();
     const planWithCache: TransformationPlan = {
       ...mockPlan,
@@ -263,5 +263,10 @@ describe('PlanReview Component — Schema Previews', () => {
     const badge = screen.getByTestId('ai-cached-badge');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveTextContent(/Caché de Inferencia/i);
+
+    await act(async () => {
+      fireEvent.click(badge);
+    });
+    expect(screen.getByTestId('cache-observability-modal')).toBeInTheDocument();
   });
 });

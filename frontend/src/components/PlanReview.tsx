@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DatasetMetadata, ProfilingReport, TransformationPlan, TransformationStep } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { CacheObservabilityModal } from './CacheObservabilityModal';
 
 interface Props {
   plan: TransformationPlan;
@@ -38,6 +39,7 @@ export const PlanReview: React.FC<Props> = ({
   const [steps, setSteps] = useState<TransformationStep[]>(plan.steps);
   const [showGlobalSchema, setShowGlobalSchema] = useState<boolean>(false);
   const [previewStepId, setPreviewStepId] = useState<string | null>(null);
+  const [isCacheModalOpen, setIsCacheModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setSteps(plan.steps);
@@ -149,14 +151,23 @@ export const PlanReview: React.FC<Props> = ({
               </span>
             </div>
             {plan.ai_metrics.cached && (
-              <span
+              <button
+                type="button"
                 data-testid="ai-cached-badge"
                 className="badge badge-emerald"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.725rem' }}
-                title="Respuesta recuperada instantáneamente desde la caché de inferencia semántica (ahorro del 100% en tokens)"
+                onClick={() => setIsCacheModalOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.725rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                }}
+                title="Respuesta recuperada instantáneamente desde la caché de inferencia semántica (ahorro del 100% en tokens). Clic para abrir el panel de observabilidad."
               >
                 <Zap size={12} /> {t.plan?.aiCachedBadge || 'Caché de Inferencia (100% Ahorro)'}
-              </span>
+              </button>
             )}
           </div>
         )}
@@ -743,6 +754,11 @@ export const PlanReview: React.FC<Props> = ({
           );
         })}
       </div>
+
+      <CacheObservabilityModal
+        isOpen={isCacheModalOpen}
+        onClose={() => setIsCacheModalOpen(false)}
+      />
     </div>
   );
 };

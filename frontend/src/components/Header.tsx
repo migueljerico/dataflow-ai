@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Sparkles, ShieldCheck, Key, Smartphone } from 'lucide-react';
+import { Database, Sparkles, ShieldCheck, Key, Smartphone, Activity } from 'lucide-react';
 import { ApiKeyModal } from './ApiKeyModal';
 import { InstallPwaModal } from './InstallPwaModal';
+import { CacheObservabilityModal } from './CacheObservabilityModal';
 import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '../context/LanguageContext';
 import { getApiKey } from '../utils/security';
@@ -19,6 +20,7 @@ export const Header: React.FC = () => {
   const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isCacheModalOpen, setIsCacheModalOpen] = useState(false);
 
   useEffect(() => {
     const key = getApiKey();
@@ -125,6 +127,29 @@ export const Header: React.FC = () => {
             )}
           </button>
 
+          <button
+            onClick={() => setIsCacheModalOpen(true)}
+            className="btn btn-outline"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              backgroundColor: 'rgba(14, 165, 233, 0.1)',
+              borderColor: 'rgba(14, 165, 233, 0.35)',
+              color: 'var(--primary)',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+            data-testid="header-cache-observability-btn"
+            title={t.header?.cacheObservabilityTitle || 'Observabilidad de la caché distribuida (L1 Memoria + L2 Redis)'}
+          >
+            <Activity size={14} aria-hidden="true" style={{ color: 'var(--primary)' }} />
+            <span>{t.header?.cacheObservability || 'Caché IA'}</span>
+          </button>
+
           <span className="badge badge-emerald hide-on-mobile" title={t.header.gdprTitle}>
             <ShieldCheck size={13} /> {t.header.gdprPrivacy}
           </span>
@@ -147,6 +172,11 @@ export const Header: React.FC = () => {
         onInstallPrompt={deferredPrompt ? handleInstallClick : undefined}
         isInstallable={!!deferredPrompt}
         isIOS={isIOS}
+      />
+
+      <CacheObservabilityModal
+        isOpen={isCacheModalOpen}
+        onClose={() => setIsCacheModalOpen(false)}
       />
     </>
   );

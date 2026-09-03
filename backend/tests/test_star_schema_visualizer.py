@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas del visualizador de modelo estrella (Star Schema) para Power BI.
 
 Verifican la inferencia de dimensiones (calendario + atributos), las relaciones
@@ -74,6 +74,9 @@ def test_star_schema_inference_end_to_end():
 
     # Script DAX consolidado y fragmento TMDL de relaciones
     assert "Dim_Fecha" in star["dax_calculated_tables"]
+    assert cal.get("tmdl_definition") is not None
+    assert "table 'Dim_Fecha'" in cal["tmdl_definition"]
+    assert "partition 'Dim_Fecha' = calculated" in cal["tmdl_definition"]
     assert star["tmdl_relationships"] is not None
     assert "relationship " in star["tmdl_relationships"]
     assert f"fromColumn: {star['fact_table']}" in star["tmdl_relationships"]
@@ -114,8 +117,25 @@ def test_star_schema_relationships_present_in_pbip_export():
     assert "application/zip" in pbip_res.headers["content-type"]
 
     with zipfile.ZipFile(io.BytesIO(pbip_res.content), "r") as zf:
+        namelist = zf.namelist()
         model_tmdl = zf.read(f"{guide['table_name']}.SemanticModel/definition/model.tmdl").decode(
             "utf-8"
         )
-    assert "relationship " in model_tmdl
-    assert "fromColumn:" in model_tmdl
+        assert "relationship " in model_tmdl
+        assert "fromColumn:" in model_tmdl
+        assert "toColumn:" in model_tmdl
+
+        # Verificar que cada dimensión referenciada tenga su archivo TMDL canónico en el ZIP
+        for dim in guide["star_schema"]["dimensions"]:
+            dim_filename = f"{guide['table_name']}.SemanticModel/definition/tables/{dim['name']}.tmdl"
+            assert dim_filename in namelist, f"Falta el archivo {dim_filename} en el ZIP PBIP"
+            dim_tmdl = zf.read(dim_filename).decode("utf-8")
+            assert f"table '{dim['name']}'" in dim_tmdl
+            assert "lineageTag:" in dim_tmdl
+            assert "partition" in dim_tmdl
+            assert "calculated" in dim_tmdl
+            assert "column" in dim_tmdl
+            if dim["kind"] == "calendar":
+                assert "column Date" in dim_tmdl
+                assert "dateTime" in dim_tmdl
+

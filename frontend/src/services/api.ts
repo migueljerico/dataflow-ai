@@ -8,7 +8,8 @@ import {
   SampleDataset,
   ExecutiveAnalyticsReport,
   OpenDatasetItem,
-  OpenDataSearchResponse
+  OpenDataSearchResponse,
+  CacheStats
 } from '../types';
 import { getApiKey } from '../utils/security';
 
@@ -170,5 +171,11 @@ export const api = {
 
   getPbipExportUrl: (runId: string): string => {
     return `${API_BASE}/analytics/${runId}/export/pbip`;
+  },
+
+  // Observabilidad de Caché
+  getCacheStats: async (): Promise<CacheStats> => {
+    const res = await fetch(`${API_BASE}/cache/stats`);
+    return handleResponse<CacheStats>(res);
   },
 };

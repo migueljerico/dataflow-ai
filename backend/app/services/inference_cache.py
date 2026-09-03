@@ -1,4 +1,4 @@
-﻿import copy
+import copy
 import hashlib
 import json
 import threading
@@ -330,17 +330,26 @@ class InferenceCacheService:
         redis_client = cls._get_redis()
         with cls._lock:
             total_requests = cls._hits + cls._misses
-            hit_rate = round((cls._hits / total_requests) * 100, 2) if total_requests > 0 else 0.0
+            l2_hits = cls._redis_hits
+            l1_hits = max(0, cls._hits - l2_hits)
+            total_hits = cls._hits
+            hit_rate = round((total_hits / total_requests) * 100, 2) if total_requests > 0 else 0.0
+            l1_hit_rate = round((l1_hits / total_requests) * 100, 2) if total_requests > 0 else 0.0
+            l2_hit_rate = round((l2_hits / total_requests) * 100, 2) if total_requests > 0 else 0.0
             return {
                 "backend": settings.INFERENCE_CACHE_BACKEND,
                 "distributed": redis_client is not None,
                 "redis_available": redis_client is not None,
-                "redis_hits": cls._redis_hits,
+                "redis_hits": l2_hits,
                 "redis_errors": cls._redis_errors,
-                "hits": cls._hits,
+                "hits": total_hits,
+                "l1_hits": l1_hits,
+                "l2_hits": l2_hits,
                 "misses": cls._misses,
                 "total_requests": total_requests,
                 "hit_rate_pct": hit_rate,
+                "l1_hit_rate_pct": l1_hit_rate,
+                "l2_hit_rate_pct": l2_hit_rate,
                 "cached_entries": len(cls._cache),
                 "saved_tokens": cls._saved_tokens,
                 "saved_cost_usd": round(cls._saved_cost_usd, 6),

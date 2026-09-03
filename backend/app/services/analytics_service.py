@@ -1400,12 +1400,17 @@ class AnalyticsService:
             )
             added += 1
 
-        # Script DAX consolidado de tablas calculadas
+        # Script DAX consolidado y definición TMDL de tablas calculadas
         dax_blocks: List[str] = []
         for dim in dimensions:
             if dim.dax_definition:
                 header = f"// Tabla calculada: {dim.name}" + (" (Calendario)" if dim.kind == "calendar" else "")
                 dax_blocks.append(f"{header}\n{dim.dax_definition}")
+            dim.tmdl_definition = AnalyticsService._build_tmdl_dimension_table_definition(
+                dim=dim,
+                table_name=table_name,
+                fact_columns=columns_info,
+            )
         dax_calculated_tables = "\n\n".join(dax_blocks)
 
         # Fragmento TMDL de relaciones para el modelo semántico
@@ -1500,6 +1505,84 @@ class AnalyticsService:
         lines.append("\t\tmode: import")
         lines.append(f"\t\tsource =\n\t\t\t{m_indented}")
         lines.append("")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _build_tmdl_dimension_table_definition(
+        dim: StarSchemaDimension,
+        table_name: str,
+        fact_columns: Optional[List[IntegrationColumn]] = None,
+    ) -> str:
+        """Genera la definición canónica en formato TMDL para una tabla calculada
+        de dimensión (calendario o atributo) compatible con Power BI Desktop Developer Mode."""
+        dim_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table_name}.dim.{dim.name}"))
+        lines = [f"table '{dim.name}'", f"\tlineageTag: {dim_guid}", ""]
+
+        # Extraer expresión DAX sin el prefijo 'Dim_Nombre = '
+        formula_clean = (dim.dax_definition or "").strip()
+        if formula_clean.startswith(f"{dim.name} ="):
+            expr = formula_clean[len(f"{dim.name} =") :].strip()
+        elif "=" in formula_clean:
+            expr = formula_clean.split("=", 1)[1].strip()
+        else:
+            expr = formula_clean
+
+        expr_indented = "\n\t\t\t".join(expr.split("\n"))
+        lines.append(f"\tpartition '{dim.name}' = calculated")
+        lines.append("\t\tmode: import")
+        lines.append(f"\t\tsource =\n\t\t\t{expr_indented}")
+        lines.append("")
+
+        if dim.kind == "calendar":
+            date_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{dim.name}.col.Date"))
+            lines.append("\tcolumn Date")
+            lines.append("\t\tdataType: dateTime")
+            lines.append("\t\tformatString: yyyy-mm-dd")
+            lines.append(f"\t\tlineageTag: {date_guid}")
+            lines.append("\t\tsummarizeBy: none")
+            lines.append("\t\tisNameInferred: true")
+            lines.append("\t\tisDataTypeInferred: true")
+            lines.append("\t\tsourceColumn: [Date]")
+            lines.append("")
+
+            for attr in dim.suggested_attributes:
+                attr_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{dim.name}.col.{attr}"))
+                is_num = attr in ("Año", "Número de Mes", "Día")
+                tmdl_type = "int64" if is_num else "string"
+                lines.append(f"\tcolumn '{attr}'")
+                lines.append(f"\t\tdataType: {tmdl_type}")
+                if is_num:
+                    lines.append("\t\tformatString: 0")
+                lines.append(f"\t\tlineageTag: {attr_guid}")
+                lines.append("\t\tsummarizeBy: none")
+                lines.append("\t\tisNameInferred: true")
+                lines.append("\t\tisDataTypeInferred: true")
+                lines.append(f"\t\tsourceColumn: [{attr}]")
+                lines.append("")
+        else:
+            key_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{dim.name}.col.{dim.key_column}"))
+            tmdl_type = "string"
+            if fact_columns:
+                for col in fact_columns:
+                    if col.name == dim.source_column:
+                        tmdl_type = AnalyticsService._map_to_tmdl_type(col.power_bi_m_type)
+                        break
+
+            lines.append(f"\tcolumn '{dim.key_column}'")
+            lines.append(f"\t\tdataType: {tmdl_type}")
+            if tmdl_type == "int64":
+                lines.append("\t\tformatString: 0")
+            elif tmdl_type == "double":
+                lines.append("\t\tformatString: #,##0.00")
+            elif tmdl_type == "dateTime":
+                lines.append("\t\tformatString: yyyy-mm-dd")
+            lines.append(f"\t\tlineageTag: {key_guid}")
+            lines.append("\t\tsummarizeBy: none")
+            lines.append("\t\tisNameInferred: true")
+            lines.append("\t\tisDataTypeInferred: true")
+            lines.append(f"\t\tsourceColumn: [{dim.key_column}]")
+            lines.append("")
 
         return "\n".join(lines)
 
@@ -1635,6 +1718,14 @@ class AnalyticsService:
             zf.writestr(f"{table_name}.SemanticModel/definition/model.tmdl", tmdl_model)
             zf.writestr(f"{table_name}.SemanticModel/definition/cultures/es-ES.tmdl", culture_tmdl)
             zf.writestr(f"{table_name}.SemanticModel/definition/tables/{table_name}.tmdl", tmdl_table)
+            if guide.star_schema and guide.star_schema.dimensions:
+                for dim in guide.star_schema.dimensions:
+                    dim_tmdl = dim.tmdl_definition or AnalyticsService._build_tmdl_dimension_table_definition(
+                        dim=dim,
+                        table_name=table_name,
+                        fact_columns=guide.columns,
+                    )
+                    zf.writestr(f"{table_name}.SemanticModel/definition/tables/{dim.name}.tmdl", dim_tmdl)
 
         buf.seek(0)
         return buf.getvalue()

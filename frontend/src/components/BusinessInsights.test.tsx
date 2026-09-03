@@ -439,6 +439,12 @@ describe('BusinessInsights component', () => {
     expect(screen.getAllByText(/Dim_Segmento/i).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/Atributos Sugeridos:/i)).toBeInTheDocument();
     expect(screen.getAllByText(/DISTINCT\('Ventas_Comerciales'\[Segmento\]\)/i).length).toBeGreaterThanOrEqual(2);
+
+    // Botón de exportación del diagrama a imagen PNG
+    const pngBtn = screen.getByTestId('export-star-schema-png-btn');
+    expect(pngBtn).toBeInTheDocument();
+    expect(pngBtn).toHaveTextContent(/Exportar PNG|Descargar PNG/i);
+    fireEvent.click(pngBtn);
   });
 
   it('does not show the Star Schema view button when the guide has no star schema', async () => {

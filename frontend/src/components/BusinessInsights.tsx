@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   TrendingUp,
   Lightbulb,
@@ -18,6 +18,7 @@ import {
   ArrowLeftRight,
   Star,
   Table2,
+  Download,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
@@ -70,6 +71,8 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
   const { t } = useLanguage();
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [copiedDax, setCopiedDax] = useState<string | null>(null);
+  const [isExportingPng, setIsExportingPng] = useState<boolean>(false);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const W = 860;
   const H = 520;
@@ -97,6 +100,51 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
     setTimeout(() => setCopiedDax(null), 2000);
   };
 
+  const exportAsPng = () => {
+    const svgEl = svgRef.current;
+    if (!svgEl) return;
+    setIsExportingPng(true);
+
+    try {
+      const svgXml = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+
+      img.onload = () => {
+        const scale = 2; // Alta resolución (2x Retina)
+        const canvas = document.createElement('canvas');
+        canvas.width = W * scale;
+        canvas.height = H * scale;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const pngData = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.download = `esquema_estrella_${schema.fact_table}.png`;
+          a.href = pngData;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        URL.revokeObjectURL(url);
+        setIsExportingPng(false);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        setIsExportingPng(false);
+      };
+
+      img.src = url;
+    } catch {
+      setIsExportingPng(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }} data-testid="star-schema-visual">
       {/* Diagrama SVG: hechos al centro, dimensiones alrededor, relaciones *:1 */}
@@ -106,10 +154,45 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
             backgroundColor: 'var(--bg-input)',
             border: '1px solid var(--border-color)',
             borderRadius: '10px',
-            padding: '10px',
+            padding: '12px 14px',
           }}
         >
-          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label="Diagrama de modelo estrella">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main, #f8fafc)' }}>
+              {t.powerBiExcel?.tabStarSchema || 'Esquema Estrella'}
+            </span>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={exportAsPng}
+              disabled={isExportingPng}
+              data-testid="export-star-schema-png-btn"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+              title={t.powerBiExcel?.exportStarSchemaPng || 'Descargar diagrama en imagen PNG (2x Retina)'}
+            >
+              <Download size={13} />
+              {isExportingPng
+                ? (t.powerBiExcel?.starPngDownloading || 'Generando...')
+                : (t.powerBiExcel?.exportStarSchemaPng || 'Descargar PNG')}
+            </button>
+          </div>
+
+          <svg
+            ref={svgRef}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox={`0 0 ${W} ${H}`}
+            style={{ width: '100%', height: 'auto', display: 'block' }}
+            role="img"
+            aria-label="Diagrama de modelo estrella"
+          >
             {/* Relaciones (debajo de las cajas) */}
             {positions.map(({ dim, x, y }) => (
               <g key={`rel-${dim.name}`}>

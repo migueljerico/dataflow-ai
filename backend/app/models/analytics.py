@@ -146,6 +146,7 @@ class StarSchemaDimension(BaseModel):
     distinct_count: int
     suggested_attributes: List[str] = []
     dax_definition: Optional[str] = None
+    tmdl_definition: Optional[str] = None
 
 
 class StarSchemaRelationship(BaseModel):

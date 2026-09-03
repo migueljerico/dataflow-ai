@@ -4,6 +4,42 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.14.0] — 2026-09-03
+
+### ⚡ Panel de Observabilidad de Caché Distribuida y Exportación PNG / TMDL para Power BI Desktop
+
+> **Observabilidad & Power BI Real:** Incorporación de un panel interactivo de observabilidad de la caché de inferencia semántica de dos niveles (L1 memoria + L2 Redis) en el frontend, exportación directa en PNG de alta resolución (2x Retina) del diagrama interactivo de Esquema Estrella, y validación exhaustiva de las definiciones canónicas TMDL de tablas de dimensión y relaciones en el proyecto PBIP descargable.
+
+#### ⚡ Observabilidad de Caché Distribuida (Frontend & Backend)
+- **Endpoint REST (`backend/app/api/v1/endpoints/cache.py`):**
+  - Nuevo endpoint `GET /api/v1/cache/stats` con modelo Pydantic `CacheStatsResponse`.
+  - Desglose matemático explícito de aciertos L1 (memoria local <1ms) y L2 (Redis distribuido), tasas porcentuales independientes (`l1_hit_rate_pct`, `l2_hit_rate_pct`, `hit_rate_pct`), total de peticiones, fallos (llamadas LLM), entradas activas en LRU y ahorro acumulado de tokens y coste en USD.
+- **Frontend Interactivo (`frontend/src/components/CacheObservabilityModal.tsx`):**
+  - Modal interactivo con 6 tarjetas de KPIs en vivo (Tasa Global, Aciertos L1, Aciertos L2, Fallos, Tokens Ahorrados, Coste USD Ahorrado).
+  - Barra de distribución apilada (stacked bar) con proporciones relativas de tráfico L1 vs L2 vs Misses.
+  - Indicador de estado de conexión Redis L2 / Memoria local LRU con alertas visuales de timeout.
+  - Botón de refresco en vivo (`RefreshCw`) y soporte completo de accesibilidad (Escape, ARIA).
+- **Puntos de Integración UI:**
+  - Botón «Caché IA» con icono `Activity` en la barra superior de navegación (`Header.tsx`).
+  - Badge interactivo `ai-cached-badge` en la vista de revisión del plan (`PlanReview.tsx`), que permite abrir el panel de observabilidad directamente al detectar un hit.
+  - Internacionalización completa en español e inglés.
+
+#### ⭐ Exportación PNG de Star Schema y TMDL para Power BI Desktop
+- **Exportación en Alta Resolución (`frontend/src/components/BusinessInsights.tsx`):**
+  - Nuevo botón «Exportar PNG» en el visualizador interactivo de Esquema Estrella.
+  - Renderizado en canvas HTML5 a escala 2x Retina con fondo `#0f172a` coherente con la aplicación y descarga automática del archivo `esquema_estrella_{fact_table}.png`.
+- **Generación Canónica de TMDL para Dimensiones (`backend/app/services/analytics_service.py`):**
+  - Nuevo método `_build_tmdl_dimension_table_definition(...)` que genera la estructura oficial TMDL de Microsoft Fabric / Power BI Desktop para tablas calculadas (`CALENDAR` y `DISTINCT`) con `lineageTag`, `partition ... = calculated`, `mode: import`, tipos de datos inferidos y referencias de columna.
+  - El empaquetador del proyecto PBIP (`generate_powerbi_pbip_zip`) ahora escribe en el ZIP los archivos `.SemanticModel/definition/tables/{dim.name}.tmdl` para cada dimensión del modelo estrella, eliminando referencias huérfanas en `model.tmdl` y garantizando apertura inmediata y sin errores en Power BI Desktop Developer Mode.
+
+#### 🧪 Verificación y Pruebas
+- **Backend:** 166 pruebas unitarias y de integración pasando al 100% (+3 pruebas nuevas en `test_cache_observability.py` y `test_star_schema_visualizer.py`).
+- **Frontend:** 45 pruebas con Vitest pasando al 100% (+4 pruebas nuevas en `CacheObservabilityModal.test.tsx`, `PlanReview.test.tsx` y `BusinessInsights.test.tsx`).
+- **Linters & SAST:** Ruff 0 errores, Black 0 diferencias de formato, Bandit 0 vulnerabilidades. TypeScript + Vite compilando en 1.35s sin errores.
+
+#### 🤖 Atribución del Modelo
+- **Atribución del Modelo:** Gemini 3.8 Flash (High) (vía Google Antigravity).
+
 ## [1.13.1] — 2026-09-02
 
 ### 📸 Corrección del Badge de Versión y Nueva Captura del Esquema Estrella en el README

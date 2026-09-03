@@ -295,6 +295,26 @@ export interface StarSchemaDimension {
   distinct_count: number;
   suggested_attributes: string[];
   dax_definition?: string;
+  tmdl_definition?: string;
+}
+
+export interface CacheStats {
+  backend: string;
+  distributed: boolean;
+  redis_available: boolean;
+  redis_hits: number;
+  redis_errors: number;
+  hits: number;
+  l1_hits: number;
+  l2_hits: number;
+  misses: number;
+  total_requests: number;
+  hit_rate_pct: number;
+  l1_hit_rate_pct: number;
+  l2_hit_rate_pct: number;
+  cached_entries: number;
+  saved_tokens: number;
+  saved_cost_usd: number;
 }
 
 export interface StarSchemaRelationship {
