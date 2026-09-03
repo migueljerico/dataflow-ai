@@ -289,7 +289,7 @@ cd ../frontend
 npm test
 ```
 
-> ✅ **206 tests automatizados totales (163 backend + 41 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **214 tests automatizados totales (166 backend + 45 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (gobernanza determinista, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -314,7 +314,7 @@ docker compose up --build
 ```text
 dataflow-ai/
 ├── .github/workflows/
-│   └── ci.yml                 # CI: Pytest backend (163 tests) + Build React Vite
+│   └── ci.yml                 # CI: Pytest backend (166 tests) + Build React Vite
 ├── backend/
 │   ├── app/
 │   │   ├── ai_providers/      # Gemini Provider (BYOK), Mock determinista y caché de inferencia
@@ -324,7 +324,7 @@ dataflow-ai/
 │   │   ├── services/          # Profiler, Quality, ETL determinista, Open Data (CKAN), Analytics, TMDL/PBIP y caché de inferencia
 │   │   ├── transformations/   # Catálogo TransformationRegistry
 │   │   └── main.py            # FastAPI app, middleware CORS y servido SPA
-│   ├── tests/                 # Suite de 163 pruebas automatizadas
+│   ├── tests/                 # Suite de 166 pruebas automatizadas
 │   ├── Dockerfile             # Imagen de backend
 │   └── requirements.txt       # Dependencias Python
 ├── frontend/
@@ -350,8 +350,9 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Documentación:** Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por **Muse Spark 1.2 Contributor** — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026.
-- **Última mejora (v1.13.0):** Visualizador de modelo estrella (Star Schema), caché de inferencia distribuida Redis/Memorystore, rediseño del README con índice navegable y galería de vistas previas (`docs/capturas/`), desarrollados con **GLM-5.3-Flash** a través de **[ZCode](https://z.ai)**, la app de desarrollo asistido por IA desde la que se gestionó esta release.
+- **Última mejora (v1.14.0):** Panel interactivo de observabilidad de la caché distribuida (L1/L2), exportación PNG en alta resolución (2x Retina) del diagrama interactivo de Esquema Estrella y validación canónica de definiciones TMDL de dimensiones calculadas y relaciones para Power BI Desktop real, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
+- **Versión v1.13.0:** Visualizador de modelo estrella (Star Schema), caché de inferencia distribuida Redis/Memorystore, rediseño del README con índice navegable y galería de vistas previas (`docs/capturas/`), desarrollados con **GLM-5.3-Flash** a través de **[ZCode](https://z.ai)**, la app de desarrollo asistido por IA desde la que se gestionó esa release.
+- **Contribuciones previas y documentación:** Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por **Muse Spark 1.2 Contributor** — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026.
 
 ---
 

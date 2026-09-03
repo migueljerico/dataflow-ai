@@ -53,15 +53,15 @@ def test_get_cache_stats_reflects_l1_hits_and_savings():
             cached=False,
         ),
     )
-    test_key = "test_canonical_key_123"
-    InferenceCacheService.set(test_key, mock_resp)
+    cache_entry_hash = "df_cache_entry_hash_alpha"
+    InferenceCacheService.set(cache_entry_hash, mock_resp)
 
     # 1. Miss
-    miss_res = InferenceCacheService.get("non_existent_key")
+    miss_res = InferenceCacheService.get("df_non_existent_entry_hash")
     assert miss_res is None
 
     # 2. Hit L1
-    hit_res = InferenceCacheService.get(test_key)
+    hit_res = InferenceCacheService.get(cache_entry_hash)
     assert hit_res is not None
     assert hit_res.metrics.cached is True
 
@@ -110,7 +110,7 @@ def test_get_cache_stats_reflects_l2_redis_hits(monkeypatch):
     mock_redis.get.return_value = payload
     monkeypatch.setattr(InferenceCacheService, "_get_redis", lambda: mock_redis)
 
-    hit_l2 = InferenceCacheService.get("key_l2_test")
+    hit_l2 = InferenceCacheService.get("df_l2_fingerprint_sample")
     assert hit_l2 is not None
     assert hit_l2.metrics.provider == "redis-cache"
 

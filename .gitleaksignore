@@ -1,0 +1,3 @@
+# Gitleaks ignore file
+# False positive in unit test for mock cache key in commit 577d9b7
+577d9b76ae111d13bbbf2598442ce1d28edaa27d:backend/tests/test_cache_observability.py:generic-api-key:56

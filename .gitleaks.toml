@@ -1,0 +1,7 @@
+[allowlist]
+description = "Permitir mocks y datos sintéticos en suites de pruebas"
+paths = [
+  '''(?i)tests/.*''',
+  '''(?i).*\.test\.(ts|tsx|py)''',
+  '''(?i)data_samples/.*'''
+]
