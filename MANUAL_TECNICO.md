@@ -1,6 +1,6 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.16.0  
+**Versión:** 1.17.0  
 **Fecha de actualización:** 3 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
@@ -616,6 +616,7 @@ Ubicación: `backend/tests/`
 - [ ] Conectores directos a bases de datos SQL (PostgreSQL, Snowflake, BigQuery).
 - [ ] Persistencia de pipelines en base de datos PostgreSQL con autenticación de usuarios.
 - [x] Programación periódica de reportes ejecutivos con notificaciones Webhook (entregado en v1.16.0: schedules desatendidos + trigger por drift crítico con validación Anti-SSRF).
+- [x] Motor semántico de calidad (entregado en v1.17.0: política central de transformación, detector de IDs CamelCase, hint FRACTION [0,1], nulos/negativos a revisión humana, países por categoría, DAX con nombres reales).
 - [ ] Programación periódica de pipelines ETL completos (Cron Jobs) más allá de la regeneración de reportes.
 - [ ] Persistencia de las programaciones de reportes en almacenamiento durable (actualmente in-memory, coherente con la arquitectura efímera MVP del resto de cachés).
 

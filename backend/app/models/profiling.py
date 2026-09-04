@@ -18,6 +18,7 @@ class SemanticHintEnum(str, Enum):
     EMAIL = "email"
     CURRENCY = "currency"
     PERCENTAGE = "percentage"
+    FRACTION = "fraction"
     DATE = "date"
     PHONE = "phone"
     LOCATION = "location"

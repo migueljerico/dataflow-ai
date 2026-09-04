@@ -4,6 +4,26 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.17.0] — 2026-09-04
+
+### 🧠 Motor Semántico de Calidad: la semántica gobierna las propuestas (Human-in-the-Loop reforzado)
+
+> **Madurez & Evidencia:** Release centrada en corregir las 8 causas raíz detectadas por auditoría cruzada (Claude Sonnet 5 + ChatGPT + verificación propia con pandas) sobre el Northwind Dirty real: IDs CamelCase no detectados, reglas que ignoraban el `semantic_hint`, nulos imputados a "Desconocido", negativos corregidos a 0, `Discount` sin semántica, países por casing y DAX con nombres recapitalizados. 41 tests nuevos de regresión (`test_semantic_policy_regression.py`); 6 tests existentes actualizados al nuevo contrato; suite 265 backend + 55 frontend en verde; linters y SAST limpios; build verificado.
+
+#### 🔴 Causas raíz corregidas
+- **P1 — Detector de IDs (`backend/app/core/semantics.py`):** `_looks_like_id_name()` reconoce `CustomerID/ProductID/OrderID/EmployeeID/CategoryID/OrderDetailID` y variantes (`customerID`, `CUSTOMER_ID`, `InvoiceID`...) sin depender del guion bajo; con salvaguarda anti-falsos-positivos (`Valid` no es ID). `CUST0001 → CUST0001` (antes `Cust0001`).
+- **P2 — Política semántica central (`backend/app/core/transformation_policy.py`, nuevo):** `casing_policy/missing_policy/negative_policy/fraction_policy` + `country_mappings()` gobiernan `ETLService`, `MockProvider`, guardrails de `AIService` y prompt de Gemini. `ID/PHONE/DATE` nunca reciben `normalize_case`; `EMAIL` solo admite `lower`.
+- **P3 — Nulos (`etl_service.py`):** fin del fallback universal a `"Desconocido"`; toda columna con nulos propone `flag_for_review` (mantener NULL + estrategia sugerida) salvo decisión humana explícita.
+- **P4 — Negativos (`etl_service.py`, `quality_service.py`, `mock_provider.py`):** fin del `clamp_range → 0` automático; `flag_for_review` con contexto `negative_values`. Los porcentajes `[0, 100]` sí se siguen acotando.
+- **P5 — Descuentos (`semantics.py`, `profiling.py`, `quality_service.py`):** nuevo `SemanticHintEnum.FRACTION`; `Discount/Descuento` validados en `[0, 1]` (1.20 y 1.4876 detectados) sin confundirlos con `Descuento_Pct` (porcentaje `[0, 100]`).
+- **P6 — Países (`etl_service.py` + `transformation_policy.py`):** `normalize_category` con diccionario extensible (`ES/España/SPAIN/spain → Spain`, `FR/Francia → France`...), ejecutado ANTES que `normalize_case` para no perder la equivalencia.
+- **P7/P8 — DAX (`analytics_service.py`):** `table_name` fiel al nombre real del modelo (`clean_products_dirty`, sin recapitalizar); medidas numéricas solo sobre columnas numéricas reales, `TOTALYTD` solo con fecha válida, avisos explícitos en lugar de DAX roto.
+- **Nueva operación `flag_for_review` (`transformations/review_ops.py`):** marcaje auditable sin modificar datos, con soporte en `script_generator.py`, auditoría de `execute_plan` y tipo `fraction` en el frontend.
+
+#### 🧪 Tests
+- **Nuevos (41):** `backend/tests/test_semantic_policy_regression.py` — IDs, emails, nulos, negativos, porcentajes, fracciones, países, DAX y regresión Northwind Dirty real (products/customers/orders/details + integridad referencial).
+- **Actualizados (6):** `test_etl.py`, `test_analytics.py`, `test_performance_large_dataset.py`, `test_european_numbers.py`, `test_governance_hardening.py` (manifiesto 15 → 16 ops) al nuevo contrato de revisión humana.
+
 ## [1.16.0] — 2026-09-03
 
 ### 📑 Reportes Ejecutivos Programados (PDF/HTML) con Webhooks de Drift + 🧪 Simulador de Drift Hipotético + 🔏 Gobernanza de Aprobación Reforzada

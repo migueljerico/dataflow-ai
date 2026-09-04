@@ -16,8 +16,20 @@ from app.core.number_parsing import (
     is_missing_value,
     to_numeric_series,
 )
-from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
+from app.core.semantics import (
+    is_fraction_or_discount_column,
+    is_id_or_code_column,
+    is_percentage_or_score_column,
+)
 from app.core.storage import get_storage
+from app.core.transformation_policy import (
+    build_review_step,
+    casing_policy,
+    country_mappings_for_values,
+    fraction_policy,
+    missing_policy,
+    negative_policy,
+)
 from app.models.dataset import FileTypeEnum, ProcessingStateEnum
 from app.models.etl import ExecutionResult, StepStatusEnum, TransformationPlan, TransformationStep
 from app.models.quality import (
@@ -55,6 +67,20 @@ def _is_percentage_or_score_column(col_name: str, raw_series: pd.Series, numeric
 
 
 class ETLService:
+    @staticmethod
+    def _hint_for(col: str, df: pd.DataFrame):
+        """Devuelve el semantic_hint del profiler para una columna (UNKNOWN si falla)."""
+        try:
+            from app.models.profiling import SemanticHintEnum as _SH
+
+            series = df[col] if col in df.columns else pd.Series(dtype=object)
+            inferred = ProfilerService._infer_column_type(series.dropna(), col_name=col)
+            return ProfilerService._detect_semantic_hint(col, series, inferred)
+        except Exception:
+            from app.models.profiling import SemanticHintEnum as _SH
+
+            return _SH.UNKNOWN
+
     @staticmethod
     def propose_plan_from_rules(dataset_id: str) -> TransformationPlan:
         quality_report = QualityService.get_quality_report(dataset_id)
@@ -104,19 +130,49 @@ class ETLService:
                     ("mayúsculas" in issue.description.lower() or "formato" in issue.description.lower())
                     and col
                     and not any(s.column == col and s.operation == "normalize_case" for s in steps)
+                    and not any(s.column == col and s.operation == "normalize_category" for s in steps)
                 ):
-                    steps.append(
-                        TransformationStep(
-                            step_id=step_id,
-                            operation="normalize_case",
-                            column=col,
-                            parameters={"column": col, "mode": "title"},
-                            reason=f"Normalizar formato de texto en '{col}' a Title Case (preservando siglas de negocio SA, SL, KPI, etc.).",
-                            confidence=0.92,
-                            risk="low",
-                            affected_rows_estimate=issue.affected_rows,
+                    # Política semántica: ID/PHONE/DATE nunca reciben casing; EMAIL
+                    # solo admite lower. Si la política lo prohíbe, no se propone nada.
+                    hint = ETLService._hint_for(col, df)
+                    policy = casing_policy(hint.value if hasattr(hint, "value") else str(hint))
+                    if not policy["allow_normalize_case"]:
+                        steps.append(
+                            TransformationStep(
+                                step_id=step_id,
+                                operation="flag_for_review",
+                                column=col,
+                                parameters={
+                                    "column": col,
+                                    "context": {
+                                        "kind": "casing_skipped",
+                                        "semantic_hint": hint.value if hasattr(hint, "value") else str(hint),
+                                    },
+                                },
+                                reason=(
+                                    f"Se detectó inconsistencia de formato en '{col}', pero {policy['reason']} "
+                                    "No se propone normalize_case: queda marcado para revisión humana."
+                                ),
+                                confidence=0.9,
+                                risk="high",
+                                affected_rows_estimate=issue.affected_rows,
+                            )
                         )
-                    )
+                    else:
+                        modes = policy["allowed_modes"] or ["title"]
+                        mode = "title" if "title" in modes else modes[0]
+                        steps.append(
+                            TransformationStep(
+                                step_id=step_id,
+                                operation="normalize_case",
+                                column=col,
+                                parameters={"column": col, "mode": mode},
+                                reason=f"Normalizar formato de texto en '{col}' a Title Case (preservando siglas de negocio SA, SL, KPI, etc.).",
+                                confidence=0.92,
+                                risk="low",
+                                affected_rows_estimate=issue.affected_rows,
+                            )
+                        )
 
             elif dim == "validity" and col:
                 if ("fecha" in issue.description.lower() or "datetime" in issue.description.lower()) and not any(
@@ -168,6 +224,7 @@ class ETLService:
             elif dim == "integrity" and col:
                 col_nums = to_numeric_series(df[col]).dropna() if col in df.columns else pd.Series()
                 col_is_pct = _is_percentage_or_score_column(col, df[col], col_nums) if col in df.columns else False
+                col_is_fraction = is_fraction_or_discount_column(col, df[col]) if col in df.columns else False
                 if col_is_pct and not any(s.column == col and s.operation == "clamp_range" for s in steps):
                     steps.append(
                         TransformationStep(
@@ -181,25 +238,62 @@ class ETLService:
                             affected_rows_estimate=issue.affected_rows,
                         )
                     )
-                elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(
-                    s.column == col and s.operation == "clamp_range" for s in steps
+                elif col_is_fraction and not any(
+                    s.column == col
+                    and s.operation == "flag_for_review"
+                    and (s.parameters or {}).get("context", {}).get("kind") == "fraction_out_of_range"
+                    for s in steps
                 ):
-                    min_v = 0.0 if col_is_pct else 0
-                    max_v = 100.0 if col_is_pct else None
+                    # Fracción [0, 1]: detección + revisión humana, nunca corrección silenciosa.
+                    pol = fraction_policy(col, issue.affected_rows)
+                    payload = build_review_step(
+                        col,
+                        f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente.",
+                        affected_rows=issue.affected_rows,
+                        context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
+                    )
                     steps.append(
                         TransformationStep(
                             step_id=step_id,
-                            operation="clamp_range",
-                            column=col,
-                            parameters={"column": col, "min_value": min_v, "max_value": max_v},
-                            reason=(
-                                f"Acotar valores fuera de rango en la columna porcentual '{col}' al intervalo de negocio [0.0, 100.0%]."
-                                if col_is_pct
-                                else f"Acotar {issue.affected_rows} valor(es) negativo(s) ilógico(s) en '{col}' estableciendo piso mínimo en 0."
-                            ),
-                            confidence=0.94,
-                            risk="medium",
-                            affected_rows_estimate=issue.affected_rows,
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=payload["confidence"],
+                            risk=payload["risk"],
+                            affected_rows_estimate=payload["affected_rows_estimate"],
+                        )
+                    )
+                elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(
+                    s.column == col
+                    and (
+                        s.operation == "clamp_range"
+                        or (
+                            s.operation == "flag_for_review"
+                            and (s.parameters or {}).get("context", {}).get("kind") == "negative_values"
+                        )
+                    )
+                    for s in steps
+                ):
+                    # Negativos sin semántica de rango explícita: revisión humana, no clamp a 0.
+                    pol = negative_policy(col, issue.affected_rows)
+                    payload = build_review_step(
+                        col,
+                        f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente. "
+                        "Acciones: [Mantener] [Corregir manualmente] [Aplicar regla] [Marcar incidencia].",
+                        affected_rows=issue.affected_rows,
+                        context={"kind": "negative_values", "condition": f"{col} < 0"},
+                    )
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=payload["confidence"],
+                            risk=payload["risk"],
+                            affected_rows_estimate=payload["affected_rows_estimate"],
                         )
                     )
                 elif (
@@ -223,84 +317,68 @@ class ETLService:
             elif (
                 dim == "completeness"
                 and col
-                and not any(s.column == col and s.operation == "fill_missing" for s in steps)
+                and not any(
+                    s.column == col
+                    and (
+                        s.operation == "fill_missing"
+                        or (
+                            s.operation == "flag_for_review"
+                            and (s.parameters or {}).get("context", {}).get("kind") == "missing_values"
+                        )
+                    )
+                    for s in steps
+                )
             ):
-                # Columnas numéricas/temporales no se imputan con texto: usan median/mean para no romper dtype/Parquet
+                # Política de nulos: ninguna columna se imputa silenciosamente.
+                # Se propone marcaje para revisión humana con la estrategia
+                # sugerida; el usuario decide (mantener NULL, mediana, constante...).
+                hint = ETLService._hint_for(col, df)
+                pol = missing_policy(hint.value if hasattr(hint, "value") else str(hint), col, issue.affected_rows)
                 col_series = df[col] if col in df.columns else None
-                is_numeric_col = False
-                if col_series is not None:
+                suggested = "keep_null"
+                if col_series is not None and pol["strategy"] == "pending_decision":
                     try:
-                        if pd.api.types.is_numeric_dtype(col_series) or pd.api.types.is_bool_dtype(col_series):
-                            is_numeric_col = True
-                        else:
-                            ratio_n, _, tot_n = get_numeric_parseable_ratio(col_series)
-                            if tot_n > 0 and ratio_n >= 0.8:
-                                is_numeric_col = True
+                        if pd.api.types.is_numeric_dtype(col_series):
+                            suggested = "median"
                     except Exception:
-                        is_numeric_col = False
-                    # Fechas también son numéricas en sentido de imputación: no usar 'Desconocido'
-                    if not is_numeric_col:
-                        try:
-                            from app.models.profiling import ColumnTypeEnum
-                            from app.services.profiler_service import ProfilerService
-
-                            inferred = ProfilerService._infer_column_type(col_series.dropna(), col_name=col)
-                            if inferred in (ColumnTypeEnum.NUMERIC, ColumnTypeEnum.DATETIME, ColumnTypeEnum.BOOLEAN):
-                                is_numeric_col = True
-                        except Exception:
-                            pass
-                if is_numeric_col:
-                    steps.append(
-                        TransformationStep(
-                            step_id=step_id,
-                            operation="fill_missing",
-                            column=col,
-                            parameters={"column": col, "strategy": "median"},
-                            reason=f"Imputar nulos en la columna numérica '{col}' con la mediana (estrategia robusta a outliers).",
-                            confidence=0.85,
-                            risk="medium",
-                            affected_rows_estimate=issue.affected_rows,
-                        )
+                        suggested = "keep_null"
+                context = {"kind": "missing_values", "null_count": issue.affected_rows, "suggested": suggested}
+                payload = build_review_step(
+                    col,
+                    f"⚠️ REVISIÓN HUMANA — {pol['reason']} Estrategia sugerida: {suggested}. "
+                    "Si decides imputar con 'Desconocido' u otro valor, añádelo explícitamente como paso humano.",
+                    affected_rows=issue.affected_rows,
+                    context=context,
+                )
+                steps.append(
+                    TransformationStep(
+                        step_id=step_id,
+                        operation=payload["operation"],
+                        column=payload["column"],
+                        parameters=payload["parameters"],
+                        reason=payload["reason"],
+                        confidence=0.9,
+                        risk=pol["risk"],
+                        affected_rows_estimate=payload["affected_rows_estimate"],
                     )
-                else:
-                    steps.append(
-                        TransformationStep(
-                            step_id=step_id,
-                            operation="fill_missing",
-                            column=col,
-                            parameters={"column": col, "strategy": "constant", "value": "Desconocido"},
-                            reason=f"Imputar nulos en '{col}' con valor constante por defecto.",
-                            confidence=0.85,
-                            risk="medium",
-                            affected_rows_estimate=issue.affected_rows,
-                        )
-                    )
+                )
 
-        # 2. Heurística Semántica Universal de Respaldo sobre Columnas
+        # 2. Heurística Semántica Universal de Respaldo sobre Columnas.
+        # Toda decisión respeta el semantic_hint del profiler (política central):
+        # ID/EMAIL/PHONE/DATE nunca reciben normalize_case destructivo.
         for col_name in df.columns:
             series_raw = df[col_name].dropna().astype(str)
-            col_lower = col_name.lower()
 
-            is_id = (
-                col_lower.startswith("id")
-                or col_lower.endswith("_id")
-                or col_lower.startswith("cod")
-                or col_lower.endswith("_cod")
-                or "codigo" in col_lower
-                or "code" in col_lower
-                or "pedido" in col_lower
-                or "cif" in col_lower
-                or "dni" in col_lower
-                or "nif" in col_lower
-                or "sku" in col_lower
-                or "ref" in col_lower
-                or "referencia" in col_lower
-            )
+            hint_col = ETLService._hint_for(col_name, df)
+            hint_val = hint_col.value if hasattr(hint_col, "value") else str(hint_col)
+            is_id = hint_val == "id" or is_id_or_code_column(col_name, series_raw)
+            policy = casing_policy(hint_val)
             is_quant_or_date = (
-                pd.api.types.is_numeric_dtype(df[col_name])
+                hint_val in ("date",)
+                or pd.api.types.is_numeric_dtype(df[col_name])
                 or pd.api.types.is_datetime64_any_dtype(df[col_name])
                 or any(
-                    k in col_lower
+                    k in col_name.lower()
                     for k in [
                         "fecha",
                         "date",
@@ -323,21 +401,53 @@ class ETLService:
                 )
             )
 
-            # Nombres / Entidades / Categorías en mayúsculas (excluyendo IDs y numéricas)
+            # Nombres / Entidades / Categorías en mayúsculas (excluyendo IDs,
+            # emails/teléfonos/fechas protegidos, numéricas y columnas ya
+            # cubiertas por normalize_category como los países)
             if (
                 not is_id
                 and not is_quant_or_date
+                and policy["allow_normalize_case"]
                 and not any(s.column == col_name and s.operation == "normalize_case" for s in steps)
+                and not any(s.column == col_name and s.operation == "normalize_category" for s in steps)
             ):
                 if any(len(x.strip()) > 2 and x.strip().isupper() for x in series_raw):
+                    modes = policy["allowed_modes"] or ["title"]
+                    mode = "title" if "title" in modes else modes[0]
                     steps.append(
                         TransformationStep(
                             step_id=f"STEP-{len(steps)+1:03d}",
                             operation="normalize_case",
                             column=col_name,
-                            parameters={"column": col_name, "mode": "title"},
+                            parameters={"column": col_name, "mode": mode},
                             reason=f"Normalizar formato de texto en '{col_name}' a Title Case (preservando siglas como SA, SL, SLU).",
                             confidence=0.92,
+                            risk="low",
+                            affected_rows_estimate=len(df),
+                        )
+                    )
+
+            # Normalización categórica de países: equivalencias ISO/nativo →
+            # canónico mediante normalize_category (nunca casing como mecanismo).
+            if hint_val == "location" and any(
+                k in col_name.lower() for k in ["pais", "país", "country", "shipcountry"]
+            ):
+                observed = df[col_name].dropna().astype(str).str.strip().unique().tolist()
+                mappings = country_mappings_for_values(observed)
+                if mappings and not any(s.column == col_name and s.operation == "normalize_category" for s in steps):
+                    steps.append(
+                        TransformationStep(
+                            step_id=f"STEP-{len(steps)+1:03d}",
+                            operation="normalize_category",
+                            column=col_name,
+                            parameters={"column": col_name, "mappings": mappings},
+                            reason=(
+                                f"Unificar variantes de país en '{col_name}' a su etiqueta canónica "
+                                f"mediante equivalencias categóricas ({len(mappings)} variante(s): "
+                                + ", ".join(f"{k} → {v}" for k, v in list(mappings.items())[:5])
+                                + ")."
+                            ),
+                            confidence=0.9,
                             risk="low",
                             affected_rows_estimate=len(df),
                         )
@@ -428,24 +538,81 @@ class ETLService:
                 clean_nums = to_numeric_series(series_raw).dropna()
                 if len(clean_nums) > 0:
                     is_pct = _is_percentage_or_score_column(col_name, df[col_name], clean_nums)
+                    is_fraction = is_fraction_or_discount_column(col_name, df[col_name])
 
-                    # Negativos
+                    # Fracciones [0, 1] fuera de rango: revisión humana, nunca clamp.
                     if (
-                        not is_pct
-                        and (clean_nums < 0).sum() > 0
-                        and not any(s.column == col_name and s.operation == "clamp_range" for s in steps)
+                        is_fraction
+                        and (((clean_nums > 1).sum() > 0) or ((clean_nums < 0).sum() > 0))
+                        and not any(
+                            s.column == col_name
+                            and (
+                                s.operation == "clamp_range"
+                                or (
+                                    s.operation == "flag_for_review"
+                                    and (s.parameters or {}).get("context", {}).get("kind") == "fraction_out_of_range"
+                                )
+                            )
+                            for s in steps
+                        )
                     ):
-                        neg_count = int((clean_nums < 0).sum())
+                        out_count = int((((clean_nums > 1) | (clean_nums < 0))).sum())
+                        pol = fraction_policy(col_name, out_count)
+                        payload = build_review_step(
+                            col_name,
+                            f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente.",
+                            affected_rows=out_count,
+                            context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
+                        )
                         steps.append(
                             TransformationStep(
                                 step_id=f"STEP-{len(steps)+1:03d}",
-                                operation="clamp_range",
-                                column=col_name,
-                                parameters={"column": col_name, "min_value": 0, "max_value": None},
-                                reason=f"Acotar {neg_count} valor(es) negativo(s) ilógico(s) en '{col_name}' estableciendo piso mínimo en 0.",
-                                confidence=0.94,
-                                risk="medium",
-                                affected_rows_estimate=neg_count,
+                                operation=payload["operation"],
+                                column=payload["column"],
+                                parameters=payload["parameters"],
+                                reason=payload["reason"],
+                                confidence=payload["confidence"],
+                                risk=payload["risk"],
+                                affected_rows_estimate=payload["affected_rows_estimate"],
+                            )
+                        )
+
+                    # Negativos sin semántica de rango: revisión humana, nunca clamp a 0.
+                    if (
+                        not is_pct
+                        and not is_fraction
+                        and (clean_nums < 0).sum() > 0
+                        and not any(
+                            s.column == col_name
+                            and (
+                                s.operation == "clamp_range"
+                                or (
+                                    s.operation == "flag_for_review"
+                                    and (s.parameters or {}).get("context", {}).get("kind") == "negative_values"
+                                )
+                            )
+                            for s in steps
+                        )
+                    ):
+                        neg_count = int((clean_nums < 0).sum())
+                        pol = negative_policy(col_name, neg_count)
+                        payload = build_review_step(
+                            col_name,
+                            f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente. "
+                            "Acciones: [Mantener] [Corregir manualmente] [Aplicar regla] [Marcar incidencia].",
+                            affected_rows=neg_count,
+                            context={"kind": "negative_values", "condition": f"{col_name} < 0"},
+                        )
+                        steps.append(
+                            TransformationStep(
+                                step_id=f"STEP-{len(steps)+1:03d}",
+                                operation=payload["operation"],
+                                column=payload["column"],
+                                parameters=payload["parameters"],
+                                reason=payload["reason"],
+                                confidence=payload["confidence"],
+                                risk=payload["risk"],
+                                affected_rows_estimate=payload["affected_rows_estimate"],
                             )
                         )
 
@@ -468,6 +635,15 @@ class ETLService:
                                 affected_rows_estimate=out_count,
                             )
                         )
+
+        # 2b. Orden de ejecución: normalize_category (países) debe ir ANTES
+        # que normalize_case, o el casing convertiría "ES" en "Es" antes del
+        # mapeo categórico y la equivalencia ES → Spain se perdería.
+        cat_steps = [s for s in steps if s.operation == "normalize_category"]
+        other_steps = [s for s in steps if s.operation != "normalize_category"]
+        steps = cat_steps + other_steps
+        for idx, s in enumerate(steps):
+            s.step_id = f"STEP-{idx+1:03d}"
 
         # 3. Columnas compuestas con separador (ej. Department_Region → Department + Region)
         for col_name in list(df.columns):
@@ -738,6 +914,19 @@ class ETLService:
                     audit_logs.append(
                         f"[VALIDACIÓN OK] Operación 'split_column' en '{target_col}': columna dividida en {cols_before} columnas totales (ej. Department + Region)."
                     )
+
+                elif step.operation == "flag_for_review" and target_col:
+                    # Marcaje sin modificación: constancia auditable, datos intactos.
+                    context = step.parameters.get("context", {}) if step.parameters else {}
+                    flagged = (
+                        _count_modified_cells(series_orig, df_current[target_col]) if series_orig is not None else 0
+                    )
+                    audit_logs.append(
+                        f"[REVISIÓN HUMANA] Operación 'flag_for_review' en '{target_col}': incidencia registrada "
+                        f"sin modificación automática de datos (contexto: {context}). "
+                        "Pendiente de decisión humana: [Mantener] [Corregir manualmente] [Aplicar regla] [Marcar incidencia]."
+                    )
+                    _ = flagged
 
                 else:
                     audit_logs.append(

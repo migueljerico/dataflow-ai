@@ -952,11 +952,15 @@ class AnalyticsService:
         script Power Query M con tipos reales, medidas DAX contextuales y fórmulas de Excel dinámicas.
         """
         clean_fn = run_result.clean_filename or "DataFlow_Cleaned_Dataset.csv"
+        # P7: el nombre de tabla DAX debe coincidir con el nombre real del modelo
+        # (stem del fichero limpio), sin recapitalización arbitraria: si el modelo
+        # se llama 'clean_products_dirty', las medidas usan 'clean_products_dirty'.
         raw_table_name = Path(clean_fn).stem
-        sanitized_table = re.sub(r"[^a-zA-Z0-9_]", "_", raw_table_name).strip("_")
-        if not sanitized_table or sanitized_table[0].isdigit():
-            sanitized_table = f"DF_{sanitized_table}"
-        table_name = "_".join(word.capitalize() for word in sanitized_table.split("_"))
+        table_name = re.sub(r"[^a-zA-Z0-9_]", "_", raw_table_name).strip("_")
+        if not table_name:
+            table_name = "DataFlow_Cleaned_Dataset"
+        if table_name[0].isdigit():
+            table_name = f"DF_{table_name}"
 
         columns_info: List[IntegrationColumn] = []
         pq_type_tuples: List[str] = []
@@ -1083,8 +1087,23 @@ class AnalyticsService:
                 )
             )
 
-        # Medidas para variables numéricas clave
+        # Medidas para variables numéricas clave.
+        # P8: solo sobre columnas presentes y con dtype numérico real; si no hay
+        # ninguna, no se inventa ninguna medida numérica (se deja constancia).
         numeric_cols = [c.name for c in columns_info if c.semantic_role == "numeric"]
+        numeric_cols = [c for c in numeric_cols if c in df.columns and pd.api.types.is_numeric_dtype(df[c])]
+        if not numeric_cols:
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Aviso_Sin_Medidas_Numericas",
+                    formula="-- ⚠️ No se puede generar esta medida automáticamente con seguridad: "
+                    "el dataset no contiene columnas numéricas tipadas.",
+                    description="Aviso: sin columnas numéricas no se generan SUM/AVERAGE/MEDIAN/STDEV.",
+                    category="calidad",
+                    format_string="",
+                    display_folder="Calidad de Datos",
+                )
+            )
         for num_c in numeric_cols[:4]:
             sanitized_num_c = re.sub(r"[^a-zA-Z0-9_]", "_", num_c)
             dax_measures.append(
@@ -1143,10 +1162,27 @@ class AnalyticsService:
                 )
             )
 
-        # Inteligencia temporal si existe fecha
+        # Inteligencia temporal si existe fecha.
+        # P8: TOTALYTD exige columna de fecha real (dtype datetime o parseable
+        # mayoritariamente) y medida base existente; si no, aviso en lugar de DAX roto.
         date_cols = [c.name for c in columns_info if c.semantic_role == "date"]
-        if date_cols and numeric_cols:
-            d_col = date_cols[0]
+        valid_date_col = None
+        for candidate in date_cols:
+            if candidate not in df.columns:
+                continue
+            series = df[candidate]
+            if pd.api.types.is_datetime64_any_dtype(series):
+                valid_date_col = candidate
+                break
+            try:
+                parsed = pd.to_datetime(series.dropna().astype(str), errors="coerce", dayfirst=True)
+                if len(parsed) > 0 and parsed.notna().mean() >= 0.8:
+                    valid_date_col = candidate
+                    break
+            except Exception:
+                continue
+        if valid_date_col and numeric_cols:
+            d_col = valid_date_col
             n_col = numeric_cols[0]
             sanitized_n_col = re.sub(r"[^a-zA-Z0-9_]", "_", n_col)
             dax_measures.append(
@@ -1156,6 +1192,18 @@ class AnalyticsService:
                     description=f"Acumulado anual (Year-to-Date) de '{n_col}' dimensionado por '{d_col}'.",
                     category="tiempo",
                     format_string="#,##0.00",
+                    display_folder="Inteligencia Temporal",
+                )
+            )
+        elif numeric_cols:
+            dax_measures.append(
+                DaxMeasureItem(
+                    name="Aviso_Sin_Inteligencia_Temporal",
+                    formula="-- ⚠️ No se puede generar esta medida automáticamente con seguridad: "
+                    "no hay columna de fecha válida para TOTALYTD.",
+                    description="Aviso: sin fecha válida no se genera inteligencia temporal.",
+                    category="tiempo",
+                    format_string="",
                     display_folder="Inteligencia Temporal",
                 )
             )

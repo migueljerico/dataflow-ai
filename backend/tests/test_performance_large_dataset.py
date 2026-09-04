@@ -185,7 +185,9 @@ def test_integration_guide_generation_100k_rows(large_dataset_100k: pd.DataFrame
 
     guide = AnalyticsService._build_integration_guide(clean_df, mock_run_result, domain="sales")
 
-    assert guide.table_name == "Ventas_Retail_Clean"
+    # Política DAX v1.17.0 (P7): el nombre de tabla coincide con el nombre real
+    # del modelo (stem del fichero), sin recapitalización arbitraria.
+    assert guide.table_name == "ventas_retail_clean"
     assert guide.clean_filename == "ventas_retail_clean.csv"
     assert guide.parquet_filename == "ventas_retail_clean.parquet"
     assert guide.row_count == 100_000
@@ -208,8 +210,8 @@ def test_integration_guide_generation_100k_rows(large_dataset_100k: pd.DataFrame
     assert "Total_Importe_Euros" in dax_names
     assert "Promedio_Importe_Euros" in dax_names
     assert "Total_Unidades_Stock" in dax_names
-    assert any("COUNTROWS('Ventas_Retail_Clean')" in m.formula for m in guide.dax_measures)
-    assert any("SUM('Ventas_Retail_Clean'[Importe_Euros])" in m.formula for m in guide.dax_measures)
+    assert any("COUNTROWS('ventas_retail_clean')" in m.formula for m in guide.dax_measures)
+    assert any("SUM('ventas_retail_clean'[Importe_Euros])" in m.formula for m in guide.dax_measures)
 
     # 4. Fórmulas Excel Adaptativas
     assert len(guide.excel_formulas) > 0

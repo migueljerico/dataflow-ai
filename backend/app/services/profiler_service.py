@@ -10,7 +10,11 @@ from app.core.number_parsing import (
     is_missing_series,
     to_numeric_series,
 )
-from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
+from app.core.semantics import (
+    is_fraction_or_discount_column,
+    is_id_or_code_column,
+    is_percentage_or_score_column,
+)
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import ColumnProfile, ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.services.dataset_service import DatasetService
@@ -74,6 +78,12 @@ class ProfilerService:
         # 4. Percentage / Ratios
         if is_percentage_or_score_column(col_name, series):
             return SemanticHintEnum.PERCENTAGE
+
+        # 4b. Fraction / Discount en rango [0, 1] (p. ej. Discount, Descuento).
+        # Se evalúa DESPUÉS de percentage para que Descuento_Pct siga siendo
+        # porcentaje [0, 100] y Discount puro sea fracción [0, 1].
+        if is_fraction_or_discount_column(col_name, series):
+            return SemanticHintEnum.FRACTION
 
         # 5. Currency / Dinero
         has_curr_kw = any(

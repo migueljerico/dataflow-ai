@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.number_parsing import is_missing_value, to_numeric_series
+from app.core.semantics import is_fraction_or_discount_column
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.models.quality import (
@@ -322,6 +323,38 @@ class QualityService:
                         )
                     )
 
+            # A2. Regla Fracción/Descuento: [0.0, 1.0]. La acción sugerida es
+            # revisión humana (flag_for_review), nunca corrección silenciosa.
+            is_fraction = col_prof.semantic_hint == SemanticHintEnum.FRACTION or (
+                col_prof.semantic_hint != SemanticHintEnum.PERCENTAGE
+                and is_fraction_or_discount_column(col_name, df[col_name])
+            )
+            if is_fraction:
+                out_of_bounds = series_num[(series_num > 1.0) | (series_num < 0.0)]
+                if len(out_of_bounds) > 0:
+                    count = len(out_of_bounds)
+                    integrity_violations += count
+                    issues.append(
+                        QualityIssue(
+                            issue_id=str(uuid.uuid4())[:8],
+                            dimension=QualityDimensionEnum.INTEGRITY,
+                            severity=SeverityEnum.HIGH,
+                            column=col_name,
+                            description=(
+                                f"Violación de rango de fracción: Se detectaron {count} valor(es) fuera del "
+                                f"intervalo de negocio [0 - 1] en '{col_name}'. Requiere revisión humana "
+                                "('flag_for_review'); no se corrige automáticamente."
+                            ),
+                            affected_rows=count,
+                            affected_percentage=round((count / row_count) * 100, 2),
+                            evidence_sample=_safe_evidence_sample(out_of_bounds.head(3)),
+                            suggested_action=(
+                                f"Marcar para revisión humana los valores fuera de [0.0, 1.0] en '{col_name}' "
+                                "('flag_for_review')."
+                            ),
+                        )
+                    )
+
             # B. Regla Conteo / Magnitud Positiva: [0.0, inf]
             is_positive_count_or_time = col_prof.semantic_hint == SemanticHintEnum.CURRENCY or any(
                 k in col_lower
@@ -352,7 +385,7 @@ class QualityService:
                     "presupuesto",
                 ]
             )
-            if is_positive_count_or_time and not is_percentage:
+            if is_positive_count_or_time and not is_percentage and not is_fraction:
                 negatives = series_num[series_num < 0.0]
                 if len(negatives) > 0:
                     count = len(negatives)
@@ -363,11 +396,19 @@ class QualityService:
                             dimension=QualityDimensionEnum.INTEGRITY,
                             severity=SeverityEnum.HIGH,
                             column=col_name,
-                            description=f"Violación de regla de negocio: Se detectaron {count} valor(es) negativos imposibles en '{col_name}'.",
+                            description=(
+                                f"Valores negativos en '{col_name}': Se detectaron {count} valor(es) "
+                                f"negativo(s) que requieren revisión humana ('flag_for_review'); "
+                                "el sistema no puede inferir el valor correcto y no se corrigen automáticamente a 0."
+                            ),
                             affected_rows=count,
                             affected_percentage=round((count / row_count) * 100, 2),
                             evidence_sample=_safe_evidence_sample(negatives.head(3)),
-                            suggested_action=f"Acotar valores negativos al piso mínimo 0 en '{col_name}' ('clamp_range').",
+                            suggested_action=(
+                                f"Marcar para revisión humana los valores negativos en '{col_name}' "
+                                "('flag_for_review'). Solo con regla de negocio explícita aprobada "
+                                "puede aplicarse 'clamp_range'."
+                            ),
                         )
                     )
 

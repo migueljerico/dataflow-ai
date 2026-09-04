@@ -9,7 +9,11 @@ from app.ai_providers.base import LLMProvider
 from app.ai_providers.gemini_provider import GeminiProvider
 from app.ai_providers.mock_provider import MockProvider
 from app.core.number_parsing import get_numeric_parseable_ratio
-from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
+from app.core.semantics import (
+    is_fraction_or_discount_column,
+    is_id_or_code_column,
+    is_percentage_or_score_column,
+)
 from app.models.dataset import ProcessingStateEnum
 from app.models.etl import TransformationPlan, TransformationStep
 from app.services.dataset_service import DatasetService
@@ -155,6 +159,42 @@ class AIService:
                 if is_id_or_code_column(target_col, df[target_col]):
                     plan_warnings.append(
                         f"[GUARDRAIL] La operación 'normalize_case' en '{target_col}' fue descartada: es una columna identificadora/código."
+                    )
+                    continue
+
+            # GUARDRAIL: Proteger columnas EMAIL/PHONE/DATE contra normalize_case
+            # destructivo (title/upper). Solo se admite mode="lower" en emails.
+            if op == "normalize_case" and target_col and target_col in df.columns:
+                from app.core.transformation_policy import casing_policy
+
+                col_schema = next((c for c in columns_schema if c.get("name") == target_col), None)
+                hint = (col_schema or {}).get("semantic_hint", "unknown")
+                policy = casing_policy(hint)
+                if not policy["allow_normalize_case"]:
+                    plan_warnings.append(
+                        f"[GUARDRAIL] La operación 'normalize_case' en '{target_col}' fue descartada: "
+                        f"la política semántica la protege (hint '{hint}')."
+                    )
+                    continue
+                mode = (sug.parameters or {}).get("mode", "title")
+                if mode not in policy["allowed_modes"]:
+                    plan_warnings.append(
+                        f"[GUARDRAIL] La operación 'normalize_case' en '{target_col}' fue descartada: "
+                        f"el modo '{mode}' no está permitido para el hint '{hint}' "
+                        f"(permitidos: {policy['allowed_modes']})."
+                    )
+                    continue
+
+            # GUARDRAIL: fracciones [0, 1] nunca se acotan con clamp [0, 100].
+            if op == "clamp_range" and target_col and target_col in df.columns:
+                col_schema = next((c for c in columns_schema if c.get("name") == target_col), None)
+                hint = (col_schema or {}).get("semantic_hint", "unknown")
+                if hint == "fraction" or (
+                    hint != "percentage" and is_fraction_or_discount_column(target_col, df[target_col])
+                ):
+                    plan_warnings.append(
+                        f"[GUARDRAIL] La operación 'clamp_range' en '{target_col}' fue descartada: "
+                        "es una fracción [0, 1], no un porcentaje [0, 100]; requiere revisión humana."
                     )
                     continue
 

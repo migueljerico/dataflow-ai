@@ -39,11 +39,14 @@ Muestra anonimizada (3 filas): {json.dumps(sample_rows[:3])}
 
 Reglas estrictas de negocio y gobernanza:
 1. SOLO puedes utilizar operaciones del catálogo permitido:
-   - trim_text, normalize_case, normalize_category, convert_datetime, convert_numeric, round_numeric, clamp_range, fill_missing, remove_duplicates, rename_column, drop_column.
+   - trim_text, normalize_case, normalize_category, convert_datetime, convert_numeric, round_numeric, clamp_range, fill_missing, remove_duplicates, rename_column, drop_column, flag_for_review.
 2. Los importes y números cuantitativos pueden usar separadores europeos (1.234,56 €, 2450,75) o americanos ($1,234.56), y marcadores de ausencia ('--', 'N/D', 'N/A', '-', 'null', 'nan'); SIEMPRE deben convertirse a float64 mediante 'convert_numeric'. NUNCA propongas 'convert_numeric' sobre columnas de texto libre (notas, observaciones, descripciones).
-3. NUNCA propongas 'normalize_case' sobre columnas identificadoras o códigos (ej. ID_Pedido, Cod_Cliente, SKU, CIF, DNI, o patrones como PED-123, EMP-001) para no degradar claves primarias ni romper JOINs.
+3. NUNCA propongas 'normalize_case' sobre columnas identificadoras o códigos (ej. CustomerID, ProductID, OrderID, ID_Pedido, Cod_Cliente, SKU, CIF, DNI, o patrones como PED-123, EMP-001, CUST0001) para no degradar claves primarias ni romper JOINs. Tampoco sobre emails, teléfonos o fechas: los emails NUNCA en Title/Upper Case (solo 'lower' si hay razón clara).
 4. Para columnas porcentuales o scores (hint 'percentage', o sufijos _pct, tasa, ratio), cualquier operación 'clamp_range' DEBE acotar el intervalo de negocio completo [0.0, 100.0] fijando obligatoriamente 'min_value': 0.0 y 'max_value': 100.0.
-5. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
+5. Las columnas de descuento/fracción (hint 'fraction': Discount, Descuento) viven en [0, 1], NO en [0, 100]: NUNCA uses 'clamp_range' sobre ellas; si hay valores fuera de [0, 1], propón 'flag_for_review' para revisión humana.
+6. Los valores negativos sin regla de negocio explícita (precios, cantidades) y los nulos de texto NO se corrigen ni imputan automáticamente: propón 'flag_for_review' y deja que el humano decida (mantener, corregir manualmente, aplicar regla o marcar incidencia). NUNCA imputes nulos de texto a 'Desconocido' por defecto.
+7. Los países se unifican con 'normalize_category' y diccionario de equivalencias (ES/España/SPAIN → Spain), nunca solo con casing.
+8. Responde EXCLUSIVAMENTE con un objeto JSON válido con esta estructura:
 {{
   "dataset_summary": "Explicación breve del dataset y su propósito operativo",
   "suggestions": [

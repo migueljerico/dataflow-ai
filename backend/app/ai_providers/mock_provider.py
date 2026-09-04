@@ -4,7 +4,12 @@ from typing import Any, Dict, List
 
 from app.ai_providers.base import AIMetrics, AIOperationSuggestion, AISuggestionResponse, LLMProvider
 from app.core.number_parsing import is_missing_value
-from app.core.semantics import is_id_or_code_column, is_percentage_or_score_column
+from app.core.semantics import (
+    is_fraction_or_discount_column,
+    is_id_or_code_column,
+    is_percentage_or_score_column,
+)
+from app.core.transformation_policy import build_review_step, casing_policy
 
 
 class MockProvider(LLMProvider):
@@ -52,18 +57,39 @@ class MockProvider(LLMProvider):
                         )
                     )
                 elif ("mayúsculas" in desc.lower() or "formato" in desc.lower()) and not any(
-                    s.column == col and s.operation == "normalize_case" for s in suggestions
+                    s.column == col and s.operation in ("normalize_case", "normalize_category") for s in suggestions
                 ):
-                    suggestions.append(
-                        AIOperationSuggestion(
-                            operation="normalize_case",
-                            column=col,
-                            parameters={"column": col, "mode": "title"},
-                            reason=f"Para homogeneizar el análisis por categorías o nombres de entidad, se sugiere convertir '{col}' a Title Case (preservando siglas de negocio como SA/SL).",
-                            confidence=0.92,
-                            risk="low",
+                    col_info = next((c for c in columns_schema if c.get("name") == col), {})
+                    policy = casing_policy(col_info.get("semantic_hint", "unknown"))
+                    if not policy["allow_normalize_case"]:
+                        payload = build_review_step(
+                            col,
+                            f"Se detectó inconsistencia de formato en '{col}', pero {policy['reason']} "
+                            "No se propone normalize_case: queda marcado para revisión humana.",
+                            context={"kind": "casing_skipped"},
                         )
-                    )
+                        suggestions.append(
+                            AIOperationSuggestion(
+                                operation=payload["operation"],
+                                column=payload["column"],
+                                parameters=payload["parameters"],
+                                reason=payload["reason"],
+                                confidence=0.9,
+                                risk="high",
+                            )
+                        )
+                    else:
+                        modes = policy["allowed_modes"] or ["title"]
+                        suggestions.append(
+                            AIOperationSuggestion(
+                                operation="normalize_case",
+                                column=col,
+                                parameters={"column": col, "mode": "title" if "title" in modes else modes[0]},
+                                reason=f"Para homogeneizar el análisis por categorías o nombres de entidad, se sugiere convertir '{col}' a Title Case (preservando siglas de negocio como SA/SL).",
+                                confidence=0.92,
+                                risk="low",
+                            )
+                        )
             elif dim == "validity" and col:
                 if "fecha" in desc.lower() and not any(
                     s.column == col and s.operation == "convert_datetime" for s in suggestions
@@ -95,6 +121,7 @@ class MockProvider(LLMProvider):
                 col_info = next((c for c in columns_schema if c.get("name") == col), {})
                 hint = col_info.get("semantic_hint", "unknown")
                 is_pct = hint == "percentage" or "porcentual" in desc.lower() or is_percentage_or_score_column(col)
+                is_fraction = hint == "fraction" or (hint != "percentage" and is_fraction_or_discount_column(col))
 
                 if is_pct and not any(s.column == col and s.operation == "clamp_range" for s in suggestions):
                     suggestions.append(
@@ -107,17 +134,42 @@ class MockProvider(LLMProvider):
                             risk="medium",
                         )
                     )
-                elif ("negativos" in desc.lower() or "negativo" in desc.lower()) and not any(
-                    s.column == col and s.operation == "clamp_range" for s in suggestions
+                elif is_fraction and not any(
+                    s.column == col and s.operation in ("clamp_range", "flag_for_review") for s in suggestions
                 ):
+                    payload = build_review_step(
+                        col,
+                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores fuera del intervalo [0, 1] en '{col}' "
+                        "(fracción/descuento). Requiere revisión humana; no se modifica automáticamente.",
+                        context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
+                    )
                     suggestions.append(
                         AIOperationSuggestion(
-                            operation="clamp_range",
-                            column=col,
-                            parameters={"column": col, "min_value": 0, "max_value": None},
-                            reason=f"Se detectó un valor numérico negativo ilógico en '{col}'. Se acota el piso mínimo a 0 para no distorsionar los agregados de negocio.",
-                            confidence=0.94,
-                            risk="medium",
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=0.9,
+                            risk="high",
+                        )
+                    )
+                elif ("negativos" in desc.lower() or "negativo" in desc.lower()) and not any(
+                    s.column == col and s.operation in ("clamp_range", "flag_for_review") for s in suggestions
+                ):
+                    payload = build_review_step(
+                        col,
+                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores negativos en '{col}'. El sistema no puede "
+                        "inferir el valor correcto: requiere revisión humana. No se propone conversión automática a 0.",
+                        context={"kind": "negative_values", "condition": f"{col} < 0"},
+                    )
+                    suggestions.append(
+                        AIOperationSuggestion(
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=0.9,
+                            risk="high",
                         )
                     )
                 elif (
@@ -142,26 +194,33 @@ class MockProvider(LLMProvider):
             dtype = col_info.get("inferred_type", "text")
 
             is_id_col = hint == "id" or is_id_or_code_column(col_name)
+            # Columnas protegidas por política semántica: nunca normalize_case
+            # destructivo (email solo admite lower, y únicamente con regla clara).
+            is_protected_col = hint in ("email", "phone", "date", "fraction")
 
-            # A. Nombres, personas, entidades o categorías de texto (excluyendo IDs)
-            is_name_or_cat = not is_id_col and (
-                hint in ["name", "location"]
-                or any(
-                    k in col_lower
-                    for k in [
-                        "nombre",
-                        "cliente",
-                        "empleado",
-                        "agente",
-                        "comercial",
-                        "contacto",
-                        "usuario",
-                        "canal",
-                        "categoria",
-                        "departamento",
-                        "ciudad",
-                        "pais",
-                    ]
+            # A. Nombres, personas, entidades o categorías de texto (excluyendo IDs y protegidas)
+            is_name_or_cat = (
+                not is_id_col
+                and not is_protected_col
+                and (
+                    hint in ["name", "location"]
+                    or any(
+                        k in col_lower
+                        for k in [
+                            "nombre",
+                            "cliente",
+                            "empleado",
+                            "agente",
+                            "comercial",
+                            "contacto",
+                            "usuario",
+                            "canal",
+                            "categoria",
+                            "departamento",
+                            "ciudad",
+                            "pais",
+                        ]
+                    )
                 )
             )
             if is_name_or_cat and not any(
@@ -229,8 +288,12 @@ class MockProvider(LLMProvider):
                         )
                     )
 
-            # C. Columnas cuantitativas con valores fuera de rango
-            if is_quant and not any(s.column == col_name and s.operation == "clamp_range" for s in suggestions):
+            # C. Columnas cuantitativas con valores fuera de rango.
+            # Porcentajes [0,100] sí se acotan; fracciones [0,1] y negativos
+            # genéricos van a revisión humana (nunca clamp silencioso a 0).
+            if is_quant and not any(
+                s.column == col_name and s.operation in ("clamp_range", "flag_for_review") for s in suggestions
+            ):
                 sample_vals = [str(r.get(col_name, "")).strip() for r in sample_rows if r.get(col_name)]
                 clean_nums = []
                 for v in sample_vals:
@@ -241,6 +304,7 @@ class MockProvider(LLMProvider):
                         pass
 
                 is_pct = hint == "percentage" or is_percentage_or_score_column(col_name)
+                is_fraction = hint == "fraction" or (hint != "percentage" and is_fraction_or_discount_column(col_name))
                 if is_pct and (any(n > 100.0 for n in clean_nums) or any(n < 0 for n in clean_nums)):
                     suggestions.append(
                         AIOperationSuggestion(
@@ -252,15 +316,38 @@ class MockProvider(LLMProvider):
                             risk="medium",
                         )
                     )
-                elif not is_pct and any(n < 0 for n in clean_nums):
+                elif is_fraction and (any(n > 1.0 for n in clean_nums) or any(n < 0 for n in clean_nums)):
+                    payload = build_review_step(
+                        col_name,
+                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores fuera del intervalo [0, 1] en '{col_name}' "
+                        "(fracción/descuento). Requiere revisión humana; no se modifica automáticamente.",
+                        context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
+                    )
                     suggestions.append(
                         AIOperationSuggestion(
-                            operation="clamp_range",
-                            column=col_name,
-                            parameters={"column": col_name, "min_value": 0, "max_value": None},
-                            reason=f"Acotar valores negativos imposibles (< 0) en '{col_name}' al límite mínimo 0.",
-                            confidence=0.93,
-                            risk="medium",
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=0.9,
+                            risk="high",
+                        )
+                    )
+                elif not is_pct and not is_fraction and any(n < 0 for n in clean_nums):
+                    payload = build_review_step(
+                        col_name,
+                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores negativos en '{col_name}'. El sistema no puede "
+                        "inferir el valor correcto: requiere revisión humana. No se propone conversión automática a 0.",
+                        context={"kind": "negative_values", "condition": f"{col_name} < 0"},
+                    )
+                    suggestions.append(
+                        AIOperationSuggestion(
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=0.9,
+                            risk="high",
                         )
                     )
 

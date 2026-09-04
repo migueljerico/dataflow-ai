@@ -8,7 +8,8 @@ from app.services.etl_service import ETLService
 
 def test_registry_manifest_contains_all_14_operations():
     manifest = TransformationRegistry.get_catalog_manifest()
-    assert len(manifest) == 15
+    assert len(manifest) == 16  # 15 originales + flag_for_review (revisión humana v1.17.0)
+    assert "flag_for_review" in manifest
     for op_name, meta in manifest.items():
         assert "name" in meta
         assert "description" in meta

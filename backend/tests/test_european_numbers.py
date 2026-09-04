@@ -90,6 +90,8 @@ def test_european_numbers_end_to_end_pipeline():
     assert df_clean["Salario_EUR"].dtype == "float64"
     assert sorted(df_clean["Salario_EUR"].dropna().unique().tolist()) == [1200.5, 2500.0]
 
-    # El absentismo negativo se acota a 0 y la fecha se estandariza a ISO
-    assert (df_clean["Absentismo_Dias"] >= 0).all()
+    # Política v1.17.0: el absentismo negativo (-3) queda intacto pendiente de
+    # revisión humana (flag_for_review no modifica datos) y la fecha se estandariza a ISO
+    assert (df_clean["Absentismo_Dias"] < 0).sum() == 1
+    assert any("REVISIÓN HUMANA" in log and "Absentismo_Dias" in log for log in run_data["audit_logs"])
     assert "2026-02-01" in df_clean["Fecha"].astype(str).values

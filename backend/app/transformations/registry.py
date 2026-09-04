@@ -20,6 +20,7 @@ from app.transformations.outlier_ops import (
     DetectOutliersIQRTransformation,
     DetectOutliersZScoreTransformation,
 )
+from app.transformations.review_ops import FlagForReviewTransformation
 from app.transformations.split_ops import SplitColumnTransformation
 from app.transformations.text_ops import (
     NormalizeCaseTransformation,
@@ -45,6 +46,7 @@ class TransformationRegistry:
         "detect_outliers_zscore": DetectOutliersZScoreTransformation(),
         "cluster_kmeans": ClusterKMeansTransformation(),
         "split_column": SplitColumnTransformation(),
+        "flag_for_review": FlagForReviewTransformation(),
     }
 
     @classmethod

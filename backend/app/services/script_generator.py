@@ -286,6 +286,17 @@ class ScriptGeneratorService:
                 code_lines.append("        except ImportError:")
                 code_lines.append(f"            df[{out_lit}] = np.arange(len(df)) % {n_clusters}")
 
+            elif op == "flag_for_review":
+                context = params.get("context", {}) if isinstance(params.get("context"), dict) else {}
+                code_lines.append(f"    if {col_lit} in df.columns:")
+                code_lines.append(
+                    f'        print(f"[REVISIÓN HUMANA] Paso sobre {{{col_lit}}}: sin modificación automática. '
+                    f'Contexto: {json.dumps(context, ensure_ascii=False)[:200]}")'
+                )
+                code_lines.append(
+                    "        # Sin cambios: el humano decide (mantener / corregir / aplicar regla / incidencia)."
+                )
+
             elif op == "split_column":
                 sep = params.get("separator", "-")
                 sep_lit = json.dumps(sep)

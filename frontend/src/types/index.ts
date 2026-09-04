@@ -29,7 +29,7 @@ export interface DatasetMetadata {
 }
 
 export type ColumnType = 'numeric' | 'datetime' | 'text' | 'boolean' | 'categorical';
-export type SemanticHint = 'id' | 'email' | 'currency' | 'percentage' | 'date' | 'phone' | 'location' | 'name' | 'unknown';
+export type SemanticHint = 'id' | 'email' | 'currency' | 'percentage' | 'fraction' | 'date' | 'phone' | 'location' | 'name' | 'unknown';
 
 export interface ColumnProfile {
   column_name: string;

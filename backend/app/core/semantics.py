@@ -28,6 +28,49 @@ _PCT_EXACT = {
     "incidencias_pct",
 }
 
+# Nombres que denotan fracción/discount en rango [0, 1] (0.05 = 5 %).
+# Se distinguen de los porcentajes [0, 100]: una columna es fracción cuando
+# alguno de sus tokens es discount/descuento Y ningún token es de tipo
+# porcentual (pct, rate, ...). Así "Discount" es fracción pero
+# "Descuento_Pct" sigue siendo porcentaje.
+_FRACTION_TOKENS = {"discount", "descuento", "descto", "dto"}
+_PCT_LIKE_TOKENS = {
+    "pct",
+    "pcte",
+    "percentage",
+    "percent",
+    "porcentaje",
+    "porc",
+    "rate",
+    "ratio",
+    "tasa",
+    "score",
+}
+
+# Palabras inglesas/españolas comunes terminadas en "id" que NO son
+# identificadores (evitan falsos positivos del detector de sufijo "id").
+_NON_ID_SUFFIX_EXCEPTIONS = {
+    "valid",
+    "invalid",
+    "solid",
+    "fluid",
+    "liquid",
+    "humid",
+    "acid",
+    "grid",
+    "arid",
+    "rapid",
+    "vivid",
+    "lipid",
+    "hybrid",
+    "pyramid",
+    "placid",
+    "rancid",
+    "rigid",
+    "timid",
+    "cupid",
+}
+
 
 def is_percentage_or_score_column(col_name: str, raw_series: Any = None) -> bool:
     """
@@ -58,6 +101,124 @@ def is_percentage_or_score_column(col_name: str, raw_series: Any = None) -> bool
     return is_pct_name
 
 
+_ID_NAME_EXACT = {
+    "id",
+    "cod",
+    "code",
+    "codigo",
+    "ref",
+    "referencia",
+    "cpostal",
+    "cp",
+    "cif",
+    "nif",
+    "nie",
+    "dni",
+    "iban",
+    "sku",
+    "ean",
+    "matricula",
+    "tramo",
+    "distrito",
+    "seccion",
+    "num_factura",
+    "id_factura",
+    "cod_factura",
+    "num_pedido",
+    "id_pedido",
+    "cod_pedido",
+}
+
+_ID_NAME_KEYWORDS = [
+    "codigo",
+    "code",
+    "cpostal",
+    "cod_postal",
+    "codigo_postal",
+    "cod_ine",
+    "seccion_censal",
+    "identificador",
+    "cif",
+    "nif",
+    "nie",
+    "dni",
+    "iban",
+    "sku",
+    "ean",
+    "matricula",
+    "expediente",
+    "tramo",
+    "tracking",
+]
+
+
+def is_fraction_or_discount_column(col_name: str, raw_series: Any = None) -> bool:
+    """
+    Determina si una columna representa una fracción/descuento en rango [0, 1].
+
+    Requiere token discount/descuento en el nombre (separado por guiones bajos,
+    espacios o CamelCase) y ausencia de tokens porcentuales (pct, rate, ...),
+    para no confundir "Descuento_Pct" (porcentaje [0, 100]) con "Discount"
+    (fracción [0, 1]). Ante la duda, exige además coherencia con los datos:
+    si hay valores no nulos > 1.5 o negativos de magnitud relevante, no es fracción.
+    """
+    col_lower = str(col_name).lower().strip()
+    tokens = set(re.split(r"[_\s\-./]+", col_lower))
+    tokens.update(re.findall(r"[a-záéíóúñü]+", col_lower))
+    tokens = {t for t in tokens if t}
+    if not (tokens & _FRACTION_TOKENS):
+        return False
+    if tokens & _PCT_LIKE_TOKENS:
+        return False
+
+    if raw_series is not None:
+        try:
+            from app.core.number_parsing import to_numeric_series
+
+            nums = to_numeric_series(pd.Series(raw_series)).dropna()
+            if len(nums) > 0:
+                if (nums < -0.001).any():
+                    return False
+                over = (nums > 1.5).sum()
+                if over / len(nums) > 0.2:
+                    return False
+        except Exception:
+            pass
+    return True
+
+
+def _looks_like_id_name(col_lower: str) -> bool:
+    """
+    Heurística de nombre para identificadores, independiente de guiones bajos.
+
+    Reconoce tanto customer_id como customerid/customerID/CUSTOMER_ID:
+    prefijos y sufijos explícitos (id, cod, pk, fk, ...), palabras clave de
+    código, y patrones */id, id/*, *_id, *-id, *id (CamelCase: CustomerID).
+    """
+    if not col_lower:
+        return False
+    if col_lower in _NON_ID_SUFFIX_EXCEPTIONS:
+        return False
+    # Prefijos/sufijos con o sin separador: id, *_id, *-id, id_*, *id (CamelCase
+    # "CustomerID" llega aquí como "customerid" y casa con endswith("id")).
+    # También "customer_id" (endswith _id) y "id_cliente" (startswith id_).
+    if (
+        col_lower.startswith(("id", "cod", "ref", "num_", "pk_", "fk_", "cpostal", "cp_"))
+        or col_lower.endswith(("_id", "_cod", "_code", "_ref", "_num", "_pk", "_fk", "_ine", "_cp"))
+        or col_lower in _ID_NAME_EXACT
+    ):
+        return True
+    # CamelCase sin separador: CustomerID, OrderID, ProductID... La terminación
+    # "id" en minúsculas + longitud mínima evita falsos positivos ("valid").
+    if len(col_lower) >= 4 and col_lower.endswith("id"):
+        stem = col_lower[:-2]
+        if len(stem) >= 2 and stem.isalpha():
+            return True
+    if any(k in col_lower for k in _ID_NAME_KEYWORDS):
+        return True
+    return False
+
+
 def is_id_or_code_column(col_name: str, non_null_str: Any = None) -> bool:
     """
     Determina si una columna es identificador o código de negocio (IDs, códigos postales, CIF/NIF, etc.).
@@ -75,63 +236,8 @@ def is_id_or_code_column(col_name: str, non_null_str: Any = None) -> bool:
     if is_date_named and not col_lower.startswith(("id_", "cod_", "pk_", "fk_")):
         return False
 
-    # 1. Nombres y prefijos/sufijos explícitos de identificador o código
-    if (
-        col_lower.startswith(("id", "cod", "ref", "num_", "pk_", "fk_", "cpostal", "cp_"))
-        or col_lower.endswith(("_id", "_cod", "_code", "_ref", "_num", "_pk", "_fk", "_ine", "_cp"))
-        or col_lower
-        in [
-            "id",
-            "cod",
-            "code",
-            "codigo",
-            "ref",
-            "referencia",
-            "cpostal",
-            "cp",
-            "cif",
-            "nif",
-            "nie",
-            "dni",
-            "iban",
-            "sku",
-            "ean",
-            "matricula",
-            "tramo",
-            "distrito",
-            "seccion",
-            "num_factura",
-            "id_factura",
-            "cod_factura",
-            "num_pedido",
-            "id_pedido",
-            "cod_pedido",
-        ]
-        or any(
-            k in col_lower
-            for k in [
-                "codigo",
-                "code",
-                "cpostal",
-                "cod_postal",
-                "codigo_postal",
-                "cod_ine",
-                "seccion_censal",
-                "identificador",
-                "cif",
-                "nif",
-                "nie",
-                "dni",
-                "iban",
-                "sku",
-                "ean",
-                "matricula",
-                "expediente",
-                "tramo",
-                "tracking",
-            ]
-        )
-    ):
+    # 1. Heurística de nombre (independiente de guiones bajos: CustomerID y customer_id).
+    if _looks_like_id_name(col_lower):
         return True
 
     if non_null_str is not None:
