@@ -10,8 +10,6 @@ import io
 
 import pandas as pd
 import pytest
-from fastapi.testclient import TestClient
-
 from app.core.semantics import is_fraction_or_discount_column, is_id_or_code_column
 from app.core.transformation_policy import (
     casing_policy,
@@ -26,10 +24,9 @@ from app.services.etl_service import ETLService
 from app.services.profiler_service import ProfilerService
 from app.services.quality_service import QualityService
 from app.transformations.registry import TransformationRegistry
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
-
-NORTHWIND_DIRTY = "D:/Downloads/Northwind_Dirty_Enterprise"
 
 
 def _upload_csv(filename: str, content: str) -> str:
@@ -103,9 +100,7 @@ def test_email_never_title_case_end_to_end():
         "emails.csv",
         "Email,Name\ndavid.martin@example.com,Ana\nCARLOS.DIAZ@EXAMPLE.COM,Luis\n",
     )
-    hint = ProfilerService._detect_semantic_hint(
-        "Email", pd.Series(["david.martin@example.com"]), ColumnTypeEnum.TEXT
-    )
+    hint = ProfilerService._detect_semantic_hint("Email", pd.Series(["david.martin@example.com"]), ColumnTypeEnum.TEXT)
     assert hint == SemanticHintEnum.EMAIL
     plan = ETLService.propose_plan_from_rules(dataset_id)
     for s in plan.steps:
@@ -119,9 +114,7 @@ def test_email_never_title_case_end_to_end():
 
 
 def test_id_columns_excluded_from_normalize_case_policy():
-    hint = ProfilerService._detect_semantic_hint(
-        "CustomerID", pd.Series(["CUST0001"]), ColumnTypeEnum.TEXT
-    )
+    hint = ProfilerService._detect_semantic_hint("CustomerID", pd.Series(["CUST0001"]), ColumnTypeEnum.TEXT)
     assert hint == SemanticHintEnum.ID
 
 
@@ -169,9 +162,9 @@ def test_negatives_require_review_not_clamp():
         "ProductName,UnitPrice,Quantity\nA,10.0,2\nB,-23.50,3\nC,5.0,-4\n",
     )
     plan = ETLService.propose_plan_from_rules(dataset_id)
-    assert not any(s.operation == "clamp_range" for s in plan.steps), (
-        "Sin regla de negocio explícita no se propone clamp a 0"
-    )
+    assert not any(
+        s.operation == "clamp_range" for s in plan.steps
+    ), "Sin regla de negocio explícita no se propone clamp a 0"
     kinds = {(s.parameters or {}).get("context", {}).get("kind") for s in plan.steps}
     assert "negative_values" in kinds
     # Y quality lo describe como revisión, no como acotación
@@ -201,16 +194,15 @@ def test_discount_is_fraction_not_percentage():
     assert is_fraction_or_discount_column("Discount", series) is True
     assert is_fraction_or_discount_column("Descuento", series) is True
     # Descuento_Pct sigue siendo porcentaje
-    hint = ProfilerService._detect_semantic_hint(
-        "Descuento_Pct", pd.Series(["10.0%", "20.0%"]), ColumnTypeEnum.NUMERIC
-    )
+    hint = ProfilerService._detect_semantic_hint("Descuento_Pct", pd.Series(["10.0%", "20.0%"]), ColumnTypeEnum.NUMERIC)
     assert hint == SemanticHintEnum.PERCENTAGE
     hint2 = ProfilerService._detect_semantic_hint("Discount", series, ColumnTypeEnum.NUMERIC)
     assert hint2 == SemanticHintEnum.FRACTION
 
 
 @pytest.mark.parametrize(
-    "value,valid", [("0", True), ("0.05", True), ("0.10", True), ("0.20", True), ("1", True), ("1.20", False), ("1.4876", False)]
+    "value,valid",
+    [("0", True), ("0.05", True), ("0.10", True), ("0.20", True), ("1", True), ("1.20", False), ("1.4876", False)],
 )
 def test_discount_range_values(value, valid):
     dataset_id = _upload_csv("disc.csv", f"Discount\n0.05\n{value}\n0.10\n")
@@ -263,9 +255,10 @@ def test_country_variants_unified_via_category():
 
 
 def test_dax_uses_real_table_name_and_validates():
+    from datetime import datetime, timezone
+
     from app.models.etl import ExecutionResult
     from app.services.analytics_service import AnalyticsService
-    from datetime import datetime, timezone
 
     df = pd.DataFrame(
         {
@@ -301,9 +294,10 @@ def test_dax_uses_real_table_name_and_validates():
 
 
 def test_dax_without_numeric_or_date_gives_warnings_not_broken_dax():
+    from datetime import datetime, timezone
+
     from app.models.etl import ExecutionResult
     from app.services.analytics_service import AnalyticsService
-    from datetime import datetime, timezone
 
     df = pd.DataFrame({"Name": ["a", "b"]})
     run = ExecutionResult(
@@ -329,47 +323,62 @@ def test_dax_without_numeric_or_date_gives_warnings_not_broken_dax():
     assert not any("TOTALYTD" in (m.formula or "") and "No se puede" not in m.formula for m in guide.dax_measures)
 
 
-# ---------- Northwind Dirty real ----------
+# ---------- Réplicas sintéticas del Northwind Dirty ----------
+#
+# Los CSV originales viven en el disco local del autor (D:/Downloads) y no
+# existen en CI. Estas réplicas autocontenidas reproducen los mismos patrones
+# (IDs CamelCase, emails NULL/Title, negativos, Discount>1, países ES/España)
+# sin depender de rutas locales.
 
 
-def _load_northwind(name: str) -> str:
-    import shutil
-    import uuid
+def _load_synthetic_northwind_products() -> str:
+    rows = ["ProductID,ProductName,CategoryID,UnitPrice,UnitsInStock"]
+    for i in range(1, 11):
+        price = "-23.50" if i <= 8 else "10.00"
+        rows.append(f"PROD{i:04d},Product {i},CAT01,{price},100")
+    return _upload_csv("products_dirty.csv", "\n".join(rows) + "\n")
 
-    from app.core.config import settings
-    from app.services.dataset_service import DATASET_CACHE, DatasetService
 
-    src = f"{NORTHWIND_DIRTY}/{name}_dirty.csv"
-    dataset_id = f"nw-{name}-{uuid.uuid4().hex[:6]}"
-    dest = settings.UPLOAD_DIR / f"{dataset_id}_{name}_dirty.csv"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(src, dest)
-    meta = DatasetService._process_saved_dataset_file(
-        saved_path=dest,
-        filename=f"{name}_dirty.csv",
-        file_ext=".csv",
-        file_size=dest.stat().st_size,
-        dataset_id=dataset_id,
-    )
-    DATASET_CACHE[dataset_id] = meta
-    return dataset_id
+def _load_synthetic_northwind_customers() -> str:
+    rows = ["CustomerID,CustomerName,Email,Phone,City,Country"]
+    for i in range(1, 26):
+        rows.append(f"CUST{i:04d},Name {i},user{i}@example.com,+34 600000000,Madrid,Spain")
+    rows.append("CUST0026,Sin Email,,+34 600000000,Madrid,ES")
+    rows.append("CUST0027,Sin Email 2,,+34 600000000,Madrid,España")
+    rows.append("CUST0028,Mayus,CARLOS.DIAZ@EXAMPLE.COM,+34 600000000,Madrid,Spain")
+    return _upload_csv("customers_dirty.csv", "\n".join(rows) + "\n")
+
+
+def _load_synthetic_northwind_orders() -> str:
+    rows = ["OrderID,CustomerID,EmployeeID,OrderDate,ShipCountry,Status"]
+    for i in range(1, 28):
+        status = "" if i <= 25 else "Delivered"
+        rows.append(f"ORD{i:05d},CUST0001,EMP001,2024-01-01,Spain,{status}")
+    return _upload_csv("orders_dirty.csv", "\n".join(rows) + "\n")
+
+
+def _load_synthetic_northwind_details() -> str:
+    rows = ["OrderDetailID,OrderID,ProductID,Quantity,UnitPrice,Discount"]
+    for i in range(1, 19):
+        rows.append(f"DET{i:06d},ORD00001,PROD0001,-{i},10.0,0.05")
+    for i in range(19, 29):
+        rows.append(f"DET{i:06d},ORD00001,PROD0001,2,10.0,1.20")
+    return _upload_csv("order_details_dirty.csv", "\n".join(rows) + "\n")
 
 
 def test_northwind_products_negatives_need_review_and_ids_intact():
-    dataset_id = _load_northwind("products")
+    dataset_id = _load_synthetic_northwind_products()
     df = DatasetService.load_dataframe(dataset_id)
     neg = int((pd.to_numeric(df["UnitPrice"], errors="coerce") < 0).sum())
     assert neg == 8
     plan = ETLService.propose_plan_from_rules(dataset_id)
     assert not any(s.operation == "clamp_range" and s.column == "UnitPrice" for s in plan.steps)
-    assert any(
-        s.operation == "flag_for_review" and s.column == "UnitPrice" for s in plan.steps
-    )
+    assert any(s.operation == "flag_for_review" and s.column == "UnitPrice" for s in plan.steps)
     assert not any(s.column == "ProductID" and s.operation == "normalize_case" for s in plan.steps)
 
 
 def test_northwind_customers_emails_and_ids():
-    dataset_id = _load_northwind("customers")
+    dataset_id = _load_synthetic_northwind_customers()
     plan = ETLService.propose_plan_from_rules(dataset_id)
     assert not any(
         s.operation == "fill_missing" and s.column == "Email" for s in plan.steps
@@ -382,7 +391,7 @@ def test_northwind_customers_emails_and_ids():
 
 
 def test_northwind_orders_status_null_and_ids():
-    dataset_id = _load_northwind("orders")
+    dataset_id = _load_synthetic_northwind_orders()
     df = DatasetService.load_dataframe(dataset_id)
     assert int(df["Status"].isna().sum()) == 25
     plan = ETLService.propose_plan_from_rules(dataset_id)
@@ -392,7 +401,7 @@ def test_northwind_orders_status_null_and_ids():
 
 
 def test_northwind_details_quantity_discount_and_country_mapping():
-    dataset_id = _load_northwind("order_details")
+    dataset_id = _load_synthetic_northwind_details()
     df = DatasetService.load_dataframe(dataset_id)
     assert int((pd.to_numeric(df["Quantity"], errors="coerce") < 0).sum()) == 18
     assert int((pd.to_numeric(df["Discount"], errors="coerce") > 1).sum()) == 10
@@ -405,22 +414,20 @@ def test_northwind_details_quantity_discount_and_country_mapping():
 
 
 def test_northwind_referential_integrity_intact_ids():
-    cust = _load_northwind("customers")
-    ords = _load_northwind("orders")
-    det = _load_northwind("order_details")
-    prods = _load_northwind("products")
-    emps = _load_northwind("employees")
+    cust = _load_synthetic_northwind_customers()
+    ords = _load_synthetic_northwind_orders()
+    det = _load_synthetic_northwind_details()
+    prods = _load_synthetic_northwind_products()
     for ds, expected_op in [
         (cust, "CustomerID"),
         (ords, "OrderID"),
         (det, "OrderDetailID"),
         (prods, "ProductID"),
-        (emps, "EmployeeID"),
     ]:
         df = DatasetService.load_dataframe(ds)
         assert expected_op in df.columns
         vals = df[expected_op].dropna().astype(str)
-        # Los IDs conservan mayúsculas originales (CUST/ORD/DET/PROD/EMP/CAT)
+        # Los IDs conservan mayúsculas originales (CUST/ORD/DET/PROD)
         assert vals.str.contains(r"^[A-Z]+0").any(), f"{expected_op} debe conservar formato original"
     df_o = DatasetService.load_dataframe(ords)
     df_c = DatasetService.load_dataframe(cust)
