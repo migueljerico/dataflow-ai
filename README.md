@@ -11,7 +11,7 @@
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-224%20backend%20%7C%2055%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.17.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.17.1-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -353,7 +353,7 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.17.0):** Motor semántico de calidad (política de transformación central, detector de IDs CamelCase, hint FRACTION para descuentos [0,1], nulos y negativos a revisión humana, países por equivalencias categóricas, DAX con nombres reales y validados), desarrollada con **Muse Spark 1.3 Contributor** (vía ZCode).
+- **Última versión (v1.17.1):** Parche CI — tests Northwind autocontenidos sin dependencia de disco local; motor semántico de calidad (v1.17.0), desarrollada con **Muse Spark 1.3 Contributor** (vía ZCode).
 - **Redistribución y mejora de este README.md:** realizada por **Muse Spark 1.3 Contributor** (vía ZCode).
 - **Versión v1.16.0:** Reportes ejecutivos programados en PDF/HTML con webhooks de drift, simulador hipotético de percentiles de drift y gobernanza de aprobación reforzada con diff canónico, desarrollados con **Qwen 3.8 Max** (vía ZCode).
 - **Versión v1.15.0:** Historial cronológico de ejecuciones y comparador de métricas de calidad entre versiones del dataset en la UI; control estadístico de Data Drift por percentiles (P05 a P95, test Kolmogorov-Smirnov sin dependencias pesadas), alertas visuales y recomendaciones proactivas de gobernanza en el dashboard; y actualización de la captura del modelo estrella con la descarga real en PNG, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).

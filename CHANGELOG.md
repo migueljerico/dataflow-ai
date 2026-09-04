@@ -4,6 +4,13 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.17.1] — 2026-09-04
+
+### 🔧 Parche CI: tests Northwind autocontenidos
+
+- **Causa:** los 5 tests de regresión Northwind leían `D:/Downloads/Northwind_Dirty_Enterprise/*.csv`, inexistente en el runner de GitHub Actions → 5 `FileNotFoundError` y CI en rojo.
+- **Solución:** réplicas sintéticas autocontenidas en `test_semantic_policy_regression.py` con los mismos patrones (8 negativos, 20/25 nulos, 18 cantidades negativas, 10 descuentos >1, países ES/España, IDs CamelCase). Sin cambios de motor; suite 265 + 55 en verde y CI de nuevo en verde.
+
 ## [1.17.0] — 2026-09-04
 
 ### 🧠 Motor Semántico de Calidad: la semántica gobierna las propuestas (Human-in-the-Loop reforzado)
