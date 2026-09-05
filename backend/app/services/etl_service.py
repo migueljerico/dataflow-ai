@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import logging
 import re
 import uuid
 from datetime import datetime, timezone
@@ -43,6 +44,8 @@ from app.services.profiler_service import ProfilerService
 from app.services.quality_service import QUALITY_CACHE, QualityService
 from app.services.script_generator import ScriptGeneratorService
 from app.transformations.registry import TransformationRegistry
+
+logger = logging.getLogger(__name__)
 
 PLANS_CACHE: Dict[str, TransformationPlan] = {}
 RUNS_CACHE: Dict[str, ExecutionResult] = {}
@@ -1006,9 +1009,14 @@ class ETLService:
         RUNS_CACHE[run_id] = result
 
         # Calcular QualityReport real del dataset limpio y construir QualityComparisonReport
-        score_before = 80.0
-        score_after = 98.0
-        score_delta = 18.0
+        try:
+            orig_quality = QualityService.get_quality_report(dataset_id)
+            score_before = orig_quality.quality_score.overall_score
+        except Exception:
+            score_before = 0.0
+        score_after = score_before
+        score_delta = 0.0
+
         try:
             clean_prof = ProfilerService.profile_dataframe(df_current, dataset_id=f"clean_{run_id}")
             clean_quality = QualityService.analyze_dataframe(df_current, clean_prof, dataset_id=f"clean_{run_id}")
@@ -1026,8 +1034,8 @@ class ETLService:
             score_before = comp_report.overall_score_before
             score_after = comp_report.overall_score_after
             score_delta = comp_report.delta_score
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error al calcular QualityComparisonReport para run {run_id}: {e}")
 
         summary_item = ExecutionSummaryItem(
             run_id=run_id,
@@ -1160,9 +1168,18 @@ class ETLService:
         if not RUNS_HISTORY and RUNS_CACHE:
             for r_id, res in RUNS_CACHE.items():
                 comp = QUALITY_COMPARISON_CACHE.get(r_id)
-                s_before = comp.overall_score_before if comp else 80.0
-                s_after = comp.overall_score_after if comp else 98.0
-                s_delta = comp.delta_score if comp else round(s_after - s_before, 2)
+                if comp:
+                    s_before = comp.overall_score_before
+                    s_after = comp.overall_score_after
+                    s_delta = comp.delta_score
+                else:
+                    try:
+                        orig = QualityService.get_quality_report(res.dataset_id)
+                        s_before = orig.quality_score.overall_score
+                    except Exception:
+                        s_before = 0.0
+                    s_after = s_before
+                    s_delta = 0.0
                 item = ExecutionSummaryItem(
                     run_id=res.run_id,
                     dataset_id=res.dataset_id,

@@ -177,10 +177,11 @@ def is_fraction_or_discount_column(col_name: str, raw_series: Any = None) -> boo
 
             nums = to_numeric_series(pd.Series(raw_series)).dropna()
             if len(nums) > 0:
-                if (nums < -0.001).any():
-                    return False
-                over = (nums > 1.5).sum()
-                if over / len(nums) > 0.2:
+                # Si la mayoría de valores no nulos son números de gran escala (>10),
+                # probablemente sea un importe monetario y no una fracción/descuento [0, 1].
+                # Los valores negativos (e.g. -3) o fuera de rango (e.g. 1.2) son anomalías
+                # a detectar y corregir en calidad, no invalidan la semántica de la columna.
+                if (nums.abs() > 10.0).sum() / len(nums) > 0.4:
                     return False
         except Exception:
             pass

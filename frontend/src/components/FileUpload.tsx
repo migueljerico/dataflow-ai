@@ -29,6 +29,7 @@ import { OpenDataExplorer } from './upload/OpenDataExplorer';
 
 interface Props {
   onUploadSuccess: (metadata: DatasetMetadata) => void;
+  onBatchUploadSuccess?: (datasets: DatasetMetadata[]) => void;
 }
 
 type TabType = 'file' | 'url' | 'opendata';
@@ -51,7 +52,7 @@ const EXAMPLE_URLS = [
   }
 ];
 
-export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
+export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSuccess }) => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('file');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,8 +92,29 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
   }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files && e.target.files.length > 1) {
+      await uploadMultipleFiles(Array.from(e.target.files));
+    } else if (e.target.files && e.target.files[0]) {
       await uploadFile(e.target.files[0]);
+    }
+  };
+
+  const uploadMultipleFiles = async (files: File[]) => {
+    setLoading(true);
+    setLoadingStatus(`Subiendo y analizando lote de ${files.length} archivos simultáneamente...`);
+    setError(null);
+    try {
+      const datasets = await api.uploadDatasetsBatch(files);
+      if (onBatchUploadSuccess) {
+        onBatchUploadSuccess(datasets);
+      } else if (datasets.length > 0) {
+        onUploadSuccess(datasets[0]);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al subir el lote de archivos.');
+    } finally {
+      setLoading(false);
+      setLoadingStatus('');
     }
   };
 
@@ -190,7 +212,9 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 1) {
+      await uploadMultipleFiles(Array.from(e.dataTransfer.files));
+    } else if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       await uploadFile(e.dataTransfer.files[0]);
     }
   };
@@ -296,6 +320,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess }) => {
               id="fileInput"
               type="file"
               accept=".csv,.xlsx"
+              multiple
               style={{ display: 'none' }}
               onChange={handleFileChange}
               disabled={loading}

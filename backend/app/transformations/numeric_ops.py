@@ -57,6 +57,14 @@ class ConvertNumericTransformation(BaseTransformation):
         original_series = df_copy[col].astype(str)
         converted = to_numeric_series(original_series)
 
+        # Preservar tipo entero si todos los valores válidos son enteros (e.g. Quantity: 6, 3, 2 en vez de 6.0, 3.0)
+        valid_nums = converted.dropna()
+        if len(valid_nums) > 0 and (valid_nums % 1 == 0).all():
+            if not converted.isna().any():
+                converted = converted.astype(int)
+            else:
+                converted = converted.astype("Int64")
+
         # Conteo preciso evitando el falso positivo de NaN != NaN.
         # En pandas >= 3 astype(str) conserva los NaN como missing values.
         orig_missing = original_series.isna() | original_series.isin(["nan", "None", ""])
@@ -149,5 +157,13 @@ class ClampRangeTransformation(BaseTransformation):
         # Corrección del bug IEEE 754: NaN != NaN siempre es True. Excluir NaNs del conteo de modificados
         changed = (original_series != num_series) & ~(original_series.isna() & num_series.isna())
         affected = int(changed.sum())
+
+        valid_nums = num_series.dropna()
+        if len(valid_nums) > 0 and (valid_nums % 1 == 0).all():
+            if not num_series.isna().any():
+                num_series = num_series.astype(int)
+            else:
+                num_series = num_series.astype("Int64")
+
         df_copy[col] = num_series
         return df_copy, affected

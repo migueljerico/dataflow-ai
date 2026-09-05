@@ -8,6 +8,7 @@ import pandas as pd
 
 from app.core.number_parsing import is_missing_value, to_numeric_series
 from app.core.semantics import is_fraction_or_discount_column
+from app.core.transformation_policy import country_mappings_for_values
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.models.quality import (
@@ -161,6 +162,40 @@ class QualityService:
                 or "ref" in col_prof.column_name.lower()
                 or "pedido" in col_prof.column_name.lower()
             )
+
+            is_country_col = col_prof.semantic_hint == SemanticHintEnum.LOCATION or any(
+                k in col_prof.column_name.lower() for k in ["pais", "país", "country", "shipcountry"]
+            )
+            if not is_identifier and is_country_col:
+                observed_unique = [str(x) for x in stripped.unique() if pd.notna(x)]
+                country_map = country_mappings_for_values(observed_unique)
+                if country_map:
+                    variant_keys = set(country_map.keys())
+                    variant_mask = stripped.isin(variant_keys)
+                    variant_count = int(variant_mask.sum())
+                    if variant_count > 0:
+                        inconsistent_cells += variant_count
+                        sample_variants = list(country_map.keys())[:3]
+                        issues.append(
+                            QualityIssue(
+                                issue_id=str(uuid.uuid4())[:8],
+                                dimension=QualityDimensionEnum.CONSISTENCY,
+                                severity=SeverityEnum.MEDIUM,
+                                column=col_prof.column_name,
+                                description=(
+                                    f"Inconsistencia categórica en '{col_prof.column_name}': Se detectaron "
+                                    f"{variant_count} valor(es) con abreviaturas o variantes no canónicas de país "
+                                    f"({', '.join(sample_variants)})."
+                                ),
+                                affected_rows=variant_count,
+                                affected_percentage=round((variant_count / row_count) * 100, 2),
+                                evidence_sample=_safe_evidence_sample(series[variant_mask].head(3)),
+                                suggested_action=(
+                                    f"Normalizar variantes de país en '{col_prof.column_name}' a nombres "
+                                    "estándar ('normalize_category')."
+                                ),
+                            )
+                        )
 
             if not is_identifier and (
                 col_prof.inferred_type in [ColumnTypeEnum.TEXT, ColumnTypeEnum.CATEGORICAL]
@@ -426,6 +461,8 @@ class QualityService:
                     "revenue",
                     "sales",
                     "units",
+                    "descuento",
+                    "discount",
                 ]
             )
             if is_positive_count_or_time and not is_percentage and not is_fraction:
@@ -481,6 +518,18 @@ class QualityService:
         consistency_issues = len([i for i in issues if i.dimension == QualityDimensionEnum.CONSISTENCY])
         uniqueness_issues = len([i for i in issues if i.dimension == QualityDimensionEnum.UNIQUENESS])
         integrity_issues = len([i for i in issues if i.dimension == QualityDimensionEnum.INTEGRITY])
+
+        # Asegurar que ninguna dimensión con incidencias activas se muestre falsamente como 100.0%
+        if completeness_issues and completeness_score >= 100.0:
+            completeness_score = 99.9
+        if validity_issues and validity_score >= 100.0:
+            validity_score = 99.9
+        if consistency_issues and consistency_score >= 100.0:
+            consistency_score = 99.9
+        if uniqueness_issues and uniqueness_score >= 100.0:
+            uniqueness_score = 99.9
+        if integrity_issues and integrity_score >= 100.0:
+            integrity_score = 99.9
 
         score_obj = QualityScore(
             overall_score=overall_score,

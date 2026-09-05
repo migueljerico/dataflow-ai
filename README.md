@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-224%20backend%20%7C%2055%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.18.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-267%20backend%20%7C%2055%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.19.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)

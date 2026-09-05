@@ -136,6 +136,19 @@ async def upload_dataset(file: UploadFile = File(...)):
     return await DatasetService.process_uploaded_file(file)
 
 
+@router.post("/upload-batch", response_model=List[DatasetMetadata], status_code=status.HTTP_201_CREATED)
+async def upload_datasets_batch(files: List[UploadFile] = File(...)):
+    """
+    Subir múltiples datasets simultáneamente (CSV o XLSX) para validación de formato,
+    generación de perfiles y habilitación del espacio de trabajo multi-tabla y Esquema de Estrella.
+    """
+    results: List[DatasetMetadata] = []
+    for f in files:
+        meta = await DatasetService.process_uploaded_file(f)
+        results.append(meta)
+    return results
+
+
 @router.post("/from-url", response_model=DatasetMetadata, status_code=status.HTTP_201_CREATED)
 async def load_dataset_from_url(payload: DatasetFromUrlRequest):
     """

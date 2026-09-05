@@ -590,3 +590,42 @@ export interface ScheduleExecutionLog {
   webhook?: WebhookDeliveryResult | null;
   error?: string | null;
 }
+
+export interface RelationshipIntegrityAudit {
+  from_table: string;
+  from_column: string;
+  to_table: string;
+  to_column: string;
+  cardinality: string;
+  total_fk_rows: number;
+  matching_fk_rows: number;
+  orphan_fk_rows: number;
+  match_percentage: number;
+  orphan_samples: unknown[];
+  is_referential_clean: boolean;
+}
+
+export interface StarSchemaTableNode {
+  table_id: string;
+  table_name: string;
+  role: 'fact' | 'dimension' | 'bridge' | 'unknown';
+  row_count: number;
+  column_count: number;
+  primary_keys: string[];
+  foreign_keys: string[];
+  attributes: string[];
+  measures: string[];
+}
+
+export interface MultiTableStarSchema {
+  model_id: string;
+  model_name: string;
+  created_at: string;
+  fact_table: StarSchemaTableNode;
+  dimension_tables: StarSchemaTableNode[];
+  relationships: RelationshipIntegrityAudit[];
+  suggested_dax_measures: Record<string, string>;
+  tmdl_definition: string;
+  referential_integrity_score: number;
+}
+

@@ -17,6 +17,7 @@ import {
   ReportScheduleCreate,
   ReportScheduleListResponse,
   ScheduleExecutionLog,
+  MultiTableStarSchema,
 } from '../types';
 import { getApiKey } from '../utils/security';
 
@@ -50,6 +51,18 @@ export const api = {
       body: formData,
     });
     return handleResponse<DatasetMetadata>(res);
+  },
+
+  uploadDatasetsBatch: async (files: File[]): Promise<DatasetMetadata[]> => {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    const res = await fetch(`${API_BASE}/datasets/upload-batch`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<DatasetMetadata[]>(res);
   },
 
   loadDatasetFromUrl: async (url: string): Promise<DatasetMetadata> => {
@@ -245,4 +258,17 @@ export const api = {
 
   getScheduledLastReportUrl: (scheduleId: string): string =>
     `${API_BASE}/reports/schedules/${scheduleId}/last-report`,
+
+  // Relational & Multi-Table Star Schema
+  generateStarSchema: async (datasetIds: string[]): Promise<MultiTableStarSchema> => {
+    const res = await fetch(`${API_BASE}/relational/star-schema`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset_ids: datasetIds }),
+    });
+    return handleResponse<MultiTableStarSchema>(res);
+  },
+
+  getStarSchemaTmdlUrl: (modelId: string): string =>
+    `${API_BASE}/relational/models/${modelId}/tmdl`,
 };

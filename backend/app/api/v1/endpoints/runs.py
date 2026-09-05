@@ -66,12 +66,14 @@ async def get_run_quality_report(run_id: str):
     quality_before = QualityService.get_quality_report(result.dataset_id)
     score_before = quality_before.quality_score.overall_score
 
-    score_after = 98.0
-    score_delta = 18.0
+    score_after = score_before
+    score_delta = 0.0
+    comparison_available = False
     try:
         comp = ETLService.get_quality_comparison(run_id)
         score_after = comp.overall_score_after
         score_delta = comp.delta_score
+        comparison_available = True
     except Exception:
         pass
 
@@ -85,6 +87,7 @@ async def get_run_quality_report(run_id: str):
         "score_before": score_before,
         "score_after": score_after,
         "score_delta": score_delta,
+        "comparison_available": comparison_available,
         "applied_steps": result.applied_steps_count,
         "execution_time_seconds": round((result.finished_at - result.started_at).total_seconds(), 3),
     }

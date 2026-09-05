@@ -4,6 +4,29 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.19.0] — 2026-09-05
+
+### 🌟 Soporte Multiarchivo, Generador Visual de Esquema de Estrella & Corrección Forense de Calidad
+
+> **Motivación:** Resolución completa de la auditoría forense sobre el pipeline de calidad y transformación en DataFlow AI, eliminando falsos 100% de Data Score, erradicando fallbacks numéricos simulados, preservando tipos de datos enteros en transformaciones numéricas y dotando a la aplicación de la capacidad de procesamiento multiarchivo para la construcción y auditoría automática de modelos relacionales en Esquema de Estrella con exportación Power BI TMDL.
+
+#### 🔴 Correcciones Forenses de Calidad y Detección Real
+- **Eliminación de falsos scores 100% (`semantics.py`, `quality_service.py`):** Corregida la invalidación indebida del tipo semántico `FRACTION` ante valores anómalos (`-3`, `1.2` en `Discount`), garantizando la detección honesta de valores fuera de rango y limitando las dimensiones con incidencias abiertas a 99.9% sin redondear falsamente a 100%.
+- **Erradicación de números simulados (`runs.py`, `etl_service.py`):** Eliminadas todas las constantes arbitrarias (`80.0`, `98.0`, `18.0`) en favor de cálculos reales y transparentes de score antes y después de la ejecución.
+- **Preservación estricta de tipos enteros (`numeric_ops.py`):** Las transformaciones de conversión y acotado numérico (`clamp_range`, `convert_numeric`) preservan tipos `int`/`Int64` cuando no existen decimales reales, impidiendo la mutación de campos enteros como `Quantity: 6` a `6.0`.
+- **Verificación de consistencia geográfica:** Detección de mezclas de países y códigos (`ES`, `España`, `SPAIN` vs `Spain`).
+
+#### 🌟 Nuevo Módulo: Subida Multiarchivo y Generador de Esquema de Estrella
+- **Subida por lotes atómica (`POST /api/v1/datasets/upload-batch`):** Carga simultánea de múltiples archivos CSV/Excel con autodetección de codificación y delimitador.
+- **Motor Relacional (`relational_service.py`):** Inferencia automática de Tabla de Hechos (Fact Table) y Tablas de Dimensiones, detección de claves foráneas, auditoría de integridad referencial fila por fila con cuantificación de registros huérfanos y generación de definiciones Power BI TMDL y medidas DAX. Carga automática de versiones limpias post-ETL.
+- **Visualizador Interactivo SVG (`MultiTableStarSchema.tsx`):** Diagrama radial de hechos y dimensiones con insignias de cardinalidad (`1:*`), porcentaje de integridad, copiado de fórmulas DAX y exportación en PNG 2x Retina.
+- **Espacio de Trabajo Multi-Tabla (`App.tsx`):** Barra superior de navegación para alternar entre el modelo relacional global y el flujo de limpieza y calidad por tabla individual.
+
+#### 🧪 Tests y Verificación
+- **Backend:** 267 tests pasando al 100% (`pytest`), incluyendo `test_relational_star_schema.py`.
+- **Frontend:** 55 tests pasando al 100% (`vitest`) y build estricto TypeScript/Vite completado con éxito.
+- **Linters:** Ruff, Black y Bandit SAST limpios.
+
 ## [1.18.0] — 2026-09-05
 
 ### 🧹 Planes con correcciones ejecutables: sube un archivo sucio, aprueba el plan con el botón y descarga el limpio para Power BI
