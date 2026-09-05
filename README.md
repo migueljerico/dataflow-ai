@@ -113,7 +113,7 @@ Recorrido completo por el flujo de trabajo de DataFlow AI, desde la ingesta del 
 
 *Visualizador interactivo del modelo estrella generado tras la limpieza ETL: diagrama SVG con la tabla de hechos al centro (`Order_Details`), dimensiones de atributo y calendario en órbita (`Customers`, `Orders`, `Products`, `Categories`, `Employees`, `Shippers`, `Dim_Date`), relaciones con cardinalidad `1:*` y auditoría de integridad referencial (100% OK); el modelo se exporta en formato TMDL para Power BI Desktop con medidas DAX de negocio preparadas.*
 
-![Vista Previa — Esquema Estrella del Modelo Semántico](./docs/capturas/captura_dataflow_ai_esquema_estrella.png)
+![Vista Previa — Esquema Estrella del Modelo Semántico](./docs/capturas/captura_dataflow_ai_esquema_estrella_v2.png)
 
 ---
 

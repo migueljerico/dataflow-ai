@@ -18,7 +18,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 #### 📐 Medidas DAX y TMDL Fieles al Modelo Power BI (`relational_service.py`, `MultiTableStarSchema.tsx`)
 - **Preservación del Nombre Canónico de Tabla:** `_clean_table_name` conserva el stem exacto del archivo limpio (ej. `clean_order_details_dirty`, `clean_products_dirty`), eliminando la recapitalización arbitraria (`Order_Details`) o prefijados espurios (`Dim_`) que causaban errores de *"Tabla no encontrada"* al copiar medidas en Power BI Desktop.
 - **Medidas DAX Contextuales:** Fórmulas generadas (`Total_Registros = COUNTROWS('clean_order_details_dirty')`, sumas y promedios por medida, y medidas calculadas de negocio `Ventas_Netas` / `Ventas_Brutas` vía `SUMX`) 100% compatibles y ejecutables directamente en Power BI.
-- **Diagrama Visual y Captura:** Actualización del pantallazo del Esquema de Estrella en `docs/capturas/captura_dataflow_ai_esquema_estrella.png` y correspondencia de relaciones en el SVG.
+- **Diagrama Visual y Captura:** Actualización del pantallazo del Esquema de Estrella en `docs/capturas/captura_dataflow_ai_esquema_estrella_v2.png` y correspondencia de relaciones en el SVG.
 
 #### 🧪 Verificación y Suite Completa
 - **Backend:** 267 tests pasando al 100% (`pytest`), linters Ruff y Black impecables, Bandit SAST limpio (0 vulnerabilidades).
