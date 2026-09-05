@@ -4,6 +4,26 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.19.1] — 2026-09-05
+
+### 🎯 Restauración del Flujo Estricto de 4 Pasos, Limpieza en Lote y Medidas DAX Fieles para Power BI
+
+> **Motivación:** Alineación total con el flujo de trabajo documentado en `README.md` paso a paso: restauración del orden estricto (1: Subida $\rightarrow$ 2: Auditoría $\rightarrow$ 3: Plan ETL $\rightarrow$ 4: Transformaciones deterministas $\rightarrow$ Esquema de Estrella al final del Paso 4 sobre datos ya limpios), eliminación de selectores manuales de tabla a favor de limpieza por lotes en una sola aprobación, generación de medidas DAX (`COUNTROWS`, `SUM`, `SUMX`) y definiciones TMDL que respetan el nombre exacto de la tabla limpia en Power BI Desktop (evitando referencias inválidas a tablas inexistentes por recapitalización) y actualización del pantallazo radial del modelo en `README.md`.
+
+#### 🧩 Restauración del Flujo Paso a Paso y Limpieza en Lote
+- **Flujo Estricto de 4 Pasos (`App.tsx`):** Unificación transparente de la navegación. Si se cargan múltiples tablas, la aplicación guía al usuario a través del mismo stepper: Auditoría Consolidada del Lote (Paso 2), Revisión Integral de Planes (Paso 3) y Ejecución Determinista Masiva (Paso 4).
+- **Aprobación en 1 Solo Clic (`BatchPlanReview.tsx`):** Sustitución de la selección manual tabla a tabla por un panel desplegable integral con botón único *"Aprobar y Limpiar Todas las Tablas"* ("La IA propone, el usuario decide, Python ejecuta").
+- **Esquema de Estrella sobre Datos Saneados (`BatchExecutionReport.tsx`):** El generador y visualizador dimensional se ubica estrictamente al final del Paso 4, una vez que todas las tablas han sido transformadas y validadas, asegurando una auditoría de integridad referencial sobre datos limpios.
+
+#### 📐 Medidas DAX y TMDL Fieles al Modelo Power BI (`relational_service.py`, `MultiTableStarSchema.tsx`)
+- **Preservación del Nombre Canónico de Tabla:** `_clean_table_name` conserva el stem exacto del archivo limpio (ej. `clean_order_details_dirty`, `clean_products_dirty`), eliminando la recapitalización arbitraria (`Order_Details`) o prefijados espurios (`Dim_`) que causaban errores de *"Tabla no encontrada"* al copiar medidas en Power BI Desktop.
+- **Medidas DAX Contextuales:** Fórmulas generadas (`Total_Registros = COUNTROWS('clean_order_details_dirty')`, sumas y promedios por medida, y medidas calculadas de negocio `Ventas_Netas` / `Ventas_Brutas` vía `SUMX`) 100% compatibles y ejecutables directamente en Power BI.
+- **Diagrama Visual y Captura:** Actualización del pantallazo del Esquema de Estrella en `docs/capturas/captura_dataflow_ai_esquema_estrella.png` y correspondencia de relaciones en el SVG.
+
+#### 🧪 Verificación y Suite Completa
+- **Backend:** 267 tests pasando al 100% (`pytest`), linters Ruff y Black impecables, Bandit SAST limpio (0 vulnerabilidades).
+- **Frontend:** 55 tests pasando al 100% (`vitest`), compilación TypeScript estricta y empaquetado Vite exitosos.
+
 ## [1.19.0] — 2026-09-05
 
 ### 🌟 Soporte Multiarchivo, Generador Visual de Esquema de Estrella & Corrección Forense de Calidad

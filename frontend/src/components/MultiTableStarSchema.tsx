@@ -191,16 +191,18 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
 
             {/* Líneas de Relación con la tabla central o entre dimensiones */}
             {placedDimensions.map(({ dim, x, y }) => {
-              // Buscar relación si existe
+              // Buscar relación con prioridad a coincidencia exacta de nombres
               const rel = schema.relationships.find(
                 (r) =>
-                  (r.to_table.toLowerCase().includes(dim.table_name.toLowerCase().replace('dim_', '')) ||
-                   dim.table_name.toLowerCase().includes(r.to_table.toLowerCase())) &&
-                  (r.from_table.toLowerCase().includes(schema.fact_table.table_name.toLowerCase()) ||
-                   schema.fact_table.table_name.toLowerCase().includes(r.from_table.toLowerCase()))
+                  (r.to_table.toLowerCase() === dim.table_name.toLowerCase() &&
+                   r.from_table.toLowerCase() === schema.fact_table.table_name.toLowerCase()) ||
+                  (r.from_table.toLowerCase() === dim.table_name.toLowerCase() &&
+                   r.to_table.toLowerCase() === schema.fact_table.table_name.toLowerCase())
               ) || schema.relationships.find(
-                (r) => dim.table_name.toLowerCase().includes(r.to_table.toLowerCase()) ||
-                       dim.table_name.toLowerCase().includes(r.from_table.toLowerCase())
+                (r) =>
+                  r.to_table.toLowerCase().includes(dim.table_name.toLowerCase()) ||
+                  dim.table_name.toLowerCase().includes(r.to_table.toLowerCase()) ||
+                  dim.table_name.toLowerCase().includes(r.from_table.toLowerCase())
               );
 
               const isClean = rel ? rel.is_referential_clean : true;

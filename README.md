@@ -11,7 +11,7 @@
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-267%20backend%20%7C%2055%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.19.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.19.1-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -111,7 +111,7 @@ Recorrido completo por el flujo de trabajo de DataFlow AI, desde la ingesta del 
 
 ### 7️⃣ Esquema Estrella del Modelo Semántico (Star Schema Preview)
 
-*Visualizador interactivo del modelo estrella en la pestaña de Power BI: diagrama SVG con la tabla de hechos al centro, dimensiones de atributo y calendario en órbita, relaciones `*:1` con cardinalidad, panel de inspección por dimensión y script DAX de las tablas calculadas; el modelo se propaga al `model.tmdl` del proyecto PBIP exportable y se reconstruye solo en Power BI Desktop.*
+*Visualizador interactivo del modelo estrella generado tras la limpieza ETL: diagrama SVG con la tabla de hechos al centro (`Order_Details`), dimensiones de atributo y calendario en órbita (`Customers`, `Orders`, `Products`, `Categories`, `Employees`, `Shippers`, `Dim_Date`), relaciones con cardinalidad `1:*` y auditoría de integridad referencial (100% OK); el modelo se exporta en formato TMDL para Power BI Desktop con medidas DAX de negocio preparadas.*
 
 ![Vista Previa — Esquema Estrella del Modelo Semántico](./docs/capturas/captura_dataflow_ai_esquema_estrella.png)
 
@@ -353,8 +353,8 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.18.0):** Planes con correcciones ejecutables aprobables desde el botón humano, score honesto, validación de fechas bilingüe y exportación limpia directa (v1.17.x: motor semántico de calidad + parche CI), desarrollada con **Muse Spark 1.3 Contributor** (vía ZCode).
-- **Redistribución y mejora de este README.md:** realizada por **Muse Spark 1.3 Contributor** (vía ZCode).
+- **Última versión (v1.19.1):** Restauración rigurosa del flujo secuencial de 4 pasos (limpieza en lote de todas las tablas en una sola ejecución antes del modelo dimensional), generación de Esquema de Estrella al final del Paso 4 sobre datos limpios, medidas DAX y TMDL fieles al casing exacto de las tablas limpiadas en Power BI, y actualización del diagrama visual radial, desarrollada con **Google Antigravity**.
+- **Versión v1.19.0:** Soporte multiarchivo, generador visual de esquema de estrella e integridad referencial, y corrección forense de calidad (eliminación de falsos 100%, preservación de enteros y corrección de nulos).
 - **Versión v1.16.0:** Reportes ejecutivos programados en PDF/HTML con webhooks de drift, simulador hipotético de percentiles de drift y gobernanza de aprobación reforzada con diff canónico, desarrollados con **Qwen 3.8 Max** (vía ZCode).
 - **Versión v1.15.0:** Historial cronológico de ejecuciones y comparador de métricas de calidad entre versiones del dataset en la UI; control estadístico de Data Drift por percentiles (P05 a P95, test Kolmogorov-Smirnov sin dependencias pesadas), alertas visuales y recomendaciones proactivas de gobernanza en el dashboard; y actualización de la captura del modelo estrella con la descarga real en PNG, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
 - **Versión v1.14.0:** Panel interactivo de observabilidad de la caché distribuida (L1/L2), exportación PNG en alta resolución (2x Retina) del diagrama interactivo de Esquema Estrella y validación canónica de definiciones TMDL de dimensiones calculadas y relaciones para Power BI Desktop real.

@@ -1,5 +1,6 @@
 import re
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -18,15 +19,15 @@ from app.services.dataset_service import DatasetService
 class RelationalService:
     @staticmethod
     def _clean_table_name(raw_name: str) -> str:
-        """Limpia nombres como 'clean_order_details_dirty.csv' -> 'Order_Details'."""
-        name = raw_name.replace(".csv", "").replace(".xlsx", "").replace(".parquet", "")
-        name = re.sub(r"^(clean_|dirty_)+", "", name, flags=re.IGNORECASE)
-        name = re.sub(r"(_dirty|_clean)+$", "", name, flags=re.IGNORECASE)
-        # Sanitizar
-        words = [w for w in re.split(r"[_\s\-]+", name) if w]
-        if not words:
-            return "Table"
-        return "_".join(w.capitalize() for w in words)
+        """
+        Obtiene el nombre canónico de la tabla en Power BI a partir del archivo real (limpio o fuente).
+        Conserva el casing original y el stem completo (ej. 'clean_order_details_dirty'),
+        sin recapitalización arbitraria ni eliminación de prefijos/sufijos,
+        para que las medidas DAX y definiciones TMDL funcionen de inmediato en Power BI Desktop.
+        """
+        stem = Path(raw_name).stem
+        sanitized = re.sub(r"[^\w\-]", "_", stem).strip("_")
+        return sanitized or stem or "Table"
 
     @staticmethod
     def _load_dataset_df(dataset_id: str) -> Tuple[pd.DataFrame, str]:
@@ -254,8 +255,6 @@ class RelationalService:
             if ds_id == fact_id:
                 continue
             dim_name = t_info["name"]
-            if not dim_name.lower().startswith("dim_"):
-                dim_name = f"Dim_{dim_name}"
             dim_nodes.append(
                 StarSchemaTableNode(
                     table_id=ds_id,
@@ -270,13 +269,35 @@ class RelationalService:
                 )
             )
 
-        # Generar medidas DAX automáticas para la tabla de hechos
+        # Generar medidas DAX automáticas para la tabla de hechos con el nombre real de tabla en Power BI
         dax_measures: Dict[str, str] = {
             "Total_Registros": f"COUNTROWS('{fact_node.table_name}')",
         }
         for m in fact_node.measures[:5]:
             dax_measures[f"Suma_{m}"] = f"SUM('{fact_node.table_name}'[{m}])"
             dax_measures[f"Promedio_{m}"] = f"AVERAGE('{fact_node.table_name}'[{m}])"
+
+        # Medidas de negocio DAX adicionales si existen columnas de cantidad y precio
+        fact_cols = {str(c).lower(): c for c in fact_info["df"].columns}
+        qty_col = next((fact_cols[c] for c in ("quantity", "cantidad", "qty", "unidades") if c in fact_cols), None)
+        price_col = next((fact_cols[c] for c in ("unitprice", "precio", "unit_price", "price") if c in fact_cols), None)
+        disc_col = next((fact_cols[c] for c in ("discount", "descuento", "disc") if c in fact_cols), None)
+
+        if qty_col and price_col:
+            if disc_col:
+                dax_measures["Ventas_Netas"] = (
+                    f"SUMX('{fact_node.table_name}', "
+                    f"'{fact_node.table_name}'[{qty_col}] * '{fact_node.table_name}'[{price_col}] * (1 - '{fact_node.table_name}'[{disc_col}]))"
+                )
+                dax_measures["Ventas_Brutas"] = (
+                    f"SUMX('{fact_node.table_name}', "
+                    f"'{fact_node.table_name}'[{qty_col}] * '{fact_node.table_name}'[{price_col}])"
+                )
+            else:
+                dax_measures["Ventas_Totales"] = (
+                    f"SUMX('{fact_node.table_name}', "
+                    f"'{fact_node.table_name}'[{qty_col}] * '{fact_node.table_name}'[{price_col}])"
+                )
 
         # Generar TMDL
         tmdl_lines: List[str] = [

@@ -70,9 +70,20 @@ def test_star_schema_inference_multi_table():
     schema = schema_res.json()
 
     assert schema["fact_table"]["role"] == "fact"
-    assert "order" in schema["fact_table"]["table_name"].lower()
+    assert schema["fact_table"]["table_name"] == "order_details"
     assert len(schema["dimension_tables"]) >= 2
+    dim_names = [d["table_name"] for d in schema["dimension_tables"]]
+    assert "products" in dim_names
+    assert "customers" in dim_names
     assert len(schema["relationships"]) >= 2
+
+    # Verificar que las medidas DAX usan exactamente el nombre de tabla del modelo
+    dax_measures = schema.get("suggested_dax_measures", {})
+    assert "Total_Registros" in dax_measures
+    assert dax_measures["Total_Registros"] == "COUNTROWS('order_details')"
+    assert "Suma_Quantity" in dax_measures
+    assert dax_measures["Suma_Quantity"] == "SUM('order_details'[Quantity])"
+    assert "Ventas_Netas" in dax_measures or "Ventas_Totales" in dax_measures
 
     # Verificar que las relaciones son *:1 y tienen integridad referencial calculada
     for rel in schema["relationships"]:
@@ -85,4 +96,5 @@ def test_star_schema_inference_multi_table():
     tmdl_res = client.get(f"/api/v1/relational/models/{model_id}/tmdl")
     assert tmdl_res.status_code == 200
     assert "model Model" in tmdl_res.text
+    assert "ref table 'order_details'" in tmdl_res.text
     assert "relationship" in tmdl_res.text
