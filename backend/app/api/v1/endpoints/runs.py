@@ -174,9 +174,7 @@ async def get_run_quality_report(run_id: str):
         "score_delta": score_delta,
         "comparison_available": comparison_available,
         "applied_steps": result.applied_steps_count,
-        "execution_time_seconds": round(
-            (result.finished_at - result.started_at).total_seconds(), 3
-        ),
+        "execution_time_seconds": round((result.finished_at - result.started_at).total_seconds(), 3),
     }
 
 
@@ -212,9 +210,7 @@ async def download_clean_dataset(run_id: str):
             status_code=404,
         )
 
-    return FileResponse(
-        path=target_file, filename=result.clean_filename, media_type="application/octet-stream"
-    )
+    return FileResponse(path=target_file, filename=result.clean_filename, media_type="application/octet-stream")
 
 
 @router.get("/{run_id}/script")
@@ -274,6 +270,4 @@ async def download_parquet_dataset(run_id: str):
             status_code=404,
         )
 
-    return FileResponse(
-        path=target_file, filename=parquet_name, media_type="application/vnd.apache.parquet"
-    )
+    return FileResponse(path=target_file, filename=parquet_name, media_type="application/vnd.apache.parquet")

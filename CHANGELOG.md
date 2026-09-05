@@ -4,6 +4,21 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.19.3] — 2026-09-05
+
+### 🔧 Corrección de Formato Black en Endpoint de Ejecuciones y Blindaje del CI
+
+> **Motivación:** En la release v1.19.2, el pipeline de CI falló en el paso `Black format check` debido a diferencias de formato multilínea en llamadas a `FileResponse` y cálculo de tiempos en `backend/app/api/v1/endpoints/runs.py`. Esta versión aplica el formateo estricto con Black (`--line-length 120`), asegurando que todos los linters, verificaciones SAST, tests y builds pasen al 100% de forma limpia y desatendida en GitHub Actions.
+
+#### 🛠️ Cambios Realizados
+- **Formateo Black (`backend/app/api/v1/endpoints/runs.py`):** Normalización sintáctica de las respuestas `FileResponse` para descargas individuales CSV/Parquet y de las métricas de tiempo de ejecución del reporte de calidad.
+- **Pipeline CI Impecable:** Verificación completa de todos los jobs (`Backend Tests`, `Frontend Build & Typecheck`, `Bandit SAST`, `Vitest` y `Pytest`).
+
+#### 🧪 Verificación y Suite Completa
+- **Backend:** 270 tests pasando al 100% (`pytest`), linters Ruff y Black impecables (0 errores, 0 diferencias), Bandit SAST limpio (0 vulnerabilidades).
+- **Frontend:** 57 tests pasando al 100% (`vitest`), comprobación estricta de tipos con TypeScript y empaquetado Vite exitosos.
+- **Atribución:** Desarrollada con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
+
 ## [1.19.2] — 2026-09-05
 
 ### 📦 Descargas Destacadas de Datasets Limpios (Individual y ZIP) y Restauración Completa de Fórmulas DAX en Lote (Paso 4)
