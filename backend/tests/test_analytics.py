@@ -52,8 +52,9 @@ def test_people_analytics_end_to_end_and_business_insights():
     assert ("Nombre_Empleado", "normalize_case") in op_map
     assert ("Horas_Mes", "convert_numeric") in op_map
     assert ("Productividad_Pct", "clamp_range") in op_map
-    # Política v1.17.0: Absentismo_Dias=-3 va a revisión humana, no a clamp a 0
-    assert ("Absentismo_Dias", "flag_for_review") in op_map
+    # Política v1.18.0: Absentismo_Dias=-3 propone clamp al mínimo 0 como paso
+    # del plan, aprobable desde el botón humano (nunca ejecución silenciosa)
+    assert ("Absentismo_Dias", "clamp_range") in op_map
 
     # 3. Execute Plan
     approve_res = client.post(f"/api/v1/plans/{plan_id}/approve", json={"steps": steps})
@@ -71,10 +72,10 @@ def test_people_analytics_end_to_end_and_business_insights():
     kpis = {k["id"]: k for k in analytics_data["kpis"]}
     # Productividad media real con clamp a 100% (88.2% - 88.3% vs 90.2% sin clamp)
     assert kpis["kpi-avg-prod"]["numeric_value"] in [88.2, 88.3]
-    # Política v1.17.0: Absentismo_Dias=-3 queda intacto pendiente de revisión
-    # (0 + -3 + 2 + 1 + 0 + 0 = 0 días), con constancia de revisión humana.
-    assert kpis["kpi-total-abs"]["numeric_value"] == 0.0
-    assert "0 días" in kpis["kpi-total-abs"]["value"]
+    # Política v1.18.0: Absentismo_Dias=-3 se corrige a 0 con el clamp propuesto
+    # en el plan (0 + 0 + 2 + 1 + 0 + 0 = 3 días), aprobado con el botón humano.
+    assert kpis["kpi-total-abs"]["numeric_value"] == 3.0
+    assert "3 días" in kpis["kpi-total-abs"]["value"]
 
     # 5. Validar Visualización de Clusters
     assert analytics_data["cluster_visualization"] is not None

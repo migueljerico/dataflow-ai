@@ -4,6 +4,27 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.18.0] — 2026-09-05
+
+### 🧹 Planes con correcciones ejecutables: sube un archivo sucio, aprueba el plan con el botón y descarga el limpio para Power BI
+
+> **Motivación:** verificación E2E con los 8 CSV reales de Northwind Dirty (`D:/Downloads/Northwind_Dirty_Enterprise`) tras v1.17.0: los archivos aparecían con **Data Score 100 y 0 pasos** (flujo sin salida) o con pasos `flag_for_review` que no modificaban datos. Esta release restaura el contrato **"la IA propone la corrección, el humano decide con el botón, Python ejecuta"**, verificada fila a fila contra los datasets reales.
+
+#### 🔴 Causas raíz corregidas
+- **P0 — Falso Data Score 100 (`quality_service.py`):** la dilución por volumen (10 celdas malas en 6.500 filas → integridad 99,85) y el redondeo a 1 decimal presentaban como 100.0 datasets con incidencias. Ahora un dataset con `issues_count > 0` nunca se muestra como 100 (tope 99,9): `order_details_dirty` pasa de 100.0 falso a 99.9 con plan real.
+- **P0 — Bug `dayfirst=True` (v1.9.0, validación de fechas):** con pandas 3.x, `pd.to_datetime(dayfirst=True)` **intercambiaba mes/día** de las fechas ISO (`2024-03-12 → 3 de diciembre`) e invalidaba en bloque las de día > 12: 1.071 de 1.800 `OrderDate` y 552 de 912 `Date` eran issues falsos. Nueva validación consciente de formato **sobre valores únicos** (rápida: 100k filas por debajo del umbral de rendimiento) con doble interpretación ISO/europea: un valor solo es inválido si falla en ambas. La mezcla ISO + europeo en una misma columna se detecta como heterogeneidad a estandarizar (`convert_datetime`).
+- **P0 — Keywords solo en español:** `Quantity`, `UnitPrice` no disparaban la regla de magnitudes positivas (solo `cantidad`, `precio`...). Listas bilingües (`quantity`, `qty`, `price`, `cost`, `amount`, `revenue`, `sales`, `units`): las 18 cantidades negativas de `order_details_dirty` ahora se detectan.
+- **P0 — Callejón sin salida con plan vacío (`PlanReview.tsx`):** con 0 pasos el botón quedaba deshabilitado sin salida. Nuevo panel "Dataset sin incidencias: ya está limpio" + botón **"Generar archivo limpio para Power BI"** (ejecuta el plan vacío y deja el CSV/Parquet descargable). i18n completa en los 13 idiomas.
+
+#### ✨ Política v1.18.0: corrección ejecutable propuesta, aprobación por botón
+- **`transformation_policy.py`:** `negative_policy` propone `clamp_range` (min=0) y `fraction_policy` propone `clamp_range` [0.0, 1.0]; `missing_policy` propone `fill_missing` (mediana en numéricas, moda en categóricas de baja cardinalidad) y mantiene `flag_for_review` + NULL solo para lo no inferible (id/email/phone, texto de alta cardinalidad). Jamás se propone el constante "Desconocido"; **nada se ejecuta sin la aprobación humana del plan** (pulsar el botón).
+- **`etl_service.py` + `mock_provider.py`:** las dos vías de propuesta (reglas y IA mock) construyen pasos ejecutables con las políticas centrales; el mock añade además la rama de nulos por tipo (numérica → mediana, categórica → moda).
+- **Resultado verificado E2E (score antes → después):** `order_details` 99.9 → 100.0 (cantidades ≥ 0, descuentos ≤ 1, sin nulos), `products` 97.0 → 100.0 (precios limpios de "€ ," y negativos), `orders` 99.9 → 100.0 (países canónicos, `Status` imputado, fechas ISO), `customers` 99.0 → 99.8 (emails NULL preservados a propósito; IDs intactos).
+
+#### 🧪 Tests
+- **Contrato actualizado (12 tests):** `test_semantic_policy_regression.py` (negativos/fracciones proponen clamp aprobable; nulos por tipo), `test_etl.py` (auditoría de clamp y corrección real), `test_european_numbers.py`, `test_analytics.py` (KPI absentismo 3 días tras clamp), sin cambiar umbrales ni gobernanza. Suite **265 backend + 55 frontend en verde**; ruff, black, bandit y build TS estricto limpios.
+
+
 ## [1.17.1] — 2026-09-04
 
 ### 🔧 Parche CI: tests Northwind autocontenidos

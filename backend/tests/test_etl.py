@@ -58,21 +58,18 @@ def test_clamp_range_logging_accuracy():
     plan_data = plan_res.json()
     plan_id = plan_data["plan_id"]
 
-    # Política semántica v1.17.0: los negativos sin regla de negocio explícita
-    # van a revisión humana (flag_for_review), no a clamp silencioso a 0.
-    neg_review = [
-        s
-        for s in plan_data["steps"]
-        if s["column"] == "AHT_Segundos" and s["operation"] == "flag_for_review"
-    ]
-    assert len(neg_review) > 0
-    assert neg_review[0]["parameters"]["context"]["kind"] == "negative_values"
+    # Política semántica v1.18.0: los negativos sin regla de negocio explícita
+    # proponen clamp al mínimo 0 como paso del plan; se ejecuta solo con la
+    # aprobación humana del botón (nunca de forma silenciosa).
+    neg_steps = [s for s in plan_data["steps"] if s["column"] == "AHT_Segundos" and s["operation"] == "clamp_range"]
+    assert len(neg_steps) > 0
+    assert neg_steps[0]["parameters"]["min_value"] == 0.0
 
     approve_res = client.post(f"/api/v1/plans/{plan_id}/approve", json={"steps": plan_data["steps"]})
     run_data = approve_res.json()
     audit_logs = run_data["audit_logs"]
 
-    aht_log = [l for l in audit_logs if "AHT_Segundos" in l and "REVISIÓN HUMANA" in l]
+    aht_log = [l for l in audit_logs if "AHT_Segundos" in l and "clamp_range" in l]
     assert len(aht_log) > 0
 
     score_log = [l for l in audit_logs if "Score_Calidad" in l and "clamp_range" in l]
@@ -130,9 +127,9 @@ def test_sales_sample_end_to_end_qa():
 
     assert "Soporte SA" in df_clean["Nombre_Cliente"].values or "SOPORTE SA" in df_clean["Nombre_Cliente"].values
     assert "Luis Martinez" in df_clean["Nombre_Cliente"].values
-    # Política v1.17.0: Cantidad=-1 queda intacta pendiente de revisión humana
-    # (flag_for_review no modifica datos); el plan debe contener el marcaje.
-    assert (df_clean["Cantidad"].dropna() < 0).sum() == 1
-    review_logs = [l for l in audit_logs if "REVISIÓN HUMANA" in l and "Cantidad" in l]
-    assert len(review_logs) > 0
+    # Política v1.18.0: Cantidad=-1 se corrige a 0 con el clamp propuesto en el
+    # plan (aprobado aquí al enviar los pasos tal cual; el humano decide).
+    assert (df_clean["Cantidad"].dropna() < 0).sum() == 0
+    clamp_logs = [l for l in audit_logs if "clamp_range" in l and "Cantidad" in l]
+    assert len(clamp_logs) > 0
     assert df_clean["Precio_Unidad"].dtype == "float64"  # Columna tipada a float64

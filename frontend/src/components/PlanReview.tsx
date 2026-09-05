@@ -62,6 +62,7 @@ export const PlanReview: React.FC<Props> = ({
 
   const approvedSteps = useMemo(() => steps.filter((s) => s.status !== 'rejected'), [steps]);
   const approvedCount = approvedSteps.length;
+  const hasNoSteps = plan.steps.length === 0;
 
   const allColumns = useMemo(() => {
     if (metadata?.columns && metadata.columns.length > 0) {
@@ -193,11 +194,16 @@ export const PlanReview: React.FC<Props> = ({
 
           <button
             className="btn btn-success"
-            disabled={executing || approvedCount === 0}
+            disabled={executing || (!hasNoSteps && approvedCount === 0)}
             onClick={() => onExecutePlan(steps)}
             data-testid="execute-plan-btn"
           >
-            <Play size={16} /> {executing ? t.plan.executingBtn : `${t.plan.executeBtn} (${approvedCount})`}
+            <Play size={16} />{' '}
+            {executing
+              ? t.plan.executingBtn
+              : hasNoSteps
+                ? t.plan.cleanExportBtn
+                : `${t.plan.executeBtn} (${approvedCount})`}
           </button>
         </div>
       </div>
@@ -396,6 +402,26 @@ export const PlanReview: React.FC<Props> = ({
               <ShieldAlert size={15} style={{ color: '#f59e0b', flexShrink: 0 }} /> {warning}
             </p>
           ))}
+        </div>
+      )}
+
+      {hasNoSteps && (
+        <div
+          data-testid="clean-export-panel"
+          style={{
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          }}
+        >
+          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-emerald)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={16} /> {t.plan.cleanExportTitle}
+          </p>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>{t.plan.cleanExportHint}</p>
         </div>
       )}
 

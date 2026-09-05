@@ -133,8 +133,13 @@ def test_text_nulls_flagged_not_filled_with_desconocido():
         and s.status == StepStatusEnum.APPROVED
         for s in plan.steps
     ), "Ningún fill a Desconocido sale aprobado por defecto"
-    review_steps = [s for s in plan.steps if s.operation == "flag_for_review"]
-    assert len(review_steps) >= 2
+    # Política v1.18.0: Email (sensible) sigue en revisión con NULL; Status
+    # (categórica de baja cardinalidad) propone imputación por moda ejecutable.
+    email_flags = [s for s in plan.steps if s.column == "Email" and s.operation == "flag_for_review"]
+    assert len(email_flags) == 1
+    status_fills = [s for s in plan.steps if s.column == "Status" and s.operation == "fill_missing"]
+    assert len(status_fills) == 1
+    assert status_fills[0].parameters.get("strategy") == "mode"
     pol = missing_policy("email", "Email", 1)
     assert pol["action"] == "flag_for_review"
     assert TransformationRegistry.get("flag_for_review") is not None
@@ -156,22 +161,21 @@ def test_flag_for_review_does_not_modify_data():
 # ---------- P4: negativos ----------
 
 
-def test_negatives_require_review_not_clamp():
+def test_negatives_propose_clamp_for_human_approval():
     dataset_id = _upload_csv(
         "neg.csv",
         "ProductName,UnitPrice,Quantity\nA,10.0,2\nB,-23.50,3\nC,5.0,-4\n",
     )
     plan = ETLService.propose_plan_from_rules(dataset_id)
-    assert not any(
-        s.operation == "clamp_range" for s in plan.steps
-    ), "Sin regla de negocio explícita no se propone clamp a 0"
-    kinds = {(s.parameters or {}).get("context", {}).get("kind") for s in plan.steps}
-    assert "negative_values" in kinds
-    # Y quality lo describe como revisión, no como acotación
+    # Política v1.18.0: los negativos proponen clamp al mínimo 0 como paso del
+    # plan; nada se ejecuta sin el botón humano de aprobación.
+    clamps = [s for s in plan.steps if s.operation == "clamp_range" and s.parameters.get("min_value") == 0.0]
+    assert {s.column for s in clamps} >= {"UnitPrice", "Quantity"}
+    # Y quality lo describe como corrección aprobable, no como marcaje pasivo
     quality = QualityService.get_quality_report(dataset_id)
     neg_issues = [i for i in quality.issues if "negativo" in i.description.lower()]
     assert neg_issues
-    assert all("flag_for_review" in i.suggested_action for i in neg_issues)
+    assert all("clamp_range" in i.suggested_action for i in neg_issues)
 
 
 def test_percentages_still_clamp_to_100():
@@ -212,14 +216,19 @@ def test_discount_range_values(value, valid):
         assert not frac_issues
     else:
         assert frac_issues
-        assert "flag_for_review" in frac_issues[0].suggested_action
+        assert "clamp_range" in frac_issues[0].suggested_action
 
 
-def test_discount_out_of_range_never_clamped():
+def test_discount_out_of_range_proposes_clamp():
     dataset_id = _upload_csv("disc2.csv", "Discount\n0.05\n1.20\n0.10\n1.4876\n")
     plan = ETLService.propose_plan_from_rules(dataset_id)
-    assert not any(s.operation == "clamp_range" and s.column == "Discount" for s in plan.steps)
-    assert any(
+    clamps = [
+        s
+        for s in plan.steps
+        if s.operation == "clamp_range" and s.column == "Discount" and s.parameters.get("max_value") == 1.0
+    ]
+    assert clamps, "La fracción fuera de rango propone clamp [0, 1] aprobable"
+    assert not any(
         s.operation == "flag_for_review"
         and (s.parameters or {}).get("context", {}).get("kind") == "fraction_out_of_range"
         for s in plan.steps
@@ -366,14 +375,18 @@ def _load_synthetic_northwind_details() -> str:
     return _upload_csv("order_details_dirty.csv", "\n".join(rows) + "\n")
 
 
-def test_northwind_products_negatives_need_review_and_ids_intact():
+def test_northwind_products_negatives_propose_clamp_and_ids_intact():
     dataset_id = _load_synthetic_northwind_products()
     df = DatasetService.load_dataframe(dataset_id)
     neg = int((pd.to_numeric(df["UnitPrice"], errors="coerce") < 0).sum())
     assert neg == 8
     plan = ETLService.propose_plan_from_rules(dataset_id)
-    assert not any(s.operation == "clamp_range" and s.column == "UnitPrice" for s in plan.steps)
-    assert any(s.operation == "flag_for_review" and s.column == "UnitPrice" for s in plan.steps)
+    clamps = [
+        s
+        for s in plan.steps
+        if s.operation == "clamp_range" and s.column == "UnitPrice" and s.parameters.get("min_value") == 0.0
+    ]
+    assert clamps, "Los negativos proponen clamp al mínimo 0 aprobable desde el plan"
     assert not any(s.column == "ProductID" and s.operation == "normalize_case" for s in plan.steps)
 
 
@@ -395,7 +408,10 @@ def test_northwind_orders_status_null_and_ids():
     df = DatasetService.load_dataframe(dataset_id)
     assert int(df["Status"].isna().sum()) == 25
     plan = ETLService.propose_plan_from_rules(dataset_id)
-    assert not any(s.operation == "fill_missing" and s.column == "Status" for s in plan.steps)
+    # Política v1.18.0: Status (categórica) propone imputación por moda ejecutable
+    fills = [s for s in plan.steps if s.column == "Status" and s.operation == "fill_missing"]
+    assert len(fills) == 1
+    assert fills[0].parameters.get("strategy") == "mode"
     for c in ("OrderID", "CustomerID", "EmployeeID"):
         assert not any(s.column == c and s.operation == "normalize_case" for s in plan.steps)
 
@@ -406,11 +422,20 @@ def test_northwind_details_quantity_discount_and_country_mapping():
     assert int((pd.to_numeric(df["Quantity"], errors="coerce") < 0).sum()) == 18
     assert int((pd.to_numeric(df["Discount"], errors="coerce") > 1).sum()) == 10
     plan = ETLService.propose_plan_from_rules(dataset_id)
-    assert not any(s.operation == "clamp_range" and s.column == "Quantity" for s in plan.steps)
-    assert not any(s.operation == "clamp_range" and s.column == "Discount" for s in plan.steps)
-    kinds = {(s.column, (s.parameters or {}).get("context", {}).get("kind")) for s in plan.steps}
-    assert ("Quantity", "negative_values") in kinds
-    assert ("Discount", "fraction_out_of_range") in kinds
+    # Política v1.18.0: cantidades negativas → clamp min 0; descuento > 1 →
+    # clamp [0, 1]. Ambos como pasos del plan ejecutables con aprobación humana.
+    q_clamps = [
+        s
+        for s in plan.steps
+        if s.operation == "clamp_range" and s.column == "Quantity" and s.parameters.get("min_value") == 0.0
+    ]
+    d_clamps = [
+        s
+        for s in plan.steps
+        if s.operation == "clamp_range" and s.column == "Discount" and s.parameters.get("max_value") == 1.0
+    ]
+    assert q_clamps
+    assert d_clamps
 
 
 def test_northwind_referential_integrity_intact_ids():

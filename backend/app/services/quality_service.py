@@ -206,22 +206,47 @@ class QualityService:
 
             # Fechas
             if col_prof.semantic_hint == SemanticHintEnum.DATE or col_prof.inferred_type == ColumnTypeEnum.DATETIME:
-                parsed_dates = pd.to_datetime(series, errors="coerce", dayfirst=True)
-                invalid_dates_count = int(parsed_dates.isna().sum())
+                # Validación consciente de formato sobre valores únicos (la
+                # cardinalidad real de una columna de fechas es baja): un valor
+                # es inválido solo si falla tanto la interpretación ISO
+                # (dayfirst=False) como la europea (dayfirst=True). Con pandas
+                # 3.x, dayfirst=True global intercambia mes/día de las fechas ISO
+                # (2024-03-12 → 3 de diciembre) y las invalida en bloque; y
+                # dayfirst=False global daría por válidas fechas europeas sin
+                # estandarizar. La mezcla de ISO y europeo en la misma columna
+                # cuenta como heterogeneidad de formato a estandarizar.
+                unique_vals = pd.Series(series.unique())
+                parsed_unique = pd.to_datetime(unique_vals, errors="coerce", dayfirst=False)
+                residual_vals = unique_vals[parsed_unique.isna()]
+                if len(residual_vals):
+                    parsed_residual = pd.to_datetime(residual_vals, errors="coerce", dayfirst=True)
+                    bad_vals = set(residual_vals[parsed_residual.isna()])
+                else:
+                    bad_vals = set()
+                invalid_mask = series.isin(bad_vals)
+                invalid_dates_count = int(invalid_mask.sum())
 
-                if invalid_dates_count > 0:
-                    invalid_cells += invalid_dates_count
-                    pct = round((invalid_dates_count / row_count) * 100, 2)
+                iso_mask = series.str.match(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}")
+                eur_mask = series.str.match(r"^\d{1,2}[-/]\d{1,2}[-/]\d{4}")
+                heterogeneous_count = int(eur_mask.sum()) if (iso_mask.any() and eur_mask.any()) else 0
+
+                issue_count = invalid_dates_count + heterogeneous_count
+                if issue_count > 0:
+                    invalid_cells += issue_count
+                    pct = round((issue_count / row_count) * 100, 2)
+                    evidence = series[invalid_mask]
+                    if evidence.empty:
+                        evidence = series[eur_mask]
                     issues.append(
                         QualityIssue(
                             issue_id=str(uuid.uuid4())[:8],
                             dimension=QualityDimensionEnum.VALIDITY,
                             severity=SeverityEnum.HIGH,
                             column=col_prof.column_name,
-                            description=f"La columna de fecha '{col_prof.column_name}' contiene {invalid_dates_count} valores con formato no estándar o inválido.",
-                            affected_rows=invalid_dates_count,
+                            description=f"La columna de fecha '{col_prof.column_name}' contiene {issue_count} valores con formato no estándar, heterogéneo o inválido.",
+                            affected_rows=issue_count,
                             affected_percentage=pct,
-                            evidence_sample=_safe_evidence_sample(series[parsed_dates.isna()].head(3)),
+                            evidence_sample=_safe_evidence_sample(evidence.head(3)),
                             suggested_action="Convertir columna a formato fecha estándar ISO 8601 ('convert_datetime').",
                         )
                     )
@@ -250,6 +275,15 @@ class QualityService:
                         "monto",
                         "descuento",
                         "stock",
+                        # Equivalentes en inglés (datasets como Northwind):
+                        "price",
+                        "cost",
+                        "amount",
+                        "quantity",
+                        "qty",
+                        "revenue",
+                        "sales",
+                        "units",
                     ]
                 )
             )
@@ -342,15 +376,15 @@ class QualityService:
                             column=col_name,
                             description=(
                                 f"Violación de rango de fracción: Se detectaron {count} valor(es) fuera del "
-                                f"intervalo de negocio [0 - 1] en '{col_name}'. Requiere revisión humana "
-                                "('flag_for_review'); no se corrige automáticamente."
+                                f"intervalo de negocio [0 - 1] en '{col_name}'. Propuesta: acotar al intervalo "
+                                "('clamp_range'); se ejecuta solo con tu aprobación en el plan."
                             ),
                             affected_rows=count,
                             affected_percentage=round((count / row_count) * 100, 2),
                             evidence_sample=_safe_evidence_sample(out_of_bounds.head(3)),
                             suggested_action=(
-                                f"Marcar para revisión humana los valores fuera de [0.0, 1.0] en '{col_name}' "
-                                "('flag_for_review')."
+                                f"Acotar los valores fuera de [0.0, 1.0] en '{col_name}' al intervalo de negocio "
+                                "('clamp_range' [0.0, 1.0]); se ejecuta solo con tu aprobación en el plan."
                             ),
                         )
                     )
@@ -383,6 +417,15 @@ class QualityService:
                     "importe",
                     "coste",
                     "presupuesto",
+                    # Equivalentes en inglés (datasets como Northwind):
+                    "quantity",
+                    "qty",
+                    "price",
+                    "cost",
+                    "amount",
+                    "revenue",
+                    "sales",
+                    "units",
                 ]
             )
             if is_positive_count_or_time and not is_percentage and not is_fraction:
@@ -398,16 +441,17 @@ class QualityService:
                             column=col_name,
                             description=(
                                 f"Valores negativos en '{col_name}': Se detectaron {count} valor(es) "
-                                f"negativo(s) que requieren revisión humana ('flag_for_review'); "
-                                "el sistema no puede inferir el valor correcto y no se corrigen automáticamente a 0."
+                                "negativo(s). Propuesta de corrección: acotar al mínimo 0 ('clamp_range'); "
+                                "se ejecuta solo con tu aprobación en el plan. Si los negativos son "
+                                "legítimos (devoluciones o ajustes), rechaza el paso."
                             ),
                             affected_rows=count,
                             affected_percentage=round((count / row_count) * 100, 2),
                             evidence_sample=_safe_evidence_sample(negatives.head(3)),
                             suggested_action=(
-                                f"Marcar para revisión humana los valores negativos en '{col_name}' "
-                                "('flag_for_review'). Solo con regla de negocio explícita aprobada "
-                                "puede aplicarse 'clamp_range'."
+                                f"Acotar los valores negativos de '{col_name}' a 0 ('clamp_range' min=0); "
+                                "se ejecuta solo con tu aprobación en el plan. Rechaza el paso si los "
+                                "negativos son legítimos (devoluciones)."
                             ),
                         )
                     )
@@ -427,6 +471,10 @@ class QualityService:
             + (0.10 * integrity_score)
         )
         overall_score = round(max(0.0, min(100.0, overall)), 1)
+        # Un dataset con incidencias detectadas nunca se presenta como 100/100:
+        # la dilución por volumen y el redondeo no deben ocultar problemas reales.
+        if issues and overall_score >= 100.0:
+            overall_score = 99.9
 
         completeness_issues = len([i for i in issues if i.dimension == QualityDimensionEnum.COMPLETENESS])
         validity_issues = len([i for i in issues if i.dimension == QualityDimensionEnum.VALIDITY])

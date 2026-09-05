@@ -134,42 +134,28 @@ class MockProvider(LLMProvider):
                             risk="medium",
                         )
                     )
-                elif is_fraction and not any(
-                    s.column == col and s.operation in ("clamp_range", "flag_for_review") for s in suggestions
-                ):
-                    payload = build_review_step(
-                        col,
-                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores fuera del intervalo [0, 1] en '{col}' "
-                        "(fracción/descuento). Requiere revisión humana; no se modifica automáticamente.",
-                        context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
-                    )
+                elif is_fraction and not any(s.column == col and s.operation == "clamp_range" for s in suggestions):
                     suggestions.append(
                         AIOperationSuggestion(
-                            operation=payload["operation"],
-                            column=payload["column"],
-                            parameters=payload["parameters"],
-                            reason=payload["reason"],
+                            operation="clamp_range",
+                            column=col,
+                            parameters={"column": col, "min_value": 0.0, "max_value": 1.0},
+                            reason=f"Se detectaron valores fuera del intervalo de negocio [0, 1] en '{col}' (fracción/descuento). Propuesta: acotar al intervalo ('clamp_range'); se ejecuta solo con tu aprobación en el plan.",
                             confidence=0.9,
-                            risk="high",
+                            risk="medium",
                         )
                     )
                 elif ("negativos" in desc.lower() or "negativo" in desc.lower()) and not any(
-                    s.column == col and s.operation in ("clamp_range", "flag_for_review") for s in suggestions
+                    s.column == col and s.operation == "clamp_range" for s in suggestions
                 ):
-                    payload = build_review_step(
-                        col,
-                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores negativos en '{col}'. El sistema no puede "
-                        "inferir el valor correcto: requiere revisión humana. No se propone conversión automática a 0.",
-                        context={"kind": "negative_values", "condition": f"{col} < 0"},
-                    )
                     suggestions.append(
                         AIOperationSuggestion(
-                            operation=payload["operation"],
-                            column=payload["column"],
-                            parameters=payload["parameters"],
-                            reason=payload["reason"],
+                            operation="clamp_range",
+                            column=col,
+                            parameters={"column": col, "min_value": 0.0},
+                            reason=f"Se detectaron valores negativos en '{col}'. Propuesta de corrección: acotar al mínimo 0 ('clamp_range'); se ejecuta solo con tu aprobación en el plan. Si los negativos son legítimos (devoluciones), rechaza este paso.",
                             confidence=0.9,
-                            risk="high",
+                            risk="medium",
                         )
                     )
                 elif (
@@ -182,6 +168,50 @@ class MockProvider(LLMProvider):
                             parameters={"column": col, "min_value": 0.0, "max_value": 100.0},
                             reason=f"Se detectó un valor fuera de rango en '{col}'. Se acota al intervalo de negocio [0.0, 100.0%].",
                             confidence=0.94,
+                            risk="medium",
+                        )
+                    )
+            elif dim == "completeness" and col:
+                col_info = next((c for c in columns_schema if c.get("name") == col), {})
+                hint = col_info.get("semantic_hint", "unknown")
+                dtype = col_info.get("inferred_type", "text")
+                null_count = int(col_info.get("null_count", 0) or 0)
+                if hint in ("id", "email", "phone"):
+                    payload = build_review_step(
+                        col,
+                        f"Se han detectado {null_count} valor(es) ausente(s) en '{col}' (semántica {hint}). "
+                        "No se inventa identidad: se propone mantener NULL y revisar manualmente.",
+                        context={"kind": "missing_values", "null_count": null_count, "suggested": "keep_null"},
+                    )
+                    suggestions.append(
+                        AIOperationSuggestion(
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=0.9,
+                            risk="high",
+                        )
+                    )
+                elif dtype == "numeric":
+                    suggestions.append(
+                        AIOperationSuggestion(
+                            operation="fill_missing",
+                            column=col,
+                            parameters={"column": col, "strategy": "median"},
+                            reason=f"Se han detectado {null_count} valor(es) ausente(s) en '{col}' (numérica). Propuesta: imputar con la mediana ('fill_missing'); se ejecuta solo con tu aprobación en el plan.",
+                            confidence=0.9,
+                            risk="medium",
+                        )
+                    )
+                elif dtype == "categorical":
+                    suggestions.append(
+                        AIOperationSuggestion(
+                            operation="fill_missing",
+                            column=col,
+                            parameters={"column": col, "strategy": "mode"},
+                            reason=f"Se han detectado {null_count} valor(es) ausente(s) en '{col}' (categórica). Propuesta: imputar con la moda ('fill_missing'); se ejecuta solo con tu aprobación en el plan.",
+                            confidence=0.9,
                             risk="medium",
                         )
                     )
@@ -317,37 +347,25 @@ class MockProvider(LLMProvider):
                         )
                     )
                 elif is_fraction and (any(n > 1.0 for n in clean_nums) or any(n < 0 for n in clean_nums)):
-                    payload = build_review_step(
-                        col_name,
-                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores fuera del intervalo [0, 1] en '{col_name}' "
-                        "(fracción/descuento). Requiere revisión humana; no se modifica automáticamente.",
-                        context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
-                    )
                     suggestions.append(
                         AIOperationSuggestion(
-                            operation=payload["operation"],
-                            column=payload["column"],
-                            parameters=payload["parameters"],
-                            reason=payload["reason"],
+                            operation="clamp_range",
+                            column=col_name,
+                            parameters={"column": col_name, "min_value": 0.0, "max_value": 1.0},
+                            reason=f"Valores fuera del intervalo de negocio [0, 1] en '{col_name}' (fracción/descuento). Propuesta: acotar al intervalo ('clamp_range'); se ejecuta solo con tu aprobación en el plan.",
                             confidence=0.9,
-                            risk="high",
+                            risk="medium",
                         )
                     )
                 elif not is_pct and not is_fraction and any(n < 0 for n in clean_nums):
-                    payload = build_review_step(
-                        col_name,
-                        f"⚠️ REVISIÓN HUMANA — Se detectaron valores negativos en '{col_name}'. El sistema no puede "
-                        "inferir el valor correcto: requiere revisión humana. No se propone conversión automática a 0.",
-                        context={"kind": "negative_values", "condition": f"{col_name} < 0"},
-                    )
                     suggestions.append(
                         AIOperationSuggestion(
-                            operation=payload["operation"],
-                            column=payload["column"],
-                            parameters=payload["parameters"],
-                            reason=payload["reason"],
+                            operation="clamp_range",
+                            column=col_name,
+                            parameters={"column": col_name, "min_value": 0.0},
+                            reason=f"Se detectaron valores negativos en '{col_name}'. Propuesta de corrección: acotar al mínimo 0 ('clamp_range'); se ejecuta solo con tu aprobación en el plan.",
                             confidence=0.9,
-                            risk="high",
+                            risk="medium",
                         )
                     )
 

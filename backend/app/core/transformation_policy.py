@@ -14,11 +14,18 @@ Filosofía: la IA propone, el usuario decide, Python ejecuta. Las políticas
 
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
+from app.core.number_parsing import get_numeric_parseable_ratio
+
 FRACTION_RANGE = (0.0, 1.0)
 PERCENTAGE_RANGE = (0.0, 100.0)
 
 # Hints que nunca deben recibir normalización de casing destructiva.
 PROTECTED_FROM_CASING = {"id", "email", "phone", "date"}
+
+# Cardinalidad máxima de una columna categórica para proponer imputación por moda.
+MODE_CARDINALITY_LIMIT = 20
 
 # Valor que marca visualmente una imputación/semilla pendiente de revisión.
 REVIEW_PLACEHOLDER_PREFIX = "[REVISAR]"
@@ -48,12 +55,16 @@ def casing_policy(semantic_hint: str) -> Dict[str, Any]:
     return {"allow_normalize_case": True, "allowed_modes": ["title", "lower", "upper"], "reason": ""}
 
 
-def missing_policy(semantic_hint: str, column: str, null_count: int) -> Dict[str, Any]:
+def missing_policy(semantic_hint: str, column: str, null_count: int, series: Any = None) -> Dict[str, Any]:
     """
-    Política de nulos: ninguna columna recibe imputación silenciosa a
-    "Desconocido" por defecto. Las columnas sensibles (email, id, phone)
-    proponen mantener NULL + revisión humana; el resto propone revisión
-    con estrategias sugeridas pero sin ejecutar nada sin aprobación.
+    Política de nulos. La propuesta por defecto es una corrección ejecutable
+    que el humano aprueba o rechaza desde el plan (nunca se ejecuta sola):
+
+    - id/email/phone: flag_for_review con keep_null (no se inventa identidad).
+    - columna numérica: fill_missing con mediana.
+    - texto de baja cardinalidad: fill_missing con moda.
+    - texto de alta cardinalidad o sin serie: flag_for_review (no hay valor
+      representativo fiable; jamás se propone el constante "Desconocido").
     """
     hint = (semantic_hint or "unknown").lower()
     sensitive = hint in ("email", "id", "phone")
@@ -69,42 +80,83 @@ def missing_policy(semantic_hint: str, column: str, null_count: int) -> Dict[str
                 "mantener NULL y solicitar revisión humana."
             ),
         }
+    if series is not None:
+        try:
+            s = pd.Series(series)
+            non_null = s.dropna()
+            if len(non_null) > 0:
+                ratio, _, total_real = get_numeric_parseable_ratio(s)
+                if total_real > 0 and ratio >= 0.8:
+                    return {
+                        "action": "fill_missing",
+                        "strategy": "median",
+                        "value": None,
+                        "risk": "medium",
+                        "reason": (
+                            f"Se han detectado {null_count} valor(es) ausente(s) en '{column}' (numérica). "
+                            "Propuesta: imputar con la mediana ('fill_missing' strategy=median). "
+                            "Se ejecutará solo si apruebas el plan; si prefieres mantener NULL u otra "
+                            "estrategia, rechaza o edita este paso."
+                        ),
+                    }
+                if non_null.nunique() <= MODE_CARDINALITY_LIMIT:
+                    mode_val = non_null.mode()
+                    mode_repr = str(mode_val.iloc[0]) if len(mode_val) > 0 else "el valor más frecuente"
+                    return {
+                        "action": "fill_missing",
+                        "strategy": "mode",
+                        "value": None,
+                        "risk": "medium",
+                        "reason": (
+                            f"Se han detectado {null_count} valor(es) ausente(s) en '{column}' (categórica). "
+                            f"Propuesta: imputar con la moda ('fill_missing' strategy=mode; valor más frecuente: "
+                            f"'{mode_repr}'). Se ejecutará solo si apruebas el plan."
+                        ),
+                    }
+        except Exception:
+            pass
     return {
         "action": "flag_for_review",
-        "strategy": "pending_decision",
+        "strategy": "keep_null",
         "value": None,
         "risk": "medium",
         "reason": (
-            f"Se han detectado {null_count} valor(es) ausente(s) en '{column}'. "
-            "El sistema no imputa automáticamente: el usuario debe elegir entre "
-            "mantener NULL, mediana/moda o un valor constante explícito."
+            f"Se han detectado {null_count} valor(es) ausente(s) en '{column}' (texto de alta cardinalidad). "
+            "No existe un valor representativo fiable: se propone mantener NULL y revisar manualmente."
         ),
     }
 
 
 def negative_policy(column: str, neg_count: int) -> Dict[str, Any]:
-    """Política de negativos: detección + revisión humana, nunca corrección a 0."""
+    """
+    Política de negativos: propone la corrección ejecutable (clamp al mínimo 0)
+    que el humano aprueba o rechaza desde el plan. Nunca se ejecuta sola: si los
+    negativos son legítimos (devoluciones, ajustes), el paso se rechaza.
+    """
     return {
-        "action": "flag_for_review",
-        "risk": "high",
+        "action": "clamp_range",
+        "parameters": {"column": column, "min_value": 0.0},
+        "risk": "medium",
         "reason": (
             f"Se han detectado {neg_count} valor(es) negativo(s) en '{column}'. "
-            "El sistema no puede inferir el valor correcto (error de origen, "
-            "devolución, ajuste o dato corrupto): requiere revisión humana. "
-            "No se propone conversión automática a 0."
+            "Propuesta de corrección: acotar al mínimo 0 ('clamp_range' min=0). "
+            "Se ejecutará solo si apruebas el plan; si los negativos son legítimos "
+            "(devoluciones o ajustes contables), rechaza este paso."
         ),
     }
 
 
 def fraction_policy(column: str, out_count: int) -> Dict[str, Any]:
-    """Política de fracciones [0, 1]: detección + revisión humana."""
+    """Política de fracciones [0, 1]: propuesta de corrección acotando al rango."""
     return {
-        "action": "flag_for_review",
+        "action": "clamp_range",
         "range": list(FRACTION_RANGE),
-        "risk": "high",
+        "parameters": {"column": column, "min_value": 0.0, "max_value": 1.0},
+        "risk": "medium",
         "reason": (
             f"Se han detectado {out_count} valor(es) fuera del intervalo de negocio "
-            f"[0, 1] en '{column}' (fracción/descuento). Requiere revisión humana."
+            f"[0, 1] en '{column}' (fracción/descuento). Propuesta de corrección: acotar al "
+            "intervalo ('clamp_range' [0.0, 1.0]). Se ejecutará solo si apruebas el plan."
         ),
     }
 

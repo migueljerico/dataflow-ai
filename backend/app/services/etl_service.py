@@ -239,29 +239,22 @@ class ETLService:
                         )
                     )
                 elif col_is_fraction and not any(
-                    s.column == col
-                    and s.operation == "flag_for_review"
-                    and (s.parameters or {}).get("context", {}).get("kind") == "fraction_out_of_range"
+                    s.column == col and s.operation == "clamp_range" and (s.parameters or {}).get("max_value") == 1.0
                     for s in steps
                 ):
-                    # Fracción [0, 1]: detección + revisión humana, nunca corrección silenciosa.
+                    # Fracción [0, 1]: propuesta de corrección acotando al rango;
+                    # se ejecuta solo con la aprobación humana del plan.
                     pol = fraction_policy(col, issue.affected_rows)
-                    payload = build_review_step(
-                        col,
-                        f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente.",
-                        affected_rows=issue.affected_rows,
-                        context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
-                    )
                     steps.append(
                         TransformationStep(
                             step_id=step_id,
-                            operation=payload["operation"],
-                            column=payload["column"],
-                            parameters=payload["parameters"],
-                            reason=payload["reason"],
-                            confidence=payload["confidence"],
-                            risk=payload["risk"],
-                            affected_rows_estimate=payload["affected_rows_estimate"],
+                            operation=pol["action"],
+                            column=col,
+                            parameters=dict(pol["parameters"]),
+                            reason=pol["reason"],
+                            confidence=0.9,
+                            risk=pol["risk"],
+                            affected_rows_estimate=issue.affected_rows,
                         )
                     )
                 elif ("negativos" in issue.description.lower() or "negativo" in issue.description.lower()) and not any(
@@ -275,25 +268,19 @@ class ETLService:
                     )
                     for s in steps
                 ):
-                    # Negativos sin semántica de rango explícita: revisión humana, no clamp a 0.
+                    # Negativos sin semántica de rango explícita: propuesta de
+                    # clamp al mínimo 0, ejecutable solo con aprobación humana.
                     pol = negative_policy(col, issue.affected_rows)
-                    payload = build_review_step(
-                        col,
-                        f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente. "
-                        "Acciones: [Mantener] [Corregir manualmente] [Aplicar regla] [Marcar incidencia].",
-                        affected_rows=issue.affected_rows,
-                        context={"kind": "negative_values", "condition": f"{col} < 0"},
-                    )
                     steps.append(
                         TransformationStep(
                             step_id=step_id,
-                            operation=payload["operation"],
-                            column=payload["column"],
-                            parameters=payload["parameters"],
-                            reason=payload["reason"],
-                            confidence=payload["confidence"],
-                            risk=payload["risk"],
-                            affected_rows_estimate=payload["affected_rows_estimate"],
+                            operation=pol["action"],
+                            column=col,
+                            parameters=dict(pol["parameters"]),
+                            reason=pol["reason"],
+                            confidence=0.9,
+                            risk=pol["risk"],
+                            affected_rows_estimate=issue.affected_rows,
                         )
                     )
                 elif (
@@ -329,39 +316,56 @@ class ETLService:
                     for s in steps
                 )
             ):
-                # Política de nulos: ninguna columna se imputa silenciosamente.
-                # Se propone marcaje para revisión humana con la estrategia
-                # sugerida; el usuario decide (mantener NULL, mediana, constante...).
+                # Política de nulos: propuesta de corrección ejecutable según
+                # semántica (numérica → mediana, categórica → moda) y marcaje
+                # para revisión solo cuando no hay valor fiable (identidades,
+                # emails, texto de alta cardinalidad). Nada se ejecuta sin el
+                # botón de aprobación humana del plan.
                 hint = ETLService._hint_for(col, df)
-                pol = missing_policy(hint.value if hasattr(hint, "value") else str(hint), col, issue.affected_rows)
                 col_series = df[col] if col in df.columns else None
-                suggested = "keep_null"
-                if col_series is not None and pol["strategy"] == "pending_decision":
-                    try:
-                        if pd.api.types.is_numeric_dtype(col_series):
-                            suggested = "median"
-                    except Exception:
-                        suggested = "keep_null"
-                context = {"kind": "missing_values", "null_count": issue.affected_rows, "suggested": suggested}
-                payload = build_review_step(
+                pol = missing_policy(
+                    hint.value if hasattr(hint, "value") else str(hint),
                     col,
-                    f"⚠️ REVISIÓN HUMANA — {pol['reason']} Estrategia sugerida: {suggested}. "
-                    "Si decides imputar con 'Desconocido' u otro valor, añádelo explícitamente como paso humano.",
-                    affected_rows=issue.affected_rows,
-                    context=context,
+                    issue.affected_rows,
+                    series=col_series,
                 )
-                steps.append(
-                    TransformationStep(
-                        step_id=step_id,
-                        operation=payload["operation"],
-                        column=payload["column"],
-                        parameters=payload["parameters"],
-                        reason=payload["reason"],
-                        confidence=0.9,
-                        risk=pol["risk"],
-                        affected_rows_estimate=payload["affected_rows_estimate"],
+                if pol["action"] == "fill_missing":
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation="fill_missing",
+                            column=col,
+                            parameters={"column": col, "strategy": pol["strategy"]},
+                            reason=pol["reason"],
+                            confidence=0.9,
+                            risk=pol["risk"],
+                            affected_rows_estimate=issue.affected_rows,
+                        )
                     )
-                )
+                else:
+                    payload = build_review_step(
+                        col,
+                        f"⚠️ REVISIÓN HUMANA — {pol['reason']} "
+                        "Si decides imputar con otro valor, añádelo explícitamente como paso humano.",
+                        affected_rows=issue.affected_rows,
+                        context={
+                            "kind": "missing_values",
+                            "null_count": issue.affected_rows,
+                            "suggested": pol["strategy"],
+                        },
+                    )
+                    steps.append(
+                        TransformationStep(
+                            step_id=step_id,
+                            operation=payload["operation"],
+                            column=payload["column"],
+                            parameters=payload["parameters"],
+                            reason=payload["reason"],
+                            confidence=0.9,
+                            risk=pol["risk"],
+                            affected_rows_estimate=payload["affected_rows_estimate"],
+                        )
+                    )
 
         # 2. Heurística Semántica Universal de Respaldo sobre Columnas.
         # Toda decisión respeta el semantic_hint del profiler (política central):
@@ -540,44 +544,35 @@ class ETLService:
                     is_pct = _is_percentage_or_score_column(col_name, df[col_name], clean_nums)
                     is_fraction = is_fraction_or_discount_column(col_name, df[col_name])
 
-                    # Fracciones [0, 1] fuera de rango: revisión humana, nunca clamp.
+                    # Fracciones [0, 1] fuera de rango: propuesta de clamp al
+                    # intervalo, ejecutable solo con aprobación humana.
                     if (
                         is_fraction
                         and (((clean_nums > 1).sum() > 0) or ((clean_nums < 0).sum() > 0))
                         and not any(
                             s.column == col_name
-                            and (
-                                s.operation == "clamp_range"
-                                or (
-                                    s.operation == "flag_for_review"
-                                    and (s.parameters or {}).get("context", {}).get("kind") == "fraction_out_of_range"
-                                )
-                            )
+                            and s.operation == "clamp_range"
+                            and (s.parameters or {}).get("max_value") == 1.0
                             for s in steps
                         )
                     ):
                         out_count = int((((clean_nums > 1) | (clean_nums < 0))).sum())
                         pol = fraction_policy(col_name, out_count)
-                        payload = build_review_step(
-                            col_name,
-                            f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente.",
-                            affected_rows=out_count,
-                            context={"kind": "fraction_out_of_range", "range": [0.0, 1.0]},
-                        )
                         steps.append(
                             TransformationStep(
                                 step_id=f"STEP-{len(steps)+1:03d}",
-                                operation=payload["operation"],
-                                column=payload["column"],
-                                parameters=payload["parameters"],
-                                reason=payload["reason"],
-                                confidence=payload["confidence"],
-                                risk=payload["risk"],
-                                affected_rows_estimate=payload["affected_rows_estimate"],
+                                operation=pol["action"],
+                                column=col_name,
+                                parameters=dict(pol["parameters"]),
+                                reason=pol["reason"],
+                                confidence=0.9,
+                                risk=pol["risk"],
+                                affected_rows_estimate=out_count,
                             )
                         )
 
-                    # Negativos sin semántica de rango: revisión humana, nunca clamp a 0.
+                    # Negativos sin semántica de rango: propuesta de clamp al
+                    # mínimo 0, ejecutable solo con aprobación humana.
                     if (
                         not is_pct
                         and not is_fraction
@@ -596,23 +591,16 @@ class ETLService:
                     ):
                         neg_count = int((clean_nums < 0).sum())
                         pol = negative_policy(col_name, neg_count)
-                        payload = build_review_step(
-                            col_name,
-                            f"⚠️ REVISIÓN HUMANA — {pol['reason']} No se modifica automáticamente. "
-                            "Acciones: [Mantener] [Corregir manualmente] [Aplicar regla] [Marcar incidencia].",
-                            affected_rows=neg_count,
-                            context={"kind": "negative_values", "condition": f"{col_name} < 0"},
-                        )
                         steps.append(
                             TransformationStep(
                                 step_id=f"STEP-{len(steps)+1:03d}",
-                                operation=payload["operation"],
-                                column=payload["column"],
-                                parameters=payload["parameters"],
-                                reason=payload["reason"],
-                                confidence=payload["confidence"],
-                                risk=payload["risk"],
-                                affected_rows_estimate=payload["affected_rows_estimate"],
+                                operation=pol["action"],
+                                column=col_name,
+                                parameters=dict(pol["parameters"]),
+                                reason=pol["reason"],
+                                confidence=0.9,
+                                risk=pol["risk"],
+                                affected_rows_estimate=neg_count,
                             )
                         )
 

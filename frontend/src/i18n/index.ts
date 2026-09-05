@@ -125,6 +125,9 @@ export interface Translations {
     parameters: string;
     warningsTitle: string;
     noSteps: string;
+    cleanExportTitle: string;
+    cleanExportBtn: string;
+    cleanExportHint: string;
     previewSchemaBtn?: string;
     hideSchemaBtn?: string;
     projectedSchemaTitle?: string;
@@ -496,6 +499,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parámetros',
       warningsTitle: 'Avisos y Guardrails de Seguridad',
       noSteps: 'No hay pasos disponibles en este plan.',
+      cleanExportTitle: 'Dataset sin incidencias: ya está limpio',
+      cleanExportBtn: 'Generar archivo limpio para Power BI',
+      cleanExportHint: 'El motor de calidad no ha detectado problemas que corregir. Puedes generar y descargar directamente la copia limpia (CSV/Parquet) lista para cargar en Power BI.',
       previewSchemaBtn: 'Previsualizar Esquema',
       hideSchemaBtn: 'Ocultar Esquema',
       projectedSchemaTitle: 'Esquema Proyectado de Columnas (Antes vs. Después)',
@@ -868,6 +874,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parameters',
       warningsTitle: 'Security Warnings & Guardrails',
       noSteps: 'No steps available in this plan.',
+      cleanExportTitle: 'Dataset with no issues: already clean',
+      cleanExportBtn: 'Generate clean file for Power BI',
+      cleanExportHint: 'The quality engine found no issues to fix. You can generate and download the clean copy (CSV/Parquet) ready to load into Power BI right away.',
       previewSchemaBtn: 'Preview Schema',
       hideSchemaBtn: 'Hide Schema',
       projectedSchemaTitle: 'Projected Column Schema (Before vs. After)',
@@ -1238,6 +1247,9 @@ export const translations: Record<Language, Translations> = {
       parameters: '参数',
       warningsTitle: '安全警示与护栏',
       noSteps: '此计划中没有可用步骤。',
+      cleanExportTitle: '数据集无问题：已是干净状态',
+      cleanExportBtn: '生成用于 Power BI 的干净文件',
+      cleanExportHint: '质量引擎未发现需要修复的问题。您可以直接生成并下载干净的副本（CSV/Parquet），随时加载到 Power BI。',
     },
     report: {
       title: '转换成功完成',
@@ -1437,6 +1449,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'पैरामीटर',
       warningsTitle: 'सुरक्षा चेतावनी और सुरक्षा नियम',
       noSteps: 'इस योजना में कोई चरण उपलब्ध नहीं हैं।',
+      cleanExportTitle: 'डेटासेट में कोई समस्या नहीं: पहले से साफ़',
+      cleanExportBtn: 'Power BI के लिए साफ़ फ़ाइल बनाएं',
+      cleanExportHint: 'गुणवत्ता इंजन को कोई सुधार योग्य समस्या नहीं मिली। आप साफ़ कॉपी (CSV/Parquet) सीधे बनाकर डाउनलोड कर सकते हैं, Power BI में लोड करने के लिए तैयार।',
     },
     report: {
       title: 'रूपांतरण सफलतापूर्वक पूर्ण हुआ',
@@ -1636,6 +1651,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Paramètres',
       warningsTitle: 'Avertissements et Garde-fous',
       noSteps: 'Aucune étape disponible dans ce plan.',
+      cleanExportTitle: 'Jeu de données sans anomalies : déjà propre',
+      cleanExportBtn: 'Générer le fichier propre pour Power BI',
+      cleanExportHint: 'Le moteur de qualité n’a détecté aucun problème à corriger. Vous pouvez générer et télécharger directement la copie propre (CSV/Parquet) prête à charger dans Power BI.',
     },
     report: {
       title: 'Transformation Réussie',
@@ -1835,6 +1853,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'المعلمات',
       warningsTitle: 'تنبيهات الأمان والضوابط',
       noSteps: 'لا توجد خطوات متاحة في هذه الخطة.',
+      cleanExportTitle: 'مجموعة البيانات بلا مشكلات: نظيف بالفعل',
+      cleanExportBtn: 'إنشاء الملف النظيف لـ Power BI',
+      cleanExportHint: 'لم يكتشف محرك الجودة أي مشكلات لإصلاحها. يمكنك إنشاء وتنزيل النسخة النظيفة (CSV/Parquet) الجاهزة للتحميل في Power BI مباشرة.',
     },
     report: {
       title: 'اكتملت المعالجة بنجاح',
@@ -2034,6 +2055,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'প্যারামিটার',
       warningsTitle: 'নিরাপত্তা সতর্কতা ও নিয়মাবলী',
       noSteps: 'এই পরিকল্পনায় কোনো ধাপ নেই।',
+      cleanExportTitle: 'ডেটাসেটে কোনো সমস্যা নেই: ইতিমধ্যেই পরিষ্কার',
+      cleanExportBtn: 'Power BI-এর জন্য পরিষ্কার ফাইল তৈরি করুন',
+      cleanExportHint: 'কোয়ালিটি ইঞ্জিন সংশোধনযোগ্য কোনো সমস্যা খুঁজে পায়নি। আপনি সরাসরি পরিষ্কার কপি (CSV/Parquet) তৈরি ও ডাউনলোড করতে পারেন, Power BI-এ লোড করার জন্য প্রস্তুত।',
     },
     report: {
       title: 'রূপান্তর সফলভাবে সম্পন্ন হয়েছে',
@@ -2233,6 +2257,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parâmetros',
       warningsTitle: 'Avisos de Segurança e Salvaguardas',
       noSteps: 'Nenhum passo disponível neste plano.',
+      cleanExportTitle: 'Conjunto de dados sem incidências: já está limpo',
+      cleanExportBtn: 'Gerar ficheiro limpo para Power BI',
+      cleanExportHint: 'O motor de qualidade não detetou problemas a corrigir. Pode gerar e descarregar diretamente a cópia limpa (CSV/Parquet) pronta a carregar no Power BI.',
     },
     report: {
       title: 'Transformação Concluída com Sucesso',
@@ -2432,6 +2459,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parameter',
       warningsTitle: 'Peringatan Keamanan & Batasan',
       noSteps: 'Tidak ada langkah yang tersedia dalam rencana ini.',
+      cleanExportTitle: 'Dataset tanpa masalah: sudah bersih',
+      cleanExportBtn: 'Hasilkan file bersih untuk Power BI',
+      cleanExportHint: 'Mesin kualitas tidak menemukan masalah yang perlu diperbaiki. Anda dapat membuat dan mengunduh salinan bersih (CSV/Parquet) siap dimuat ke Power BI.',
     },
     report: {
       title: 'Transformasi Berhasil Diselesaikan',
@@ -2631,6 +2661,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'پیرامیٹرز',
       warningsTitle: 'حفاظتی انتباہات اور گارڈ ریلز',
       noSteps: 'اس منصوبے میں کوئی مرحلہ دستیاب نہیں ہے۔',
+      cleanExportTitle: 'ڈیٹا سیٹ میں کوئی مسئلہ نہیں: پہلے سے صاف',
+      cleanExportBtn: 'Power BI کے لیے صاف فائل بنائیں',
+      cleanExportHint: 'کوالٹی انجن کو کوئی قابلِ اصلاح مسئلہ نہیں ملا۔ آپ صاف کاپی (CSV/Parquet) براہِ راست بنا کر ڈاؤن لوڈ کر سکتے ہیں، Power BI میں لوڈ کرنے کے لیے تیار۔',
     },
     report: {
       title: 'تبدیلی کا عمل کامیابی سے مکمل ہو گیا',
@@ -2830,6 +2863,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Параметры',
       warningsTitle: 'Предупреждения безопасности и ограничения',
       noSteps: 'В этом плане нет доступных шагов.',
+      cleanExportTitle: 'В наборе данных нет проблем: он уже чист',
+      cleanExportBtn: 'Создать чистый файл для Power BI',
+      cleanExportHint: 'Механизм качества не нашёл проблем для исправления. Вы можете сразу создать и скачать чистую копию (CSV/Parquet), готовую для загрузки в Power BI.',
     },
     report: {
       title: 'Преобразование успешно завершено',
@@ -3029,6 +3065,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'Parameter',
       warningsTitle: 'Sicherheitswarnungen & Leitplanken',
       noSteps: 'Keine Schritte in diesem Plan verfügbar.',
+      cleanExportTitle: 'Datensatz ohne Auffälligkeiten: bereits bereinigt',
+      cleanExportBtn: 'Bereinigte Datei für Power BI erstellen',
+      cleanExportHint: 'Die Qualitäts-Engine hat keine zu behebenden Probleme gefunden. Sie können die bereinigte Kopie (CSV/Parquet) direkt erzeugen und herunterladen – bereit zum Laden in Power BI.',
     },
     report: {
       title: 'Transformation erfolgreich abgeschlossen',
@@ -3228,6 +3267,9 @@ export const translations: Record<Language, Translations> = {
       parameters: 'パラメータ',
       warningsTitle: 'セキュリティ警告とガードレール',
       noSteps: 'この計画で利用可能なステップはありません。',
+      cleanExportTitle: 'データセットに問題なし：すでにクリーンです',
+      cleanExportBtn: 'Power BI 用のクリーンなファイルを生成',
+      cleanExportHint: '品質エンジンは修正すべき問題を検出しませんでした。クリーンなコピー（CSV/Parquet）を直接生成・ダウンロードして、Power BI に読み込めます。',
     },
     report: {
       title: 'データ変換が正常に完了しました',
