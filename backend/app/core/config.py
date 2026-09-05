@@ -6,7 +6,7 @@ from typing import List, Optional
 
 class Settings:
     PROJECT_NAME: str = "DataFlow AI"
-    VERSION: str = "1.19.1"
+    VERSION: str = "1.19.2"
     API_V1_STR: str = "/api/v1"
 
     # File limits

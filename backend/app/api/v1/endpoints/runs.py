@@ -1,3 +1,6 @@
+import io
+import zipfile
+from pathlib import Path
 from typing import List, Optional
 
 from app.core.exceptions import FunctionalException
@@ -6,10 +9,92 @@ from app.models.etl import ExecutionResult
 from app.models.quality import ExecutionSummaryItem, QualityComparisonReport
 from app.services.etl_service import ETLService
 from app.services.quality_service import QualityService
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from fastapi.responses import FileResponse
 
 router = APIRouter()
+
+
+@router.get("/batch/download-zip")
+async def download_batch_clean_zip(
+    run_ids: str = Query(..., description="IDs de ejecuciones separados por coma"),
+):
+    """
+    Descargar todos los archivos limpios (CSV, Parquet y Scripts reproducible)
+    de un lote de ejecuciones en un único paquete ZIP.
+    """
+    ids = [r.strip() for r in run_ids.split(",") if r.strip()]
+    if not ids:
+        raise FunctionalException(
+            message="Debe proporcionar al menos un ID de ejecución para generar el archivo ZIP.",
+            code="EMPTY_RUN_IDS",
+            status_code=400,
+        )
+
+    storage = get_storage()
+    buf = io.BytesIO()
+    files_added = 0
+
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for rid in ids:
+            try:
+                run_res = ETLService.get_run_result(rid)
+            except Exception:
+                continue
+
+            # 1. CSV
+            clean_fn = run_res.clean_filename
+            csv_candidates = [f"{rid}_{clean_fn}", clean_fn]
+            for c_key in csv_candidates:
+                if storage.exists(c_key):
+                    csv_path = storage.get_path(c_key)
+                    if csv_path.exists():
+                        zf.write(csv_path, arcname=f"csv/{clean_fn}")
+                        files_added += 1
+                    break
+
+            # 2. Parquet
+            parquet_name = run_res.parquet_filename or f"clean_{run_res.dataset_id}.parquet"
+            p_candidates = [f"{rid}_{parquet_name}", parquet_name]
+            for p_key in p_candidates:
+                if storage.exists(p_key):
+                    p_path = storage.get_path(p_key)
+                    if p_path.exists():
+                        zf.write(p_path, arcname=f"parquet/{parquet_name}")
+                        files_added += 1
+                    break
+
+            # 3. Script Python
+            s_candidates = [
+                f"pipeline_{rid}.py",
+                f"script_{rid}.py",
+                f"script_{run_res.dataset_id}.py",
+            ]
+            for s_key in s_candidates:
+                if storage.exists(s_key):
+                    s_path = storage.get_path(s_key)
+                    if s_path.exists():
+                        clean_stem = Path(clean_fn).stem
+                        script_name = f"pipeline_{clean_stem}.py"
+                        zf.write(s_path, arcname=f"scripts/{script_name}")
+                        files_added += 1
+                    break
+
+    if files_added == 0:
+        raise FunctionalException(
+            message="No se encontraron archivos limpios para las ejecuciones solicitadas.",
+            code="NO_CLEAN_FILES",
+            status_code=404,
+        )
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="datasets_limpios_lote.zip"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get("/", response_model=List[ExecutionSummaryItem])
@@ -89,7 +174,9 @@ async def get_run_quality_report(run_id: str):
         "score_delta": score_delta,
         "comparison_available": comparison_available,
         "applied_steps": result.applied_steps_count,
-        "execution_time_seconds": round((result.finished_at - result.started_at).total_seconds(), 3),
+        "execution_time_seconds": round(
+            (result.finished_at - result.started_at).total_seconds(), 3
+        ),
     }
 
 
@@ -120,10 +207,14 @@ async def download_clean_dataset(run_id: str):
 
     if not target_file or not target_file.exists():
         raise FunctionalException(
-            message="El archivo limpio no está disponible para descarga.", code="FILE_NOT_FOUND", status_code=404
+            message="El archivo limpio no está disponible para descarga.",
+            code="FILE_NOT_FOUND",
+            status_code=404,
         )
 
-    return FileResponse(path=target_file, filename=result.clean_filename, media_type="application/octet-stream")
+    return FileResponse(
+        path=target_file, filename=result.clean_filename, media_type="application/octet-stream"
+    )
 
 
 @router.get("/{run_id}/script")
@@ -147,7 +238,9 @@ async def download_reproducible_script(run_id: str):
 
     if not target_file or not target_file.exists():
         raise FunctionalException(
-            message="El script de Python no está disponible.", code="SCRIPT_NOT_FOUND", status_code=404
+            message="El script de Python no está disponible.",
+            code="SCRIPT_NOT_FOUND",
+            status_code=404,
         )
 
     return FileResponse(path=target_file, filename=f"pipeline_{run_id}.py", media_type="text/plain")
@@ -181,4 +274,6 @@ async def download_parquet_dataset(run_id: str):
             status_code=404,
         )
 
-    return FileResponse(path=target_file, filename=parquet_name, media_type="application/vnd.apache.parquet")
+    return FileResponse(
+        path=target_file, filename=parquet_name, media_type="application/vnd.apache.parquet"
+    )

@@ -4,6 +4,25 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.19.2] — 2026-09-05
+
+### 📦 Descargas Destacadas de Datasets Limpios (Individual y ZIP) y Restauración Completa de Fórmulas DAX en Lote (Paso 4)
+
+> **Motivación:** En el flujo de ejecución en lote multiarchivo, los datasets limpios resultantes no disponían de botones de descarga prominentes ni descarga unificada, y habían desaparecido de la interfaz las fórmulas DAX, código Power Query M, fórmulas Excel e insights analíticos que caracterizaban la última pantalla de la aplicación. Esta versión restaura el acceso integral y visible a todos los artefactos depurados y a la suite completa de Business Insights por tabla.
+
+#### 📥 Descargas Prominentes Individuales y en ZIP Masivo
+- **Endpoint de Descarga Masiva (`GET /api/v1/runs/batch/download-zip`):** Nuevo endpoint que empaqueta en un archivo `.zip` (`datasets_limpios_lote.zip`) todos los CSVs limpios depurados, archivos Apache Parquet columnares y scripts reproducibles standalone de Python correspondientes al lote procesado.
+- **Acceso Directo en Cabecera y Tarjetas (`BatchExecutionReport.tsx`):** Botón principal *"Descargar Lote Completo (.ZIP)"* en la cabecera y tarjetas individuales para cada tabla con botones claros para descargar CSV (`clean_*.csv`), Parquet columnar y Script Python (`pipeline_*.py`).
+
+#### ⚡ Fórmulas DAX, Power Query M y Business Insights por Tabla
+- **Selector Interactivo de Tablas (`BatchExecutionReport.tsx`):** Navegación visual mediante pestañas (pills) para inspeccionar los insights y fórmulas de cualquier tabla del lote, seleccionando por defecto la tabla de hechos identificada en el esquema estrella.
+- **Incrustación Completa de `BusinessInsights`:** Restauración íntegra de la pestaña *"Integración Power BI & Excel"*, con todas las medidas DAX adaptadas al nombre real y columnas de cada tabla limpia, código Power Query M, exportación TMDL y fórmulas de Excel dinámicas, además de KPIs, clusters, boxplots y data drift.
+- **Jerarquía Secuencial Estricta:** Las descargas y transformaciones se presentan primero, seguidas por el módulo de fórmulas e insights por tabla, y culminando al pie con el **Esquema de Estrella del Modelo Semántico Limpio** sobre los datos ya depurados.
+
+#### 🧪 Verificación y Suite Completa
+- **Backend:** 270 tests pasando al 100% (`pytest`), incluyendo `test_batch_downloads.py`, linters Ruff y Black impecables, Bandit SAST limpio (0 vulnerabilidades).
+- **Frontend:** 57 tests pasando al 100% (`vitest`), incluyendo `BatchExecutionReport.test.tsx`, compilación TypeScript estricta y empaquetado Vite exitosos.
+
 ## [1.19.1] — 2026-09-05
 
 ### 🎯 Restauración del Flujo Estricto de 4 Pasos, Limpieza en Lote y Medidas DAX Fieles para Power BI

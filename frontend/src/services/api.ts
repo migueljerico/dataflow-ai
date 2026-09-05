@@ -187,6 +187,10 @@ export const api = {
     return handleResponse<QualityComparisonReport>(res);
   },
 
+  getBatchZipDownloadUrl: (runIds: string[]): string => {
+    return `${API_BASE}/runs/batch/download-zip?run_ids=${encodeURIComponent(runIds.join(','))}`;
+  },
+
   // Business Analytics
   getBusinessAnalytics: async (runId: string): Promise<ExecutiveAnalyticsReport> => {
     const res = await fetch(`${API_BASE}/analytics/${runId}`);

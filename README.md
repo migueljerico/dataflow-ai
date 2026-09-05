@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-267%20backend%20%7C%2055%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.19.1-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-270%20backend%20%7C%2057%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.19.2-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -353,7 +353,8 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.19.1):** Restauración rigurosa del flujo secuencial de 4 pasos (limpieza en lote de todas las tablas en una sola ejecución antes del modelo dimensional), generación de Esquema de Estrella al final del Paso 4 sobre datos limpios, medidas DAX y TMDL fieles al casing exacto de las tablas limpiadas en Power BI, y actualización del diagrama visual radial, desarrollada con **Google Antigravity**.
+- **Última versión (v1.19.2):** Descargas prominentes de datasets limpios individuales (CSV, Parquet, Script .py) y unificadas en ZIP masivo, restauración completa de fórmulas DAX contextuales, código Power Query M, fórmulas Excel e insights por tabla mediante selector interactivo en Paso 4, y esquema de estrella al final del flujo, desarrollada con **Google Antigravity**.
+- **Versión v1.19.1:** Restauración rigurosa del flujo secuencial de 4 pasos (limpieza en lote de todas las tablas en una sola ejecución antes del modelo dimensional), generación de Esquema de Estrella al final del Paso 4 sobre datos limpios, medidas DAX y TMDL fieles al casing exacto de las tablas limpiadas en Power BI, y actualización del diagrama visual radial.
 - **Versión v1.19.0:** Soporte multiarchivo, generador visual de esquema de estrella e integridad referencial, y corrección forense de calidad (eliminación de falsos 100%, preservación de enteros y corrección de nulos).
 - **Versión v1.16.0:** Reportes ejecutivos programados en PDF/HTML con webhooks de drift, simulador hipotético de percentiles de drift y gobernanza de aprobación reforzada con diff canónico, desarrollados con **Qwen 3.8 Max** (vía ZCode).
 - **Versión v1.15.0:** Historial cronológico de ejecuciones y comparador de métricas de calidad entre versiones del dataset en la UI; control estadístico de Data Drift por percentiles (P05 a P95, test Kolmogorov-Smirnov sin dependencias pesadas), alertas visuales y recomendaciones proactivas de gobernanza en el dashboard; y actualización de la captura del modelo estrella con la descarga real en PNG, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
