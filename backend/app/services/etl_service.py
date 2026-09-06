@@ -97,19 +97,45 @@ class ETLService:
             dim = issue.dimension.value if hasattr(issue.dimension, "value") else str(issue.dimension)
 
             if dim == "uniqueness":
-                if not any(s.operation == "remove_duplicates" for s in steps):
-                    steps.append(
-                        TransformationStep(
-                            step_id=step_id,
-                            operation="remove_duplicates",
-                            column=None,
-                            parameters={},
-                            reason="Eliminar filas duplicadas exactas para garantizar la unicidad del dataset.",
-                            confidence=0.95,
-                            risk="high",
-                            affected_rows_estimate=issue.affected_rows,
+                if col:
+                    if not any(s.column == col and s.operation == "flag_for_review" for s in steps):
+                        steps.append(
+                            TransformationStep(
+                                step_id=step_id,
+                                operation="flag_for_review",
+                                column=col,
+                                parameters={
+                                    "column": col,
+                                    "context": {
+                                        "kind": "duplicate_values",
+                                        "duplicate_count": issue.affected_rows,
+                                        "suggested": "review_duplicates",
+                                    },
+                                },
+                                reason=(
+                                    f"⚠️ REVISIÓN HUMANA — Se han detectado {issue.affected_rows} valor(es) duplicados "
+                                    f"en la columna '{col}'. La IA propone revisar estos registros antes de modificar "
+                                    "o eliminar información."
+                                ),
+                                confidence=0.90,
+                                risk="high",
+                                affected_rows_estimate=issue.affected_rows,
+                            )
                         )
-                    )
+                else:
+                    if not any(s.operation == "remove_duplicates" for s in steps):
+                        steps.append(
+                            TransformationStep(
+                                step_id=step_id,
+                                operation="remove_duplicates",
+                                column=None,
+                                parameters={},
+                                reason="Eliminar filas duplicadas exactas para garantizar la unicidad del dataset.",
+                                confidence=0.95,
+                                risk="high",
+                                affected_rows_estimate=issue.affected_rows,
+                            )
+                        )
 
             elif dim == "consistency":
                 if (
@@ -1009,13 +1035,10 @@ class ETLService:
         RUNS_CACHE[run_id] = result
 
         # Calcular QualityReport real del dataset limpio y construir QualityComparisonReport
-        try:
-            orig_quality = QualityService.get_quality_report(dataset_id)
-            score_before = orig_quality.quality_score.overall_score
-        except Exception:
-            score_before = 0.0
-        score_after = score_before
-        score_delta = 0.0
+        score_before: Optional[float] = None
+        score_after: Optional[float] = None
+        score_delta: Optional[float] = None
+        comparison_available: bool = False
 
         try:
             clean_prof = ProfilerService.profile_dataframe(df_current, dataset_id=f"clean_{run_id}")
@@ -1034,8 +1057,14 @@ class ETLService:
             score_before = comp_report.overall_score_before
             score_after = comp_report.overall_score_after
             score_delta = comp_report.delta_score
+            comparison_available = True
         except Exception as e:
             logger.error(f"Error al calcular QualityComparisonReport para run {run_id}: {e}")
+            try:
+                orig_quality = QualityService.get_quality_report(dataset_id)
+                score_before = orig_quality.quality_score.overall_score
+            except Exception:
+                score_before = None
 
         summary_item = ExecutionSummaryItem(
             run_id=run_id,
@@ -1054,6 +1083,7 @@ class ETLService:
             score_before=score_before,
             score_after=score_after,
             score_delta=score_delta,
+            comparison_available=comparison_available,
             input_hash_md5=input_md5,
             output_hash_md5=output_md5,
             download_url=result.download_url,
@@ -1168,18 +1198,20 @@ class ETLService:
         if not RUNS_HISTORY and RUNS_CACHE:
             for r_id, res in RUNS_CACHE.items():
                 comp = QUALITY_COMPARISON_CACHE.get(r_id)
+                comp_avail = False
                 if comp:
                     s_before = comp.overall_score_before
                     s_after = comp.overall_score_after
                     s_delta = comp.delta_score
+                    comp_avail = True
                 else:
                     try:
                         orig = QualityService.get_quality_report(res.dataset_id)
                         s_before = orig.quality_score.overall_score
                     except Exception:
-                        s_before = 0.0
-                    s_after = s_before
-                    s_delta = 0.0
+                        s_before = None
+                    s_after = None
+                    s_delta = None
                 item = ExecutionSummaryItem(
                     run_id=res.run_id,
                     dataset_id=res.dataset_id,
@@ -1197,6 +1229,7 @@ class ETLService:
                     score_before=s_before,
                     score_after=s_after,
                     score_delta=s_delta,
+                    comparison_available=comp_avail,
                     input_hash_md5=res.input_hash_md5,
                     output_hash_md5=res.output_hash_md5,
                     download_url=res.download_url,

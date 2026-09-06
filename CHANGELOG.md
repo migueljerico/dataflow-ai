@@ -4,6 +4,35 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.19.4] — 2026-09-06
+
+### 🔬 Corrección Forense Controlada: Unicidad Semántica, Blindaje de Scores, Alineación Causal y Detección 18/18 en Northwind
+
+> **Motivación:** Subsanar anomalías no detectadas identificadas en la auditoría forense sobre v1.19.3 (anomalía 18: duplicados semánticos de Email en Customers), erradicar fallbacks ficticios de score (0.0 inventado cuando no hay baseline), alinear textualmente las acciones sugeridas de los issues con las políticas reales deterministas de transformación (`missing_policy` y `casing_policy`), y desacoplar el doble cómputo entre normalización categórica y casing en columnas geográficas (`Country`/`ShipCountry`). Esta entrega eleva la cobertura al 100% (18/18 grupos de anomalías en Northwind Dirty) preservando estrictamente la fórmula canónica de Data Score y la gobernanza *"La IA propone. El usuario decide. Python ejecuta."*.
+
+#### 🛠️ Cambios Realizados
+- **Unicidad Semántica & Integridad de Entidad (`quality_service.py`, `etl_service.py`):**
+  - Detección de duplicados semánticos en `Email` (insensible a mayúsculas/minúsculas `lower().str.strip()`, excluyendo valores nulos/vacíos para evitar penalización duplicada con Completeness).
+  - Enmascaramiento preventivo anti-PII (`_mask_pii_sample`, ej. `an***1@example.com`) en las muestras de evidencia de calidad (`evidence_sample`).
+  - Detección de duplicados en Claves Primarias de entidad mediante heurística contextual (`_is_entity_primary_key`), protegiendo Foreign Keys legítimas en tablas de hechos (`CustomerID` en Orders, `ProductID`/`OrderID` en OrderDetails).
+  - Toda anomalía de duplicado a nivel de columna genera propuesta gobernada `flag_for_review` (*Human-in-the-Loop*), prohibiendo expresamente la eliminación ciega mediante `drop_duplicates()`.
+  - El sub-score de unicidad se calcula unificando índices afectados sin solapes.
+- **Erradicación de Fallbacks Ficticios de Score (`quality.py`, `etl_service.py`, `runs.py`):**
+  - El modelo `ExecutionSummaryItem` define `score_before: Optional[float] = None`, `score_after: Optional[float] = None`, `score_delta: Optional[float] = None` y `comparison_available: bool = Field(True, ...)`.
+  - Eliminados los valores ficticios `score_before = 0.0` y `score_delta = 0.0` cuando no se dispone de baseline previo, reportando `None` y `comparison_available: False` explícitamente.
+- **Alineación Causal Issue → Propuesta (`quality_service.py`):**
+  - La propiedad `suggested_action` en issues de completitud (`missing_values`) refleja exactamente la política de imputación: `flag_for_review / keep_null` en emails e IDs, mediana en variables numéricas y moda en categóricas.
+  - Los issues de casing en `Email` sugieren estandarización a minúsculas (`normalize_case` con `mode=lower`).
+- **Desacoplamiento de Consistencia Residual (`quality_service.py`):**
+  - En columnas de texto/geográficas (`Country`, `ShipCountry`), la detección de casing residual excluye las filas marcadas para normalización de variantes categóricas (`variant_mask`), evitando el doble conteo de celdas afectadas.
+- **Validación Northwind Dirty Completa:**
+  - 18 de 18 grupos de anomalías detectados (100% de cobertura) sobre las 8 tablas de prueba.
+
+#### 🧪 Verificación y Suite Completa
+- **Backend:** 280 tests pasando al 100% (`pytest`), incluyendo 10 nuevos tests forenses en `test_audit_forensic_fixes.py`. Linters Ruff y Black impecables (0 errores, 0 diferencias), Bandit SAST limpio (0 vulnerabilidades).
+- **Frontend:** 57 tests pasando al 100% (`vitest`), comprobación estricta de tipos con TypeScript y empaquetado Vite exitoso.
+- **Atribución:** Desarrollada con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
+
 ## [1.19.3] — 2026-09-05
 
 ### 🔧 Corrección de Formato Black en Endpoint de Ejecuciones y Blindaje del CI

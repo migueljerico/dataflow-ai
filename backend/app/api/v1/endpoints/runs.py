@@ -148,14 +148,19 @@ async def get_run_quality_report(run_id: str):
     Obtener el informe comparativo de calidad Antes vs Después.
     """
     result = ETLService.get_run_result(run_id)
-    quality_before = QualityService.get_quality_report(result.dataset_id)
-    score_before = quality_before.quality_score.overall_score
+    score_before = None
+    try:
+        quality_before = QualityService.get_quality_report(result.dataset_id)
+        score_before = quality_before.quality_score.overall_score
+    except Exception:
+        pass
 
-    score_after = score_before
-    score_delta = 0.0
+    score_after = None
+    score_delta = None
     comparison_available = False
     try:
         comp = ETLService.get_quality_comparison(run_id)
+        score_before = comp.overall_score_before
         score_after = comp.overall_score_after
         score_delta = comp.delta_score
         comparison_available = True

@@ -8,7 +8,7 @@ import pandas as pd
 
 from app.core.number_parsing import is_missing_value, to_numeric_series
 from app.core.semantics import is_fraction_or_discount_column
-from app.core.transformation_policy import country_mappings_for_values
+from app.core.transformation_policy import country_mappings_for_values, missing_policy
 from app.models.dataset import ProcessingStateEnum
 from app.models.profiling import ColumnTypeEnum, ProfilingReport, SemanticHintEnum
 from app.models.quality import (
@@ -53,6 +53,78 @@ def _safe_evidence_sample(sample_list: Any) -> List[Any]:
     return cleaned
 
 
+def _mask_pii_sample(sample_list: Any) -> List[Any]:
+    """Anonimiza muestras de texto con información potencialmente sensible (ej. emails)."""
+    if hasattr(sample_list, "tolist"):
+        sample_list = sample_list.tolist()
+    elif not isinstance(sample_list, list):
+        sample_list = [sample_list]
+
+    masked = []
+    for item in sample_list:
+        val = str(item).strip()
+        if "@" in val:
+            parts = val.split("@", 1)
+            local = parts[0]
+            domain = parts[1] if len(parts) > 1 else ""
+            if len(local) > 3:
+                masked_local = local[:2] + "***" + local[-1:]
+            elif len(local) >= 1:
+                masked_local = local[0] + "***"
+            else:
+                masked_local = "***"
+            masked.append(f"{masked_local}@{domain}")
+        else:
+            masked.append(val[:3] + "***" if len(val) > 4 else val)
+    return masked
+
+
+def _is_entity_primary_key(col_name: str, df: pd.DataFrame, dataset_id: str = "") -> bool:
+    """
+    Determina de manera conservadora si una columna actúa como clave primaria inequívoca
+    de su propia entidad, distinguiéndola de Foreign Keys y columnas normales.
+    Principio: es preferible no marcar un duplicado dudoso que declarar erróneamente una foreign key como corrupta.
+    """
+    col_lower = str(col_name).lower().strip()
+    if not (col_lower == "id" or col_lower.endswith("_id") or col_lower.endswith("id")):
+        return False
+
+    filename = ""
+    try:
+        if dataset_id and dataset_id != "temp_dataset":
+            meta = DatasetService.get_dataset_metadata(dataset_id)
+            if meta and meta.filename:
+                filename = meta.filename.lower()
+    except Exception:
+        pass
+
+    if filename:
+        clean_name = re.sub(r"^(clean_|raw_)", "", filename)
+        stem = re.sub(r"(_dirty)?\.(csv|parquet|xlsx)$", "", clean_name)
+        entity_token = stem.rstrip("s").replace("_", "")
+        col_token = col_lower.replace("_", "").replace("id", "")
+        if col_token and col_token == entity_token:
+            return True
+        if col_lower == "id":
+            return True
+        if col_token and entity_token and col_token != entity_token:
+            return False
+
+    if col_lower == "id":
+        return True
+
+    s = df[col_name].dropna().astype(str).str.strip()
+    s = s[s != ""]
+    if len(s) > 0 and (s.nunique() / len(s)) < 0.8:
+        return False
+
+    id_cols = [c for c in df.columns if str(c).lower().endswith("id")]
+    if len(id_cols) == 1 and id_cols[0] == col_name and len(s) > 0 and s.nunique() >= len(s) * 0.95:
+        return True
+
+    return False
+
+
 class QualityService:
     @staticmethod
     def analyze_dataframe(
@@ -76,6 +148,26 @@ class QualityService:
                     if null_pct > 50
                     else (SeverityEnum.HIGH if null_pct > 20 else SeverityEnum.MEDIUM)
                 )
+                col_series = df[col_prof.column_name] if col_prof.column_name in df.columns else None
+                hint_str = (
+                    col_prof.semantic_hint.value
+                    if hasattr(col_prof.semantic_hint, "value")
+                    else str(col_prof.semantic_hint)
+                )
+                pol = missing_policy(hint_str, col_prof.column_name, col_prof.null_count, series=col_series)
+                if pol["action"] == "flag_for_review":
+                    suggested_action = f"Mantener valores nulos en '{col_prof.column_name}' y solicitar revisión humana ('flag_for_review')."
+                elif pol.get("strategy") == "median":
+                    suggested_action = (
+                        f"Imputar nulos en '{col_prof.column_name}' mediante la mediana ('fill_missing')."
+                    )
+                elif pol.get("strategy") == "mode":
+                    suggested_action = f"Imputar nulos en '{col_prof.column_name}' mediante la moda ('fill_missing')."
+                else:
+                    suggested_action = (
+                        f"Imputar nulos en '{col_prof.column_name}' mediante mediana o constante ('fill_missing')."
+                    )
+
                 issues.append(
                     QualityIssue(
                         issue_id=str(uuid.uuid4())[:8],
@@ -86,7 +178,7 @@ class QualityService:
                         affected_rows=col_prof.null_count,
                         affected_percentage=null_pct,
                         evidence_sample=["[VALOR VACÍO]"],
-                        suggested_action=f"Imputar nulos en '{col_prof.column_name}' mediante mediana o constante ('fill_missing').",
+                        suggested_action=suggested_action,
                     )
                 )
 
@@ -95,9 +187,14 @@ class QualityService:
         # ==========================================
         # 2. REGISTROS ÚNICOS (Uniqueness)
         # ==========================================
+        uniqueness_violating_rows: set = set()
+
+        # 2.1 Duplicados exactos de fila completa
         duplicates_count = profiling.duplicates_count
         duplicates_pct = profiling.duplicates_percentage
         if duplicates_count > 0:
+            dup_row_indices = set(df[df.duplicated(keep="first")].index)
+            uniqueness_violating_rows.update(dup_row_indices)
             issues.append(
                 QualityIssue(
                     issue_id=str(uuid.uuid4())[:8],
@@ -112,8 +209,80 @@ class QualityService:
                 )
             )
 
+        # 2.2 Duplicados semánticos a nivel de columna (Email y Claves Primarias de Entidad)
+        for col_prof in profiling.columns:
+            col_name = col_prof.column_name
+            if col_name not in df.columns:
+                continue
+
+            is_email_col = col_prof.semantic_hint == SemanticHintEnum.EMAIL or "email" in col_name.lower()
+            is_pk = _is_entity_primary_key(col_name, df, dataset_id=dataset_id)
+
+            if is_email_col or is_pk:
+                s_raw = df[col_name].dropna().astype(str).str.strip()
+                # Excluir explícitamente nulos y cadenas vacías (NULL no es duplicado)
+                s_valid = s_raw[s_raw != ""]
+                if len(s_valid) == 0:
+                    continue
+
+                s_compare = s_valid.str.lower() if is_email_col else s_valid
+                dup_mask = s_compare.duplicated(keep="first")
+                dup_count = int(dup_mask.sum())
+
+                if dup_count > 0:
+                    dup_indices = set(s_valid[dup_mask].index)
+                    uniqueness_violating_rows.update(dup_indices)
+                    dup_pct = round((dup_count / row_count) * 100, 2)
+                    total_involved = int(s_compare.duplicated(keep=False).sum())
+
+                    if is_email_col:
+                        sample_dups = s_valid[dup_mask].unique()[:3]
+                        evidence = _mask_pii_sample(sample_dups)
+                        issues.append(
+                            QualityIssue(
+                                issue_id=str(uuid.uuid4())[:8],
+                                dimension=QualityDimensionEnum.UNIQUENESS,
+                                severity=SeverityEnum.HIGH if dup_pct > 5.0 else SeverityEnum.MEDIUM,
+                                column=col_name,
+                                description=(
+                                    f"Se han detectado {dup_count} valores duplicados en la columna '{col_name}' "
+                                    f"({total_involved} filas implicadas). La IA propone revisar estos registros "
+                                    "antes de modificar o eliminar información."
+                                ),
+                                affected_rows=dup_count,
+                                affected_percentage=dup_pct,
+                                evidence_sample=evidence,
+                                suggested_action=(
+                                    f"Revisar registros duplicados en '{col_name}' antes de modificar o "
+                                    "eliminar información ('flag_for_review')."
+                                ),
+                            )
+                        )
+                    elif is_pk:
+                        sample_dups = s_valid[dup_mask].unique()[:3]
+                        issues.append(
+                            QualityIssue(
+                                issue_id=str(uuid.uuid4())[:8],
+                                dimension=QualityDimensionEnum.UNIQUENESS,
+                                severity=SeverityEnum.HIGH,
+                                column=col_name,
+                                description=(
+                                    f"Se han detectado {dup_count} valores duplicados en el identificador de entidad "
+                                    f"'{col_name}' ({total_involved} filas implicadas)."
+                                ),
+                                affected_rows=dup_count,
+                                affected_percentage=dup_pct,
+                                evidence_sample=_safe_evidence_sample(sample_dups),
+                                suggested_action=(
+                                    f"Revisar duplicados en la clave primaria '{col_name}' antes de consolidar "
+                                    "('flag_for_review')."
+                                ),
+                            )
+                        )
+
+        total_unique_violations = len(uniqueness_violating_rows)
         uniqueness_score = (
-            round(max(0.0, 100.0 * (1.0 - (duplicates_count / row_count))), 2) if row_count > 0 else 100.0
+            round(max(0.0, 100.0 * (1.0 - (total_unique_violations / row_count))), 2) if row_count > 0 else 100.0
         )
 
         # ==========================================
@@ -166,6 +335,8 @@ class QualityService:
             is_country_col = col_prof.semantic_hint == SemanticHintEnum.LOCATION or any(
                 k in col_prof.column_name.lower() for k in ["pais", "país", "country", "shipcountry"]
             )
+            has_country_variants = False
+            variant_mask = pd.Series(False, index=series.index)
             if not is_identifier and is_country_col:
                 observed_unique = [str(x) for x in stripped.unique() if pd.notna(x)]
                 country_map = country_mappings_for_values(observed_unique)
@@ -174,6 +345,7 @@ class QualityService:
                     variant_mask = stripped.isin(variant_keys)
                     variant_count = int(variant_mask.sum())
                     if variant_count > 0:
+                        has_country_variants = True
                         inconsistent_cells += variant_count
                         sample_variants = list(country_map.keys())[:3]
                         issues.append(
@@ -201,32 +373,46 @@ class QualityService:
                 col_prof.inferred_type in [ColumnTypeEnum.TEXT, ColumnTypeEnum.CATEGORICAL]
                 or col_prof.semantic_hint == SemanticHintEnum.NAME
             ):
-                cleaned_str = stripped.str.lower()
-                unique_original = stripped.nunique()
-                unique_lower = cleaned_str.nunique()
+                # Evitar doble conteo: si la columna ya tiene normalización categórica,
+                # evaluar casing únicamente sobre las celdas residuales no abarcadas por variant_mask
+                eval_stripped = stripped[~variant_mask] if has_country_variants else stripped
+                if len(eval_stripped) > 0:
+                    cleaned_str = eval_stripped.str.lower()
+                    unique_original = eval_stripped.nunique()
+                    unique_lower = cleaned_str.nunique()
 
-                # Detectar mayúsculas completas en cadenas largas (>2 caracteres) vectorizado
-                has_all_caps = (stripped.str.len() > 2) & stripped.str.isupper()
-                all_caps_count = int(has_all_caps.sum())
+                    # Detectar mayúsculas completas en cadenas largas (>2 caracteres) vectorizado
+                    has_all_caps = (eval_stripped.str.len() > 2) & eval_stripped.str.isupper()
+                    all_caps_count = int(has_all_caps.sum())
 
-                if unique_original > unique_lower or all_caps_count > 0:
-                    diff_count = max(unique_original - unique_lower, all_caps_count)
-                    inconsistent_cells += diff_count
-                    issues.append(
-                        QualityIssue(
-                            issue_id=str(uuid.uuid4())[:8],
-                            dimension=QualityDimensionEnum.CONSISTENCY,
-                            severity=SeverityEnum.MEDIUM,
-                            column=col_prof.column_name,
-                            description=f"Inconsistencia de formato (mayúsculas/minúsculas) en '{col_prof.column_name}' ({diff_count} valores detectados).",
-                            affected_rows=diff_count,
-                            affected_percentage=round((diff_count / row_count) * 100, 2),
-                            evidence_sample=_safe_evidence_sample(
-                                series[has_all_caps].head(3) if all_caps_count > 0 else series.unique()[:3]
-                            ),
-                            suggested_action=f"Normalizar formato de texto en '{col_prof.column_name}' a Title Case ('normalize_case').",
+                    if unique_original > unique_lower or all_caps_count > 0:
+                        diff_count = max(unique_original - unique_lower, all_caps_count)
+                        inconsistent_cells += diff_count
+                        is_email = (
+                            col_prof.semantic_hint == SemanticHintEnum.EMAIL or "email" in col_prof.column_name.lower()
                         )
-                    )
+                        casing_action = (
+                            f"Normalizar formato de email en '{col_prof.column_name}' a minúsculas ('normalize_case' mode=lower)."
+                            if is_email
+                            else f"Normalizar formato de texto en '{col_prof.column_name}' a Title Case ('normalize_case')."
+                        )
+                        issues.append(
+                            QualityIssue(
+                                issue_id=str(uuid.uuid4())[:8],
+                                dimension=QualityDimensionEnum.CONSISTENCY,
+                                severity=SeverityEnum.MEDIUM,
+                                column=col_prof.column_name,
+                                description=f"Inconsistencia de formato (mayúsculas/minúsculas) en '{col_prof.column_name}' ({diff_count} valores detectados).",
+                                affected_rows=diff_count,
+                                affected_percentage=round((diff_count / row_count) * 100, 2),
+                                evidence_sample=_safe_evidence_sample(
+                                    eval_stripped[has_all_caps].head(3)
+                                    if all_caps_count > 0
+                                    else eval_stripped.unique()[:3]
+                                ),
+                                suggested_action=casing_action,
+                            )
+                        )
 
         consistency_score = round(max(0.0, 100.0 * (1.0 - (inconsistent_cells / total_cells))), 2)
 
