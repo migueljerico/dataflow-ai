@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-export type ToastKind = 'error' | 'success' | 'info';
+export type ToastKind = 'error' | 'success' | 'info' | 'warning';
 
 export interface ToastItem {
   id: string;
@@ -49,7 +49,9 @@ const Toast: React.FC<{ item: ToastItem; onDismiss: (id: string) => void }> = ({
       ? 'rgba(244,63,94,0.95)'
       : item.kind === 'success'
         ? 'rgba(16,185,129,0.95)'
-        : 'rgba(14,165,233,0.95)';
+        : item.kind === 'warning'
+          ? 'rgba(245,158,11,0.95)'
+          : 'rgba(14,165,233,0.95)';
 
   return (
     <div

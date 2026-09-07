@@ -4,6 +4,22 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.20.3] — 2026-09-07
+
+### 🧭 UX: Auto-Recuperación Cuando el Plan de Transformaciones Caduca
+
+> **Motivación:** En flujos largos (multi-tabla, recargas de página, tests que limpian `PLANS_CACHE`), el usuario podía quedarse en el paso 3 con un plan_id obsoleto y recibir el error `El plan de transformaciones 'PLAN-xxxx' no fue encontrado o ha caducado` sin indicación de qué hacer. Esta versión detecta ese caso y devuelve automáticamente al usuario al paso 2 para regenerar el plan.
+
+#### 🛠️ Cambios Realizados
+- **Detector de plan caducado (`App.tsx`):** Si el error de ejecución contiene `PLAN-\w+` o palabras como `caducado / expired / no fue encontrado / not found`, se muestra un toast ámbar de aviso y se vuelve al paso 2 con el plan y/o planes de lote vacíos.
+- **Tipo `ToastKind` extendido (`components/Toast.tsx`):** añadido `'warning'` con su color ámbar en el contenedor de toasts.
+- **i18n (`i18n/index.ts`):** nueva clave `errors.planExpired` (es + en) marcada como opcional para no romper los 11 idiomas restantes.
+
+#### 🧪 Verificación
+- **Frontend:** 59 tests ✅ | TypeScript estricto ✅ | Vite build ✅.
+- **Backend:** Sin cambios (289 tests de v1.20.2 siguen vigentes).
+- **Atribución:** Desarrollada con **Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus**.
+
 ## [1.20.2] — 2026-09-07
 
 ### 🐛 Fix Crítico: Error "tuple indices must be integers" al Generar la Propuesta de Dashboard

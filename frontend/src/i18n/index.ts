@@ -319,6 +319,7 @@ export interface Translations {
     fetchProfiling: string;
     generatePlan: string;
     executePlan: string;
+    planExpired?: string;
   };
   historyModal?: {
     title: string;
@@ -693,6 +694,7 @@ export const translations: Record<Language, Translations> = {
       fetchProfiling: 'Error al obtener profiling del dataset.',
       generatePlan: 'Error al generar plan de transformaciones.',
       executePlan: 'Error al ejecutar plan ETL.',
+      planExpired: 'El plan de transformaciones ha caducado. Vuelve a generarlo antes de ejecutarlo.',
     },
     historyModal: {
       title: 'Historial de Ejecuciones y Control de Versiones',
@@ -1068,6 +1070,7 @@ export const translations: Record<Language, Translations> = {
       fetchProfiling: 'Error retrieving dataset profiling.',
       generatePlan: 'Error generating transformation plan.',
       executePlan: 'Error executing ETL plan.',
+      planExpired: 'The transformation plan has expired. Please regenerate it before executing.',
     },
     historyModal: {
       title: 'Execution History & Version Control',

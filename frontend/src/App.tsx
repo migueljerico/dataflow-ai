@@ -180,7 +180,15 @@ const AppContent: React.FC = () => {
       setReportBeforeAfter(rep);
       setStep(4);
     } catch (err: unknown) {
-      pushToast(toErrorMessage(err, t.errors.executePlan));
+      const message = toErrorMessage(err, t.errors.executePlan);
+      const planExpired = /PLAN-\w+/.test(message) || /caducado|expired|no fue encontrado|not found/i.test(message);
+      if (planExpired && metadata) {
+        pushToast(t.errors.planExpired ?? t.errors.executePlan, 'warning');
+        setPlan(null);
+        setStep(2);
+      } else {
+        pushToast(message);
+      }
     } finally {
       setExecuting(false);
     }
@@ -234,7 +242,15 @@ const AppContent: React.FC = () => {
           setLoadingDashboard(false);
         });
     } catch (err: unknown) {
-      pushToast(toErrorMessage(err, 'Error al ejecutar los planes de limpieza en lote.'), 'error');
+      const message = toErrorMessage(err, 'Error al ejecutar los planes de limpieza en lote.');
+      const planExpired = /PLAN-\w+/.test(message) || /caducado|expired|no fue encontrado|not found/i.test(message);
+      if (planExpired) {
+        pushToast(t.errors.planExpired ?? t.errors.executePlan, 'warning');
+        setBatchPlans([]);
+        setStep(2);
+      } else {
+        pushToast(message, 'error');
+      }
     } finally {
       setExecuting(false);
     }
