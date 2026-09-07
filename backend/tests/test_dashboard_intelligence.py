@@ -2,12 +2,10 @@
 
 import io
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.core import wcag
 from app.main import app
-from app.services.dashboard_service import DashboardService
 
 client = TestClient(app)
 
@@ -80,7 +78,19 @@ def test_dashboard_analyze_endpoint():
     assert res.status_code == 200
     bp = res.json()
     assert bp["blueprint_id"]
-    assert bp["dashboard_type"] in ["sales", "finance", "operations", "hr", "marketing", "inventory", "customers", "logistics", "academic", "executive", "generic"]
+    assert bp["dashboard_type"] in [
+        "sales",
+        "finance",
+        "operations",
+        "hr",
+        "marketing",
+        "inventory",
+        "customers",
+        "logistics",
+        "academic",
+        "executive",
+        "generic",
+    ]
     assert len(bp["kpis"]) > 0
     assert len(bp["visuals"]) > 0
     assert bp["validation"]["status"] in ["valid", "warning", "invalid"]
@@ -137,3 +147,43 @@ def test_dashboard_stats_endpoint():
     stats = res.json()
     assert "dashboard_generation_total" in stats
     assert "wcag_validation_failed" in stats
+
+
+def test_dashboard_scatter_with_continuous_numerics():
+    """Regresión: el scatter con datos reales (≥30 filas, 2 numéricas continuas) no falla.
+
+    Cubre el bug 'tuple indices must be integers or slices, not str' provocado por
+    indexar filas de itertuples() por nombre de columna en _scatter_visual.
+    """
+    import numpy as np
+    import pandas as pd
+
+    rng = np.random.default_rng(42)
+    n = 120
+    df = pd.DataFrame(
+        {
+            "OrderID": [f"ORD-{i:04d}" for i in range(n)],
+            "CustomerID": [f"CUST-{i % 20:03d}" for i in range(n)],
+            "OrderDate": pd.date_range("2024-01-01", periods=n, freq="D").strftime("%Y-%m-%d"),
+            "ShipCountry": rng.choice(["Spain", "France", "Germany", "Italy"], n),
+            "Quantity": rng.integers(1, 50, n),
+            "UnitPrice": np.round(rng.uniform(5, 200, n), 2),
+            "Discount": np.round(rng.uniform(0, 0.3, n), 2),
+        }
+    )
+    buf = io.BytesIO()
+    df.to_csv(buf, index=False)
+    buf.seek(0)
+    up = client.post("/api/v1/datasets/upload", files={"file": ("big_orders.csv", buf, "text/csv")})
+    assert up.status_code == 201
+    ds = up.json()["dataset_id"]
+
+    res = client.post("/api/v1/dashboard/analyze", json={"dataset_ids": [ds]})
+    assert res.status_code == 200, res.text[:500]
+    bp = res.json()
+    scatters = [v for v in bp["visuals"] if v["visual_type"] == "scatter"]
+    assert len(scatters) >= 1
+    assert len(scatters[0]["preview_data"]) >= 30
+    first = scatters[0]["preview_data"][0]
+    assert isinstance(first["value"], (int, float))
+    assert isinstance(first["secondary_value"], (int, float))

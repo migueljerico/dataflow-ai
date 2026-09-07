@@ -4,6 +4,22 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.20.2] — 2026-09-07
+
+### 🐛 Fix Crítico: Error "tuple indices must be integers" al Generar la Propuesta de Dashboard
+
+> **Motivación:** Al pulsar "Generar Propuesta de Dashboard" con datasets reales (≥30 filas y 2+ columnas numéricas continuas), el backend fallaba con `tuple indices must be integers or slices, not str`. Causa raíz: `_scatter_visual` indexaba filas de `itertuples()` por nombre de columna, pero las tuplas solo aceptan índices enteros. Los datasets sintéticos de los tests nunca activaban el scatter (poca cardinalidad), por lo que el bug pasó inadvertido.
+
+#### 🛠️ Cambios Realizados
+- **Fix (`services/visual_engine.py`):** `_scatter_visual` extrae `x_values`/`y_values` como listas con `.tolist()` y empareja con `zip(..., strict=True)` en lugar de indexar tuplas por nombre.
+- **Test de regresión (`tests/test_dashboard_intelligence.py`):** `test_dashboard_scatter_with_continuous_numerics` con 120 filas reales y 3 numéricas continuas; verifica que el scatter se genera con ≥30 puntos y valores numéricos. Suite backend: 289 tests.
+- **Limpieza de imports** del módulo de tests (ruff F401/I001).
+
+#### 🧪 Verificación
+- **Backend:** 9/9 tests de dashboard ✅ | Ruff 0 errores | Black 0 diffs | Bandit 0 vulnerabilidades.
+- **Frontend:** Sin cambios (59 tests de v1.20.1 siguen vigentes).
+- **Atribución:** Desarrollada con **Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus**.
+
 ## [1.20.1] — 2026-09-07
 
 ### 🧭 Fix de Navegación al Paso 5: Botón de Propuesta de Dashboard en el Paso 4

@@ -518,11 +518,11 @@ class VisualRecommendationEngine:
         if len(sample) < 30:
             return None
         head = sample.head(100)
+        x_values = head[x_col].tolist()
+        y_values = head[y_col].tolist()
         points = [
-            PreviewDataPoint(
-                label=f"{i + 1}", value=round(float(row[x_col]), 2), secondary_value=round(float(row[y_col]), 2)
-            )
-            for i, row in enumerate(head.itertuples(index=False))
+            PreviewDataPoint(label=f"{i + 1}", value=round(float(x), 2), secondary_value=round(float(y), 2))
+            for i, (x, y) in enumerate(zip(x_values, y_values, strict=True))
         ]
         score, level, rationale = self._score(
             45, None, [(10, "dos variables numéricas continuas con datos suficientes")]
