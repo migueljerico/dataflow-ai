@@ -243,6 +243,11 @@ const AppContent: React.FC = () => {
   // Generar Dashboard Blueprint manualmente
   const handleGenerateDashboard = async () => {
     if (workspaceDatasets.length === 0) return;
+    // Si el Blueprint ya está en caché (pre-generado tras el lote), navegar al instante
+    if (dashboardBlueprint) {
+      setStep(5);
+      return;
+    }
     setLoadingDashboard(true);
     try {
       const blueprint = await api.analyzeDashboard(workspaceDatasets.map((d) => d.dataset_id));
@@ -388,6 +393,7 @@ const AppContent: React.FC = () => {
                 onGenerateStarSchema={handleTriggerCleanStarSchema}
                 onGenerateDashboard={handleGenerateDashboard}
                 loadingDashboard={loadingDashboard}
+                dashboardReady={!!dashboardBlueprint}
                 onResetSession={handleResetSession}
               />
             ) : executionResult ? (

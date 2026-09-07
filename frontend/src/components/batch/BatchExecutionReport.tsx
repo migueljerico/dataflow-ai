@@ -34,6 +34,7 @@ interface Props {
   onGenerateStarSchema: () => void;
   onGenerateDashboard?: () => void;
   loadingDashboard?: boolean;
+  dashboardReady?: boolean;
   onResetSession: () => void;
 }
 
@@ -53,6 +54,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
   onGenerateStarSchema,
   onGenerateDashboard,
   loadingDashboard,
+  dashboardReady,
   onResetSession,
 }) => {
   // Seleccionar la tabla activa para inspeccionar Business Insights y fórmulas DAX
@@ -452,6 +454,51 @@ export const BatchExecutionReport: React.FC<Props> = ({
             </button>
           </div>
         )}
+      </div>
+
+      {/* SIGUIENTE PASO DEL FLUJO: PROPUESTA DE DASHBOARD PARA POWER BI */}
+      <div className="card" style={{ marginBottom: '24px', border: '1px solid var(--accent-emerald)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Sparkles size={20} /> 8️⃣ Propuesta de Dashboard para Power BI
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
+              A partir del esquema estrella: tipo de dashboard, KPIs, visuales justificados, paleta WCAG validada, medidas DAX y guía de implementación.
+            </p>
+          </div>
+
+          {loadingDashboard ? (
+            <button type="button" className="btn btn-primary" disabled style={{ padding: '8px 20px', fontSize: '0.9rem', opacity: 0.7 }}>
+              <RefreshCw size={16} className="spin" />
+              <span>Generando propuesta...</span>
+            </button>
+          ) : dashboardReady ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onGenerateDashboard}
+              style={{ padding: '8px 20px', fontSize: '0.9rem' }}
+              data-testid="go-dashboard-preview"
+            >
+              <span>Ver Dashboard Preview</span>
+              <ArrowRight size={16} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onGenerateDashboard}
+              disabled={!cleanStarSchema}
+              title={!cleanStarSchema ? 'Primero genera el Esquema de Estrella' : 'Generar propuesta de dashboard'}
+              style={{ padding: '8px 20px', fontSize: '0.9rem' }}
+              data-testid="generate-dashboard"
+            >
+              <Sparkles size={16} />
+              <span>Generar Propuesta de Dashboard</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

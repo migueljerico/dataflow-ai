@@ -148,4 +148,58 @@ describe('BatchExecutionReport Component', () => {
     // Ahora BusinessInsights debe mostrarse para run_products
     expect(screen.getByTestId('mock-business-insights')).toHaveTextContent('BusinessInsights for run_products');
   });
+
+  it('muestra la seccion de propuesta de dashboard con boton de generacion', () => {
+    const onReset = vi.fn();
+    const onGenStar = vi.fn();
+    const onGenDashboard = vi.fn();
+
+    render(
+      <LanguageProvider>
+        <BatchExecutionReport
+          results={mockResults}
+          cleanStarSchema={null}
+          loadingStarSchema={false}
+          onGenerateStarSchema={onGenStar}
+          onGenerateDashboard={onGenDashboard}
+          loadingDashboard={false}
+          dashboardReady={false}
+          onResetSession={onReset}
+        />
+      </LanguageProvider>
+    );
+
+    // La sección 8 existe y el botón de generar está presente pero deshabilitado sin esquema estrella
+    expect(screen.getByText(/8️⃣ Propuesta de Dashboard para Power BI/i)).toBeInTheDocument();
+    const genBtn = screen.getByTestId('generate-dashboard');
+    expect(genBtn).toBeInTheDocument();
+    expect(genBtn).toBeDisabled();
+    expect(genBtn).toHaveAttribute('title', expect.stringContaining('Esquema de Estrella'));
+  });
+
+  it('muestra el boton "Ver Dashboard Preview" cuando el blueprint esta listo', () => {
+    const onReset = vi.fn();
+    const onGenStar = vi.fn();
+    const onGenDashboard = vi.fn();
+
+    render(
+      <LanguageProvider>
+        <BatchExecutionReport
+          results={mockResults}
+          cleanStarSchema={null}
+          loadingStarSchema={false}
+          onGenerateStarSchema={onGenStar}
+          onGenerateDashboard={onGenDashboard}
+          loadingDashboard={false}
+          dashboardReady={true}
+          onResetSession={onReset}
+        />
+      </LanguageProvider>
+    );
+
+    const goBtn = screen.getByTestId('go-dashboard-preview');
+    expect(goBtn).toBeInTheDocument();
+    fireEvent.click(goBtn);
+    expect(onGenDashboard).toHaveBeenCalledTimes(1);
+  });
 });

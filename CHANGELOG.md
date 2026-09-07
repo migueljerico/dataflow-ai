@@ -4,6 +4,22 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.20.1] — 2026-09-07
+
+### 🧭 Fix de Navegación al Paso 5: Botón de Propuesta de Dashboard en el Paso 4
+
+> **Motivación:** En v1.20.0 el prop `onGenerateDashboard` llegaba a `BatchExecutionReport` pero nunca se renderizaba ningún botón que lo invocara: el usuario podía descargar CSVs y ver el esquema estrella, pero no había forma de pasar al paso 5 (Dashboard Preview). Esta versión añade la sección visible "8️⃣ Propuesta de Dashboard para Power BI" al final del paso 4 con el CTA correspondiente.
+
+#### 🛠️ Cambios Realizados
+- **Sección CTA de dashboard (`BatchExecutionReport.tsx`):** Nueva tarjeta final con 3 estados: (1) "Generar Propuesta de Dashboard" (deshabilitado hasta que exista esquema estrella), (2) "Generando propuesta..." durante la llamada, (3) "Ver Dashboard Preview →" cuando el Blueprint ya está listo (navegación instantánea sin re-llamada).
+- **Navegación instantánea (`App.tsx`):** `handleGenerateDashboard` navega al paso 5 de inmediato si el Blueprint ya está en caché (pre-generado tras la ejecución del lote).
+- **Tests:** 2 nuevos tests del CTA (botón deshabilitado sin estrella, botón "Ver Dashboard Preview" invoca el callback). Suite frontend: 59 tests.
+
+#### 🧪 Verificación
+- **Frontend:** 59 tests pasando al 100% (`vitest`), TypeScript estricto OK, Vite build OK.
+- **Backend:** Sin cambios (288 tests de v1.20.0 siguen vigentes).
+- **Atribución:** Desarrollada con **Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus**.
+
 ## [1.20.0] — 2026-09-07
 
 ### 🎯 Dashboard Intelligence: De Esquema Estrella a Propuesta de Dashboard para Power BI
