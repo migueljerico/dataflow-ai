@@ -4,6 +4,39 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.20.0] — 2026-09-07
+
+### 🎯 Dashboard Intelligence: De Esquema Estrella a Propuesta de Dashboard para Power BI
+
+> **Motivación:** Convertir el esquema estrella validado en una propuesta de dashboard orientada a Power BI, combinando análisis semántico del modelo, reglas deterministas de Business Intelligence, recomendaciones de visualización, diseño accesible WCAG y generación de previsualización visual. Esta funcionalidad cierra el flujo completo: *Datos → Calidad → Transformación → Esquema Estrella → Dashboard Preview*, manteniendo la filosofía *"La IA propone. El usuario decide. Python ejecuta."*.
+
+#### 🛠️ Cambios Realizados
+
+**Backend — Dashboard Intelligence Module:**
+- **Modelos Pydantic (`models/dashboard.py`):** `DashboardBlueprint`, `DashboardPage`, `KPIRecommendation`, `VisualRecommendation`, `FilterRecommendation`, `DesignRecommendation`, `AccessibilityRecommendation`, `DashboardValidation`, `SemanticModelAnalysis`, `ColorPalette`, `DaxMeasure`, `PowerBIImplementationInstruction`.
+- **Validación WCAG Determinista (`core/wcag.py`):** Fórmula oficial de luminancia relativa sRGB, ratios de contraste AA/AAA para texto normal, texto grande y componentes de UI. Nunca delegada a LLM.
+- **Analizador Semántico (`services/semantic_analyzer.py`):** Clasificación de tablas (fact, dimension, date, customer, product, etc.) y columnas (date, identifier, measure, currency, percentage, category, geography, etc.) combinando nombre, tipo, cardinalidad, valores y posición en el modelo. Toda clasificación heurística marcada explícitamente (`is_heuristic: bool`).
+- **Motor de Recomendación de Visuales (`services/visual_engine.py`):** Reglas deterministas para bar/horizontal bar (comparación categórica), line (evolución temporal), donut (composición única ≤6 categorías), scatter (relación entre numéricas), histogram (distribución), table (ranking/detalle). Confianza rule-based (high/medium/low) calculada con rúbrica aditiva objetiva.
+- **Servicio Orquestador (`services/dashboard_service.py`):** `DashboardTypeClassifier` (sales, finance, operations, hr, marketing, inventory, customers, logistics, academic, executive, generic), `KpiGenerator` (KPIs con valores reales calculados en Python), `DaxGenerator` (medidas DAX como especificaciones para Power BI), `DesignSystemGenerator` (3 paletas validadas WCAG, 3 estilos de diseño), `DashboardPlanner` (páginas, filtros, jerarquías, guía Power BI), `DataQualityIntegrator` (warnings por completitud), `BlueprintValidator` (18 chequeos deterministas: existencia de tablas/columnas, compatibilidad de visuales, WCAG, reglas de circulares, cardinalidad, ausencia de referencias ficticias).
+- **Endpoints API (`api/v1/endpoints/dashboard.py`):** `POST /dashboard/analyze` (genera Blueprint completo), `GET /dashboard/{blueprint_id}` (recupera Blueprint), `POST /dashboard/validate` (valida Blueprint editado por usuario), `GET /dashboard/stats` (métricas operativas).
+- **Observabilidad:** Contadores `dashboard_generation_total`, `dashboard_generation_failed`, `dashboard_validation_failed`, `visual_recommendation_count`, `wcag_validation_failed`.
+
+**Frontend — Dashboard Preview UI:**
+- **Tipos TypeScript (`types/index.ts`):** `DashboardBlueprint`, `DashboardType`, `VisualType`, `KPIRecommendation`, `VisualRecommendation`, `FilterRecommendation`, `DashboardPage`, `ColorPalette`, `AccessibilityRecommendation`, `DesignSystem`, `DaxMeasure`, `PowerBIImplementationInstruction`, `DashboardValidation`, `DashboardStats`.
+- **Cliente API (`services/api.ts`):** `analyzeDashboard()`, `getDashboardBlueprint()`, `getDashboardStats()`, `validateDashboardBlueprint()`.
+- **Componente DashboardPreview (`components/DashboardPreview.tsx`):** 4 paneles (Resumen con KPIs/preguntas/filtros, Visuales con justificación y notas de calidad, Diseño con paleta WCAG y checklist de accesibilidad, Power BI con medidas DAX copiables y guía de implementación).
+- **Integración en App (`App.tsx`):** Paso 5 del flujo (Data Quality → Transformations → Star Schema → Dashboard Preview), generación automática tras ejecución en lote, botón manual para regenerar.
+- **Stepper actualizado:** 5 pasos visibles (Carga → Calidad → Plan → Ejecución → Dashboard).
+
+**Tests:**
+- **Backend:** 8 nuevos tests en `test_dashboard_intelligence.py` (WCAG determinista, endpoint analyze, validación de campos inexistentes, paleta WCAG validada, KPIs sin métricas ficticias, blueprint_id determinista, stats endpoint).
+- **Invariantes verificados:** Ningún visual referencia columnas inexistentes, ningún KPI usa medidas no validadas, ninguna combinación de colores se acepta como WCAG compliant sin validación matemática, ejecución repetida produce el mismo blueprint_id.
+
+#### 🧪 Verificación y Suite Completa
+- **Backend:** 288 tests pasando al 100% (`pytest`), incluyendo 8 nuevos tests de Dashboard Intelligence. Linters Ruff y Black impecables (0 errores, 0 diferencias), Bandit SAST limpio (0 vulnerabilidades).
+- **Frontend:** 57 tests pasando al 100% (`vitest`), comprobación estricta de tipos con TypeScript y empaquetado Vite exitoso.
+- **Atribución:** Desarrollada con **Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus**.
+
 ## [1.19.4] — 2026-09-06
 
 ### 🔬 Corrección Forense Controlada: Unicidad Semántica, Blindaje de Scores, Alineación Causal y Detección 18/18 en Northwind

@@ -629,3 +629,259 @@ export interface MultiTableStarSchema {
   referential_integrity_score: number;
 }
 
+// ── v1.20.0: Dashboard Intelligence ────────────────────────────────────────
+
+export type DashboardType =
+  | 'sales'
+  | 'finance'
+  | 'operations'
+  | 'hr'
+  | 'marketing'
+  | 'inventory'
+  | 'customers'
+  | 'logistics'
+  | 'academic'
+  | 'executive'
+  | 'generic';
+
+export type VisualType =
+  | 'bar'
+  | 'horizontal_bar'
+  | 'line'
+  | 'area'
+  | 'stacked_bar'
+  | 'pie'
+  | 'donut'
+  | 'scatter'
+  | 'histogram'
+  | 'table'
+  | 'kpi_card';
+
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+export interface PreviewDataPoint {
+  label: string;
+  value: number;
+  secondary_value?: number;
+}
+
+export interface KPIRecommendation {
+  kpi_id: string;
+  title: string;
+  description: string;
+  dax_measure_name: string;
+  dax_formula: string;
+  table_context: string;
+  format_type: string;
+  validated: boolean;
+  value?: number;
+  value_label?: string;
+  confidence: ConfidenceLevel;
+  data_quality_notes: string[];
+  order: number;
+}
+
+export interface VisualRecommendation {
+  visual_id: string;
+  title: string;
+  visual_type: VisualType;
+  page_id: string;
+  dimension?: string;
+  measure?: string;
+  measure_name?: string;
+  fields: string[];
+  axis_label?: string;
+  legend_field?: string;
+  filter_suggestion?: string;
+  reason: string;
+  confidence: ConfidenceLevel;
+  confidence_rationale: string;
+  alternative_types: VisualType[];
+  preview_data: PreviewDataPoint[];
+  preview_mode: 'real' | 'illustrative';
+  data_quality_notes: string[];
+  accessibility_note?: string;
+  order: number;
+}
+
+export interface FilterRecommendation {
+  filter_id: string;
+  table_ref: string;
+  column: string;
+  label: string;
+  recommended_values: string[];
+  purpose: string;
+  order: number;
+}
+
+export interface DashboardPage {
+  page_id: string;
+  title: string;
+  purpose: string;
+  visual_ids: string[];
+  layout_section: string;
+}
+
+export interface ColorPalette {
+  name: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  background_color: string;
+  text_color: string;
+  muted_text_color: string;
+  positive_color: string;
+  negative_color: string;
+  warning_color: string;
+}
+
+export interface ContrastPairCheck {
+  label: string;
+  foreground: string;
+  background: string;
+  contrast_ratio: number;
+  aa: boolean;
+  aaa: boolean;
+  large_text: boolean;
+}
+
+export interface AccessibilityCheckItem {
+  label: string;
+  status: string;
+  detail: string;
+}
+
+export interface AccessibilityRecommendation {
+  contrast_pairs: ContrastPairCheck[];
+  checklist: AccessibilityCheckItem[];
+  overall_label: string;
+  declarations: string[];
+}
+
+export interface DesignRecommendation {
+  style_name: string;
+  canvas: string;
+  layout: string;
+  spacing: string;
+  cards: string;
+  typography: string;
+  density: string;
+  color_strategy: string;
+  notes: string[];
+}
+
+export interface DesignSystem {
+  style: DesignRecommendation;
+  style_variants: DesignRecommendation[];
+  palette: ColorPalette;
+  palette_variants: ColorPalette[];
+  accessibility: AccessibilityRecommendation;
+}
+
+export interface DaxMeasure {
+  name: string;
+  formula: string;
+  table_context: string;
+  purpose: string;
+  validated: boolean;
+  kind: string;
+}
+
+export interface PowerBIImplementationInstruction {
+  page: string;
+  visual: string;
+  visual_type: string;
+  axis?: string;
+  legend?: string;
+  values?: string;
+  filters?: string;
+  suggested_measure?: string;
+  formatting: string;
+  accessibility: string;
+}
+
+export interface BusinessQuestion {
+  question_id: string;
+  text: string;
+}
+
+export interface HierarchyRecommendation {
+  hierarchy_id: string;
+  name: string;
+  levels: string[];
+}
+
+export interface DataQualityNote {
+  column: string;
+  completeness_pct: number;
+  severity: string;
+  message: string;
+}
+
+export interface DashboardCheck {
+  check_id: string;
+  name: string;
+  category: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface DashboardValidation {
+  checks: DashboardCheck[];
+  passed_count: number;
+  total_count: number;
+  status: 'valid' | 'warning' | 'invalid';
+  issues: string[];
+}
+
+export interface GenerationMeta {
+  duration_ms: number;
+  dashboard_generation_total: number;
+  dashboard_generation_failed: number;
+  dashboard_validation_failed: number;
+  visual_recommendation_count: number;
+  wcag_validation_failed: number;
+  deterministic: boolean;
+}
+
+export interface DashboardBlueprint {
+  blueprint_id: string;
+  model_id: string;
+  dataset_ids: string[];
+  name: string;
+  dashboard_type: DashboardType;
+  objective: string;
+  audience: string;
+  business_questions: BusinessQuestion[];
+  pages: DashboardPage[];
+  visuals: VisualRecommendation[];
+  kpis: KPIRecommendation[];
+  filters: FilterRecommendation[];
+  hierarchies: HierarchyRecommendation[];
+  design: DesignSystem;
+  dax_measures: DaxMeasure[];
+  power_bi_implementation: PowerBIImplementationInstruction[];
+  power_bi_summary: string;
+  semantic_model: any;
+  data_quality: DataQualityNote[];
+  warnings: string[];
+  limitations: string[];
+  confidence: ConfidenceLevel;
+  confidence_rationale: string;
+  uncertainty_note?: string;
+  validation?: DashboardValidation;
+  generation_meta: GenerationMeta;
+  created_at: string;
+}
+
+export interface DashboardStats {
+  dashboard_generation_total: number;
+  dashboard_generation_failed: number;
+  dashboard_generation_duration_ms_total: number;
+  dashboard_validation_total: number;
+  dashboard_validation_failed: number;
+  visual_recommendation_count: number;
+  wcag_validation_failed: number;
+  cached_blueprints: number;
+}
+

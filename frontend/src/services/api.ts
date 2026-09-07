@@ -18,6 +18,8 @@ import {
   ReportScheduleListResponse,
   ScheduleExecutionLog,
   MultiTableStarSchema,
+  DashboardBlueprint,
+  DashboardStats,
 } from '../types';
 import { getApiKey } from '../utils/security';
 
@@ -275,4 +277,33 @@ export const api = {
 
   getStarSchemaTmdlUrl: (modelId: string): string =>
     `${API_BASE}/relational/models/${modelId}/tmdl`,
+
+  // ── v1.20.0: Dashboard Intelligence ──────────────────────────────────────
+  analyzeDashboard: async (datasetIds: string[]): Promise<DashboardBlueprint> => {
+    const res = await fetch(`${API_BASE}/dashboard/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset_ids: datasetIds }),
+    });
+    return handleResponse<DashboardBlueprint>(res);
+  },
+
+  getDashboardBlueprint: async (blueprintId: string): Promise<DashboardBlueprint> => {
+    const res = await fetch(`${API_BASE}/dashboard/${blueprintId}`);
+    return handleResponse<DashboardBlueprint>(res);
+  },
+
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    const res = await fetch(`${API_BASE}/dashboard/stats`);
+    return handleResponse<DashboardStats>(res);
+  },
+
+  validateDashboardBlueprint: async (datasetIds: string[], blueprint: DashboardBlueprint): Promise<any> => {
+    const res = await fetch(`${API_BASE}/dashboard/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset_ids: datasetIds, blueprint }),
+    });
+    return handleResponse(res);
+  },
 };

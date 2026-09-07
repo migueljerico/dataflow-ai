@@ -7,6 +7,7 @@ import { ExecutionReport } from './components/ExecutionReport';
 import { BatchProfilingDashboard, BatchItem } from './components/batch/BatchProfilingDashboard';
 import { BatchPlanReview, BatchPlanItem } from './components/batch/BatchPlanReview';
 import { BatchExecutionReport, BatchExecutionItem } from './components/batch/BatchExecutionReport';
+import { DashboardPreview } from './components/DashboardPreview';
 import { ToastContainer, ToastItem } from './components/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -19,6 +20,7 @@ import {
   TransformationStep,
   ExecutionResult,
   MultiTableStarSchema,
+  DashboardBlueprint,
 } from './types';
 
 function toErrorMessage(err: unknown, fallback: string): string {
@@ -51,6 +53,8 @@ const AppContent: React.FC = () => {
   const [batchResults, setBatchResults] = useState<BatchExecutionItem[]>([]);
   const [cleanStarSchema, setCleanStarSchema] = useState<MultiTableStarSchema | null>(null);
   const [loadingStarSchema, setLoadingStarSchema] = useState<boolean>(false);
+  const [dashboardBlueprint, setDashboardBlueprint] = useState<DashboardBlueprint | null>(null);
+  const [loadingDashboard, setLoadingDashboard] = useState<boolean>(false);
 
   const pushToast = useCallback((message: string, kind: ToastItem['kind'] = 'error') => {
     const id = Math.random().toString(36).slice(2, 9);
@@ -217,13 +221,37 @@ const AppContent: React.FC = () => {
       setLoadingStarSchema(true);
       api
         .generateStarSchema(workspaceDatasets.map((d) => d.dataset_id))
-        .then((schema) => setCleanStarSchema(schema))
+        .then((schema) => {
+          setCleanStarSchema(schema);
+          // Generar automáticamente el Dashboard Blueprint
+          setLoadingDashboard(true);
+          return api.analyzeDashboard(workspaceDatasets.map((d) => d.dataset_id));
+        })
+        .then((blueprint) => setDashboardBlueprint(blueprint))
         .catch(() => {})
-        .finally(() => setLoadingStarSchema(false));
+        .finally(() => {
+          setLoadingStarSchema(false);
+          setLoadingDashboard(false);
+        });
     } catch (err: unknown) {
       pushToast(toErrorMessage(err, 'Error al ejecutar los planes de limpieza en lote.'), 'error');
     } finally {
       setExecuting(false);
+    }
+  };
+
+  // Generar Dashboard Blueprint manualmente
+  const handleGenerateDashboard = async () => {
+    if (workspaceDatasets.length === 0) return;
+    setLoadingDashboard(true);
+    try {
+      const blueprint = await api.analyzeDashboard(workspaceDatasets.map((d) => d.dataset_id));
+      setDashboardBlueprint(blueprint);
+      setStep(5);
+    } catch (err: unknown) {
+      pushToast(toErrorMessage(err, 'Error al generar el Blueprint de dashboard.'), 'error');
+    } finally {
+      setLoadingDashboard(false);
     }
   };
 
@@ -254,6 +282,7 @@ const AppContent: React.FC = () => {
     setBatchPlans([]);
     setBatchResults([]);
     setCleanStarSchema(null);
+    setDashboardBlueprint(null);
   };
 
   const isMultiFile = workspaceDatasets.length > 1;
@@ -287,11 +316,18 @@ const AppContent: React.FC = () => {
             <span>{t.stepper.step3}</span>
           </div>
           <div
-            className={`step-item ${step === 4 ? 'active' : ''}`}
+            className={`step-item ${step === 4 ? 'active' : step > 4 ? 'completed' : ''}`}
             aria-current={step === 4 ? 'step' : undefined}
           >
             <div className="step-num">4</div>
             <span>{t.stepper.step4}</span>
+          </div>
+          <div
+            className={`step-item ${step === 5 ? 'active' : ''}`}
+            aria-current={step === 5 ? 'step' : undefined}
+          >
+            <div className="step-num">5</div>
+            <span>Dashboard</span>
           </div>
         </nav>
 
@@ -350,6 +386,8 @@ const AppContent: React.FC = () => {
                 cleanStarSchema={cleanStarSchema}
                 loadingStarSchema={loadingStarSchema}
                 onGenerateStarSchema={handleTriggerCleanStarSchema}
+                onGenerateDashboard={handleGenerateDashboard}
+                loadingDashboard={loadingDashboard}
                 onResetSession={handleResetSession}
               />
             ) : executionResult ? (
@@ -359,6 +397,14 @@ const AppContent: React.FC = () => {
                 onResetSession={handleResetSession}
               />
             ) : null
+          )}
+
+          {/* PASO 5: DASHBOARD PREVIEW */}
+          {step === 5 && dashboardBlueprint && (
+            <DashboardPreview
+              blueprint={dashboardBlueprint}
+              onBackToStarSchema={() => setStep(4)}
+            />
           )}
         </ErrorBoundary>
       </main>

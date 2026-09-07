@@ -12,6 +12,7 @@ import pytest
 from app.core.config import settings
 from app.core.storage import reset_storage
 from app.services.analytics_service import ANALYTICS_CACHE
+from app.services.dashboard_service import DASHBOARD_CACHE
 from app.services.dataset_service import DATASET_CACHE, EMPTY_ROWS_PURGED_CACHE
 from app.services.etl_service import PLANS_CACHE, RUNS_CACHE
 from app.services.profiler_service import PROFILING_CACHE
@@ -28,6 +29,7 @@ ALL_CACHES = (
     ANALYTICS_CACHE,
     REPORT_SCHEDULES,
     SCHEDULE_LOGS,
+    DASHBOARD_CACHE,
 )
 
 

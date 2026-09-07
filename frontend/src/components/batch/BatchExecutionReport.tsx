@@ -32,6 +32,8 @@ interface Props {
   cleanStarSchema: MultiTableStarSchema | null;
   loadingStarSchema: boolean;
   onGenerateStarSchema: () => void;
+  onGenerateDashboard?: () => void;
+  loadingDashboard?: boolean;
   onResetSession: () => void;
 }
 
@@ -49,6 +51,8 @@ export const BatchExecutionReport: React.FC<Props> = ({
   cleanStarSchema,
   loadingStarSchema,
   onGenerateStarSchema,
+  onGenerateDashboard,
+  loadingDashboard,
   onResetSession,
 }) => {
   // Seleccionar la tabla activa para inspeccionar Business Insights y fórmulas DAX

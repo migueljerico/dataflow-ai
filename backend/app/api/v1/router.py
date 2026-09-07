@@ -1,6 +1,7 @@
 from app.api.v1.endpoints import (
     analytics,
     cache,
+    dashboard,
     datasets,
     plans,
     profiling,
@@ -23,3 +24,4 @@ api_router.include_router(cache.router, prefix="/cache", tags=["Cache & Observab
 api_router.include_router(reports.router, prefix="/reports", tags=["Executive Reports"])
 api_router.include_router(simulations.router, prefix="/simulations", tags=["Drift Simulations"])
 api_router.include_router(relational.router, prefix="/relational", tags=["Relational & Star Schema"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard Intelligence"])
