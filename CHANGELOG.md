@@ -4,6 +4,22 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.21.0] — 2026-09-08
+
+### 🖼️ Paso 5: Ejemplo Visual del Dashboard Exportable a PNG
+
+> **Motivación:** El paso 5 mostraba la propuesta de dashboard solo como especificación escrita (KPIs, visuales, DAX, guía Power BI), sin la vista previa de ejemplo en imagen que pedía el usuario (estilo informe Power BI con KPIs, línea, barras, donut, ranking, slicers y consejos de construcción).
+
+#### 🛠️ Cambios Realizados
+- **Nuevo componente `DashboardMockup.tsx`:** maqueta SVG 1600×1000 estilo informe Power BI construida solo con datos REALES del Blueprint (KPIs con `value_label`, serie temporal con `preview_data`, barras, donut ≤6 categorías, ranking top, slicers con valores reales y panel de consejos: medidas DAX, tarjetas KPI y guía de montaje). Sin dependencias nuevas: exporta a PNG 2x con el patrón SVG → canvas ya usado en el esquema estrella.
+- **`DashboardPreview.tsx`:** nueva pestaña «Ejemplo» (visible por defecto) con la maqueta y botón «Descargar ejemplo PNG»; el resto de pestañas (Resumen, Visuales, Diseño, Power BI) se mantienen intactas.
+- **i18n (`i18n/index.ts`):** nuevas claves opcionales `powerBiExcel.mockupTitle/mockupDesc/mockupExportPng/mockupGenerating` (es + en) sin romper los 11 idiomas restantes.
+
+#### 🧪 Verificación
+- **Frontend:** 63 tests ✅ (4 nuevos de la maqueta) | TypeScript estricto ✅ | Vite build ✅.
+- **Backend:** Sin cambios (289 tests siguen vigentes) | Ruff 0 errores | Black 0 diffs | Bandit 0 vulnerabilidades.
+- **Atribución:** Desarrollada con **muse-spark-1.3**.
+
 ## [1.20.3] — 2026-09-07
 
 ### 🧭 UX: Auto-Recuperación Cuando el Plan de Transformaciones Caduca

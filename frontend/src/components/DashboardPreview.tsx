@@ -10,8 +10,10 @@ import {
   Copy,
   Check,
   Download,
+  Image,
 } from 'lucide-react';
 import { DashboardBlueprint } from '../types';
+import { DashboardMockup } from './DashboardMockup';
 
 interface Props {
   blueprint: DashboardBlueprint;
@@ -20,7 +22,7 @@ interface Props {
 
 export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchema }) => {
   const [copiedDax, setCopiedDax] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'visuals' | 'design' | 'powerbi'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'example' | 'visuals' | 'design' | 'powerbi'>('example');
 
   const copyText = (label: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -75,6 +77,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       {/* Tabs de navegación */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
         {[
+          { id: 'example', label: 'Ejemplo', icon: Image },
           { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
           { id: 'visuals', label: 'Visuales', icon: BarChart3 },
           { id: 'design', label: 'Diseño', icon: Palette },
@@ -103,6 +106,9 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           </button>
         ))}
       </div>
+
+      {/* Panel 0: Maqueta de ejemplo (estilo informe Power BI) exportable a PNG */}
+      {activeTab === 'example' && <DashboardMockup blueprint={blueprint} />}
 
       {/* Panel 1: Resumen */}
       {activeTab === 'overview' && (

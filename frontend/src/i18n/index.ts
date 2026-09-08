@@ -277,6 +277,10 @@ export interface Translations {
     starClickHint?: string;
     exportStarSchemaPng?: string;
     starPngDownloading?: string;
+    mockupTitle?: string;
+    mockupDesc?: string;
+    mockupExportPng?: string;
+    mockupGenerating?: string;
   };
   cacheModal?: {
     title: string;
@@ -652,6 +656,10 @@ export const translations: Record<Language, Translations> = {
       starClickHint: 'Haz clic en una dimensión para ver su detalle',
       exportStarSchemaPng: 'Exportar PNG',
       starPngDownloading: 'Generando imagen...',
+      mockupTitle: 'Ejemplo visual del dashboard',
+      mockupDesc: 'Maqueta de ejemplo construida con los datos reales del Blueprint: KPIs, gráficos, slicers y consejos de construcción (DAX, KPI, visuales).',
+      mockupExportPng: 'Descargar ejemplo PNG',
+      mockupGenerating: 'Generando imagen...',
     },
     cacheModal: {
       title: 'Observabilidad de Caché Distribuida',
@@ -1028,6 +1036,10 @@ export const translations: Record<Language, Translations> = {
       starClickHint: 'Click a dimension to inspect its details',
       exportStarSchemaPng: 'Export PNG',
       starPngDownloading: 'Generating image...',
+      mockupTitle: 'Dashboard visual example',
+      mockupDesc: 'Example mockup built with the real Blueprint data: KPIs, charts, slicers and build tips (DAX, KPIs, visuals).',
+      mockupExportPng: 'Download example PNG',
+      mockupGenerating: 'Generating image...',
     },
     cacheModal: {
       title: 'Distributed Cache Observability',
