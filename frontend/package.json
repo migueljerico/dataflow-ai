@@ -1,7 +1,7 @@
 {
   "name": "dataflow-ai-frontend",
   "private": true,
-  "version": "1.21.0",
+  "version": "1.21.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,6 +26,6 @@
     "jsdom": "^30.0.1",
     "typescript": "^5.9.3",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

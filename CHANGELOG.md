@@ -4,6 +4,22 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.21.1] — 2026-09-14
+
+### 📦 Dependabot & Tooling: Actualización a Vitest 5.0.0 y Compatibilidad TypeScript
+
+> **Motivación:** Resolver la alerta de dependencias de Dependabot (#22) actualizando Vitest a v5.0.0 y corrigiendo la augmentación de tipos para `@testing-library/jest-dom` en TypeScript estricto.
+
+#### 🛠️ Cambios Realizados
+- **Dependencias Frontend:** Actualizado `vitest` a `^5.0.0` junto con bumps menores alineados (`lucide-react` a `^1.41.0`, `@playwright/test` a `^1.63.0`, `@testing-library/react` a `^16.3.3`, `@types/react-dom` a `^19.2.7`).
+- **Configuración de Tests (`setup.ts`):** Adaptado el import a `@testing-library/jest-dom/vitest` para extender el interface `Assertion` propio de Vitest 5 en lugar de la definición clásica de Jest Matchers.
+- **Lockfile:** Sincronizado `package-lock.json` de frontend con 0 vulnerabilidades.
+
+#### 🧪 Verificación
+- **Frontend:** 63/63 tests pasando (14 suites) | TypeScript estricto (`tsc`) verificado sin errores | Vite build OK.
+- **Backend:** 289/289 tests pasando | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Atribución:** Desarrollada con **Gemini 3.8 Flash**.
+
 ## [1.21.0] — 2026-09-08
 
 ### 🖼️ Paso 5: Ejemplo Visual del Dashboard Exportable a PNG
