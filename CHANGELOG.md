@@ -4,6 +4,26 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.23.0] — 2026-09-21
+
+### 🎨 Dashboard Ejecutivo: Layout Limpio, Exportación PNG 3x, PDF y HTML
+
+> **Motivación:** El dashboard del paso 5 mostraba un layout técnico con panel de tips DAX/PBI incrustado en el PNG y resolución 2x. Se rediseñó para ofrecer un layout ejecutivo limpio (sin tips), exportación PNG de alta resolución (3x) y nuevas opciones de exportación a PDF y HTML.
+
+#### 🛠️ Cambios Realizados
+- **Dashboard Mockup v2 (`DashboardMockup.tsx`):** Eliminado el panel de "Consejos de construcción (DAX · KPI · visuales)" del layout del mockup. El dashboard muestra solo: filtros, KPIs, tendencia hero, composición/donut, barras comparativas y ranking. Layout ejecutivo tipo Data Studio/Power BI moderno.
+- **Exportación PNG 3x:** Resolución aumentada de 2x a 3x para mayor nitidez. Nombre del archivo cambiado a `dashboard_<id>.png`.
+- **Exportación PDF (`jspdf`):** Nuevo botón de exportación a PDF en formato apaisado (1600×1000px) con imagen embebida del dashboard.
+- **Exportación HTML:** Nuevo botón de exportación a HTML autocontenido con imagen en base64 del dashboard.
+- **Stub de exportación (`exportDashboard.ts`):** Creación del módulo de utilidades con funciones `exportDashboardPng`, `exportDashboardPdf`, `exportDashboardHtml` y `downloadBlob`. Implementación stub para tests jsdom, implementación real con `html-to-image` + `jspdf` para producción.
+- **Mock `html-to-image`:** Añadido `src/__mocks__/html-to-image.ts` para permitir tests unitarios del componente en jsdom.
+- **Pie del dashboard:** Actualizado para mostrar solo preguntas de negocio, slicers y checks (sin DAX measures en el footer).
+
+#### 🧪 Verificación
+- **Frontend:** 63/63 tests pasando | TypeScript estricto (`tsc`) verificado sin errores | Vite build OK.
+- **Backend:** 303/303 tests pasando | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Atribución:** Desarrollada con **MiMo V2.5 Free** (OpenCode).
+
 ## [1.22.0] — 2026-09-21
 
 ### 📊 Dashboard Intelligence v2: Gobernanza Semántica de Agregación, Intención Analítica y Control de Redundancia
