@@ -4,6 +4,25 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.23.1] — 2026-09-21
+
+### 🛠️ Dashboard Ejecutivo v2.1: Exportaciones Reales y Rediseño Visible del Preview
+
+> **Motivación:** La v1.23.0 dejó los botones PDF/HTML como stubs sin funcionalidad real y el preview apenas cambió (panel vacío residual). Se corrige con exportaciones funcionales y un rediseño ejecutivo visible y adaptado a los datos.
+
+#### 🛠️ Cambios Realizados
+- **Exportaciones reales (`exportDashboard.ts`):** Implementación funcional con patrón SVG → canvas probado: PNG 3x con fondo blanco (`dashboard_<id>.png`), PDF apaisado A4 con cabecera y pie (`jspdf` 4.2.1 por importación dinámica), HTML autocontenido con SVG inline + preguntas de negocio. Gestión de errores sin romper la app y compatible con jsdom (timeout de carga de imagen).
+- **Rediseño visible del preview (`DashboardMockup.tsx`, 1600×1240):** Cabecera ejecutiva con tipo/audiencia/objetivo, tira de slicers como pills, 4 KPIs limpios sin código DAX, tendencia hero + donut con total central y leyenda con %, barras comparativas con paleta del Blueprint, ranking con barras horizontales proporcionales y medallas, tira de preguntas de negocio que responde el dashboard y pie de gobierno. Paleta del Blueprint con fallbacks WCAG AA (texto `#0f172a`/`#475569` sobre blanco).
+- **Limpieza de dependencias:** Eliminada `html-to-image` (innecesaria) y su mock; PDF usa `jspdf` ya gestionado por Dependabot.
+- **i18n:** Descripciones del mockup actualizadas en español e inglés (sin mención a consejos técnicos).
+- **Tests:** Actualizados y ampliados a 64 frontend (maqueta ejecutiva con PNG/PDF/HTML, KPIs + filtros + preguntas sin DAX, utilidades resuelven sin lanzar en jsdom).
+- **Versiones:** Sincronizado `VERSION` de backend (estaba en 1.22.0) a 1.23.1.
+
+#### 🧪 Verificación
+- **Frontend:** 64/64 tests pasando | TypeScript estricto (`tsc`) y Vite build sin errores.
+- **Backend:** 303/303 tests pasando | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Atribución:** Desarrollada con **Muse Spark 1.3 Free** (OpenCode).
+
 ## [1.23.0] — 2026-09-21
 
 ### 🎨 Dashboard Ejecutivo: Layout Limpio, Exportación PNG 3x, PDF y HTML

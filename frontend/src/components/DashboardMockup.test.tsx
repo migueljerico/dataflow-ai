@@ -181,22 +181,27 @@ const renderPreview = () =>
     </LanguageProvider>
   );
 
-describe('DashboardPreview — pestaña Ejemplo con maqueta PNG', () => {
-  it('muestra la maqueta de ejemplo por defecto con el botón de descarga PNG', () => {
+describe('DashboardPreview — pestaña Ejemplo con maqueta ejecutiva', () => {
+  it('muestra la maqueta ejecutiva con botones PNG, PDF y HTML', () => {
     renderPreview();
     expect(screen.getByTestId('dashboard-mockup')).toBeInTheDocument();
     expect(screen.getByTestId('export-dashboard-mockup-png-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('export-dashboard-mockup-pdf-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('export-dashboard-mockup-html-btn')).toBeInTheDocument();
     expect(screen.getByTestId('export-dashboard-mockup-png-btn')).toHaveTextContent(/PNG/i);
   });
 
-  it('la maqueta incluye los KPIs reales del Blueprint y el título del dashboard', () => {
+  it('la maqueta ejecutiva incluye KPIs, filtros y preguntas sin código técnico DAX', () => {
     renderPreview();
     // El SVG de la maqueta (role="img"); el primer <svg> del árbol es un icono de lucide
     const svg = screen.getByRole('img', { name: /Ejemplo visual del dashboard/i });
     expect(svg).toBeInTheDocument();
     expect(svg.textContent).toContain('Rendimiento de Ventas');
     expect(svg.textContent).toContain('450,00');
-    expect(svg.textContent).toContain('Total_Importe');
+    expect(svg.textContent).toContain('Filtros');
+    expect(svg.textContent).toContain('evolución mensual');
+    // Layout ejecutivo limpio: sin nombres técnicos de medidas DAX en el PNG
+    expect(svg.textContent).not.toContain('Total_Importe');
   });
 
   it('permite cambiar a la pestaña Resumen y volver a Ejemplo', () => {
@@ -208,11 +213,23 @@ describe('DashboardPreview — pestaña Ejemplo con maqueta PNG', () => {
     expect(screen.getByTestId('dashboard-mockup')).toBeInTheDocument();
   });
 
-  it('el botón de descarga no rompe la app aunque el navegador no soporte canvas (try/catch)', () => {
+  it('los botones de descarga no rompen la app aunque el navegador no soporte canvas (try/catch)', async () => {
     renderPreview();
-    const btn = screen.getByTestId('export-dashboard-mockup-png-btn');
-    fireEvent.click(btn);
-    // La maqueta sigue visible tras el intento de exportación
+    fireEvent.click(screen.getByTestId('export-dashboard-mockup-png-btn'));
+    fireEvent.click(screen.getByTestId('export-dashboard-mockup-pdf-btn'));
+    fireEvent.click(screen.getByTestId('export-dashboard-mockup-html-btn'));
+    // La maqueta sigue visible tras los intentos de exportación
     expect(screen.getByTestId('dashboard-mockup')).toBeInTheDocument();
   });
+
+  it('las utilidades de exportación resuelven sin lanzar en jsdom', async () => {
+    const { exportDashboardPng, exportDashboardPdf, exportDashboardHtml, serializeDashboardSvg } = await import(
+      '../utils/exportDashboard'
+    );
+    await expect(exportDashboardPng(null, 'x')).resolves.toBe(false);
+    await expect(exportDashboardPdf(null, 'x')).resolves.toBe(false);
+    await expect(exportDashboardHtml(null, 'x')).resolves.toBe(false);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    expect(serializeDashboardSvg(svg as unknown as SVGSVGElement)).toContain('<svg');
+  }, 10000);
 });

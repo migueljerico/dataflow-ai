@@ -1,7 +1,7 @@
 {
   "name": "dataflow-ai-frontend",
   "private": true,
-  "version": "1.23.0",
+  "version": "1.23.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,6 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "html-to-image": "^1.11.11",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.46.0",
     "react": "^19.2.8",

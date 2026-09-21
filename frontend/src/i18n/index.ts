@@ -657,8 +657,8 @@ export const translations: Record<Language, Translations> = {
       exportStarSchemaPng: 'Exportar PNG',
       starPngDownloading: 'Generando imagen...',
       mockupTitle: 'Ejemplo visual del dashboard',
-      mockupDesc: 'Maqueta de ejemplo construida con los datos reales del Blueprint: KPIs, gráficos, slicers y consejos de construcción (DAX, KPI, visuales).',
-      mockupExportPng: 'Descargar ejemplo PNG',
+      mockupDesc: 'Maqueta ejecutiva construida con los datos reales del Blueprint: KPIs, tendencia, composición, desglose y ranking.',
+      mockupExportPng: 'Descargar PNG ejecutivo',
       mockupGenerating: 'Generando imagen...',
     },
     cacheModal: {
@@ -1037,8 +1037,8 @@ export const translations: Record<Language, Translations> = {
       exportStarSchemaPng: 'Export PNG',
       starPngDownloading: 'Generating image...',
       mockupTitle: 'Dashboard visual example',
-      mockupDesc: 'Example mockup built with the real Blueprint data: KPIs, charts, slicers and build tips (DAX, KPIs, visuals).',
-      mockupExportPng: 'Download example PNG',
+      mockupDesc: 'Executive mockup built with the real Blueprint data: KPIs, trend, composition, breakdown and ranking.',
+      mockupExportPng: 'Download executive PNG',
       mockupGenerating: 'Generating image...',
     },
     cacheModal: {
