@@ -186,7 +186,7 @@ describe('DashboardPreview — pestaña Ejemplo con maqueta PNG', () => {
     renderPreview();
     expect(screen.getByTestId('dashboard-mockup')).toBeInTheDocument();
     expect(screen.getByTestId('export-dashboard-mockup-png-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('export-dashboard-mockup-png-btn')).toHaveTextContent(/Descargar ejemplo PNG/i);
+    expect(screen.getByTestId('export-dashboard-mockup-png-btn')).toHaveTextContent(/PNG/i);
   });
 
   it('la maqueta incluye los KPIs reales del Blueprint y el título del dashboard', () => {

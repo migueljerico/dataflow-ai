@@ -12,6 +12,8 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "html-to-image": "^1.11.11",
+    "jspdf": "^3.0.1",
     "lucide-react": "^1.46.0",
     "react": "^19.2.8",
     "react-dom": "^19.3.0"

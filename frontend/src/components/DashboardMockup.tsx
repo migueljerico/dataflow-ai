@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Download, Image as ImageIcon } from 'lucide-react';
+import { Download, FileText, Code, Image as ImageIcon } from 'lucide-react';
+import { exportDashboardHtml, exportDashboardPdf, exportDashboardPng } from '../utils/exportDashboard';
 import { DashboardBlueprint, VisualRecommendation } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -99,43 +100,18 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
   // ── Ranking (tabla top) ───────────────────────────────────────────────────
   const tableRows = (tableVisual?.preview_data ?? []).slice(0, 6);
 
-  const exportAsPng = () => {
-    const svgEl = svgRef.current;
-    if (!svgEl) return;
-    setIsExportingPng(true);
+  const [exporting, setExporting] = useState<'png' | 'pdf' | 'html' | null>(null);
+
+  const handleExport = async (type: 'png' | 'pdf' | 'html') => {
+    const el = svgRef.current?.closest('[data-testid="dashboard-mockup"]') as HTMLElement | null;
+    if (!el) return;
+    setExporting(type);
     try {
-      const svgXml = new XMLSerializer().serializeToString(svgEl);
-      const svgBlob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-      const img = new Image();
-      img.onload = () => {
-        const scale = 3;
-        const canvas = document.createElement('canvas');
-        canvas.width = W * scale;
-        canvas.height = H * scale;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#eef2f7';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const pngData = canvas.toDataURL('image/png');
-          const a = document.createElement('a');
-          a.download = `dashboard_${blueprint.blueprint_id}.png`;
-          a.href = pngData;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
-        URL.revokeObjectURL(url);
-        setIsExportingPng(false);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        setIsExportingPng(false);
-      };
-      img.src = url;
-    } catch {
-      setIsExportingPng(false);
+      if (type === 'png') await exportDashboardPng(el, blueprint.blueprint_id);
+      if (type === 'pdf') await exportDashboardPdf(el, blueprint.blueprint_id);
+      if (type === 'html') await exportDashboardHtml(el, blueprint.blueprint_id);
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -167,20 +143,44 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
                 : 'Maqueta de ejemplo construida con los datos reales del Blueprint: KPIs, gráficos, slicers y consejos de construcción (DAX, KPI, visuales).')}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-outline"
-          onClick={exportAsPng}
-          disabled={isExportingPng}
-          data-testid="export-dashboard-mockup-png-btn"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
-          title={t.powerBiExcel?.mockupExportPng || (en ? 'Download example as PNG image (2x)' : 'Descargar ejemplo en imagen PNG (2x)')}
-        >
-          <Download size={14} />
-          {isExportingPng
-            ? t.powerBiExcel?.mockupGenerating || (en ? 'Generating image...' : 'Generando imagen...')
-            : t.powerBiExcel?.mockupExportPng || (en ? 'Download executive PNG' : 'Descargar PNG ejecutivo')}
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => handleExport('png')}
+            disabled={exporting === 'png'}
+            data-testid="export-dashboard-mockup-png-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
+            title={en ? 'Download executive PNG' : 'Descargar PNG ejecutivo'}
+          >
+            <Download size={14} />
+            {exporting === 'png' ? (en ? 'Exporting...' : 'Exportando...') : (en ? 'PNG' : 'PNG')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => handleExport('pdf')}
+            disabled={exporting === 'pdf'}
+            data-testid="export-dashboard-mockup-pdf-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
+            title={en ? 'Download executive PDF' : 'Descargar PDF ejecutivo'}
+          >
+            <FileText size={14} />
+            {exporting === 'pdf' ? (en ? 'Exporting...' : 'Exportando...') : (en ? 'PDF' : 'PDF')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => handleExport('html')}
+            disabled={exporting === 'html'}
+            data-testid="export-dashboard-mockup-html-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
+            title={en ? 'Download executive HTML' : 'Descargar HTML ejecutivo'}
+          >
+            <Code size={14} />
+            {exporting === 'html' ? (en ? 'Exporting...' : 'Exportando...') : (en ? 'HTML' : 'HTML')}
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ padding: '16px', backgroundColor: '#eef2f7', borderRadius: '12px', overflow: 'hidden' }}>
