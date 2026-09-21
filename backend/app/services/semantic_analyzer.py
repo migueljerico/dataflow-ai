@@ -15,6 +15,7 @@ import pandas as pd
 from app.core.number_parsing import to_numeric_series
 from app.core.semantics import _looks_like_id_name, is_percentage_or_score_column
 from app.models.dashboard import (
+    AggregationSemanticRoleEnum,
     ColumnSemanticTypeEnum,
     SemanticColumnAnalysis,
     SemanticModelAnalysis,
@@ -112,7 +113,69 @@ def _is_boolean_like(series: pd.Series) -> bool:
     normalized = {str(v).strip().lower() for v in series.dropna().unique()}
     if 0 < len(normalized) <= 2 and normalized <= {"true", "false", "si", "no", "sí", "1", "0", "verdadero", "falso"}:
         return True
-    return False
+
+
+def classify_aggregation_role(column_name: str, semantic_type: ColumnSemanticTypeEnum) -> AggregationSemanticRoleEnum:
+    """Clasificación del rol semántico de agregación (Sección 9.1 de gobernanza)."""
+    name_lower = _tokens(column_name)
+
+    # 1) Identificadores y claves
+    if semantic_type == ColumnSemanticTypeEnum.IDENTIFIER or _looks_like_id_name(name_lower):
+        return AggregationSemanticRoleEnum.IDENTIFIER_KEY
+
+    # 2) Categóricos, geográficos, texto y fechas
+    if semantic_type in (
+        ColumnSemanticTypeEnum.CATEGORY,
+        ColumnSemanticTypeEnum.SUBCATEGORY,
+        ColumnSemanticTypeEnum.GEOGRAPHY,
+        ColumnSemanticTypeEnum.NAME,
+        ColumnSemanticTypeEnum.EMAIL,
+        ColumnSemanticTypeEnum.TEXT,
+        ColumnSemanticTypeEnum.BOOLEAN,
+        ColumnSemanticTypeEnum.ORDINAL,
+        ColumnSemanticTypeEnum.DATE,
+        ColumnSemanticTypeEnum.DATETIME,
+    ):
+        return AggregationSemanticRoleEnum.CATEGORICAL
+
+    # 3) Ratios y porcentajes (SUM prohibido)
+    if semantic_type == ColumnSemanticTypeEnum.PERCENTAGE or any(
+        tok in name_lower
+        for tok in ("discount", "descuento", "disc", "margin", "margen", "ratio", "porcentaje", "pct", "tasa")
+    ):
+        return AggregationSemanticRoleEnum.RATIO_OR_PERCENTAGE
+
+    # 4) Tasas y precios unitarios (SUM prohibido sin combinar con cantidad)
+    has_additive_override = any(
+        tok in name_lower
+        for tok in ("total", "subtotal", "importe", "monto", "ventas", "sales", "revenue", "ingreso", "linetotal")
+    )
+    if not has_additive_override and any(
+        tok in name_lower
+        for tok in (
+            "unitprice",
+            "unit_price",
+            "precio_unitario",
+            "precio_unidad",
+            "price_per_unit",
+            "price_unit",
+            "precio",
+            "price",
+            "rate",
+            "tarifa",
+            "fee",
+            "coste_unitario",
+            "cost_per_unit",
+        )
+    ):
+        return AggregationSemanticRoleEnum.UNIT_PRICE_OR_RATE
+
+    # 5) Cantidades aditivas
+    if semantic_type == ColumnSemanticTypeEnum.QUANTITY or any(tok in name_lower for tok in _QUANTITY_TOKENS):
+        return AggregationSemanticRoleEnum.ADDITIVE_QUANTITY
+
+    # 6) Importe monetario o medida aditiva por defecto
+    return AggregationSemanticRoleEnum.ADDITIVE_AMOUNT
 
 
 class SemanticModelAnalyzer:
@@ -307,6 +370,7 @@ class SemanticModelAnalyzer:
         signals: List[str],
         is_heuristic: bool,
     ) -> SemanticColumnAnalysis:
+        agg_role = classify_aggregation_role(column_name, semantic_type)
         return SemanticColumnAnalysis(
             table_name=table_name,
             column_name=column_name,
@@ -316,6 +380,7 @@ class SemanticModelAnalyzer:
             completeness_pct=round(100.0 - null_pct, 2),
             inferred_from=", ".join(signals),
             is_heuristic=is_heuristic,
+            aggregation_role=agg_role,
         )
 
     @classmethod

@@ -10,21 +10,27 @@ Reglas clave:
 - Bar/horizontal bar para comparación categórica.
 - Line para evolución temporal.
 - Pie/donut SOLO con una única composición, ≤6 categorías y sin comparación precisa.
+- Horizontal bar descendente para ranking de los principales valores.
 - Scatter para relación entre dos variables numéricas.
 - Histogram para distribución de una medida continua.
+- Gobernanza estricta de agregación: jamás SUM sobre precios unitarios o ratios.
+- Control de redundancia: jamás duplicar la misma dimensión con el mismo objetivo analítico.
 """
 
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
 from app.models.dashboard import (
+    AggregationSemanticRoleEnum,
     ColumnSemanticTypeEnum,
     ConfidenceLevelEnum,
     PreviewDataPoint,
     PreviewModeEnum,
+    SemanticColumnAnalysis,
     SemanticModelAnalysis,
+    TableSemanticRoleEnum,
     VisualRecommendation,
     VisualTypeEnum,
 )
@@ -55,6 +61,96 @@ def _confidence_level(score: int) -> ConfidenceLevelEnum:
     return ConfidenceLevelEnum.LOW
 
 
+def _natural_dimension_name(col_name: str) -> str:
+    """Traduce nombres técnicos de columnas a denominaciones naturales ejecutivas en español."""
+    translations = {
+        "shipcountry": "País de Envío",
+        "ship_country": "País de Envío",
+        "country": "País",
+        "pais": "País",
+        "city": "Ciudad",
+        "ciudad": "Ciudad",
+        "shipcity": "Ciudad de Envío",
+        "ship_city": "Ciudad de Envío",
+        "customername": "Cliente",
+        "customer_name": "Cliente",
+        "companyname": "Empresa",
+        "company_name": "Empresa",
+        "contactname": "Contacto",
+        "productname": "Producto",
+        "product_name": "Producto",
+        "categoryname": "Categoría",
+        "category_name": "Categoría",
+        "category": "Categoría",
+        "subcategory": "Subcategoría",
+        "suppliername": "Proveedor",
+        "supplier_name": "Proveedor",
+        "orderdate": "Fecha de Pedido",
+        "order_date": "Fecha de Pedido",
+        "shippeddate": "Fecha de Envío",
+        "shipped_date": "Fecha de Envío",
+        "status": "Estado",
+        "orderstatus": "Estado del Pedido",
+    }
+    key = col_name.lower().replace(" ", "").replace("_", "")
+    if key in translations:
+        return translations[key]
+    return col_name.replace("_", " ")
+
+
+class RedundancyController:
+    """Controla y previene la redundancia dimensional y analítica en las recomendaciones de visuales."""
+
+    def __init__(self) -> None:
+        self._visuals_by_dim_and_goal: Dict[Tuple[str, str], VisualRecommendation] = {}
+        self._used_dimensions: Dict[str, Set[str]] = {
+            "comparación": set(),
+            "composición": set(),
+            "ranking": set(),
+            "evolución temporal": set(),
+            "relación": set(),
+            "distribución": set(),
+        }
+        self._all_dimensions_used: Set[str] = set()
+
+    def can_add(
+        self,
+        dimension: Optional[str],
+        goal: str,
+        visual_type: VisualTypeEnum,
+        category_count: Optional[int] = None,
+    ) -> bool:
+        if not dimension:
+            return True
+
+        # 1) Misma dimensión + mismo objetivo analítico -> Prohibido
+        if (dimension, goal) in self._visuals_by_dim_and_goal:
+            return False
+
+        # 2) Donut:
+        if visual_type in (VisualTypeEnum.DONUT, VisualTypeEnum.PIE):
+            # Prohibido si la dimensión ya se utilizó para comparación en barras
+            if dimension in self._used_dimensions["comparación"]:
+                return False
+            # Prohibido si no tiene entre 2 y 6 categorías
+            if category_count is not None and not (2 <= category_count <= 6):
+                return False
+
+        return True
+
+    def register(self, visual: VisualRecommendation) -> None:
+        dim = visual.dimension or ""
+        goal = visual.analytical_goal or "general"
+        if dim:
+            self._visuals_by_dim_and_goal[(dim, goal)] = visual
+            if goal in self._used_dimensions:
+                self._used_dimensions[goal].add(dim)
+            self._all_dimensions_used.add(dim)
+
+    def is_dimension_used(self, dimension: str) -> bool:
+        return dimension in self._all_dimensions_used
+
+
 class VisualRecommendationEngine:
     """Motor determinista de recomendación de visuales sobre un modelo estrella."""
 
@@ -69,8 +165,24 @@ class VisualRecommendationEngine:
         self.dataframes = dataframes
         self.fact_name = schema.fact_table.table_name
         self.fact_df = dataframes.get(self.fact_name, pd.DataFrame())
+        self._ensure_derived_measures()
         self._column_index = self._build_column_index()
         self.primary_measure = self._select_primary_measure()
+
+    def _ensure_derived_measures(self) -> None:
+        """Calcula de forma determinista la columna sintética de ventas netas si existen cantidad y precio."""
+        if self.fact_df.empty:
+            return
+        cols = {str(c).lower(): str(c) for c in self.fact_df.columns}
+        qty_col = next((cols[k] for k in ("quantity", "cantidad", "qty", "unidades", "units") if k in cols), None)
+        price_col = next((cols[k] for k in ("unitprice", "precio", "unit_price", "price") if k in cols), None)
+        disc_col = next((cols[k] for k in ("discount", "descuento", "disc") if k in cols), None)
+
+        if qty_col and price_col and DERIVED_MEASURE_COL not in self.fact_df.columns:
+            qty = pd.to_numeric(self.fact_df[qty_col], errors="coerce").fillna(0)
+            price = pd.to_numeric(self.fact_df[price_col], errors="coerce").fillna(0)
+            disc = pd.to_numeric(self.fact_df[disc_col], errors="coerce").fillna(0) if disc_col else 0
+            self.fact_df[DERIVED_MEASURE_COL] = qty * price * (1.0 - disc)
 
     # ─────────────────────── utilidades de índice ───────────────────────────
 
@@ -85,6 +197,25 @@ class VisualRecommendationEngine:
                     "analysis": col,
                     "semantic_role": table.semantic_role,
                 }
+        if DERIVED_MEASURE_COL in self.fact_df.columns:
+            analysis_col = SemanticColumnAnalysis(
+                table_name=self.fact_name,
+                column_name=DERIVED_MEASURE_COL,
+                semantic_type=ColumnSemanticTypeEnum.CURRENCY,
+                data_type="float64",
+                cardinality=int(self.fact_df[DERIVED_MEASURE_COL].nunique()),
+                null_percentage=0.0,
+                completeness_pct=100.0,
+                inferred_from="derived: quantity * price * (1 - discount)",
+                is_heuristic=False,
+                aggregation_role=AggregationSemanticRoleEnum.ADDITIVE_AMOUNT,
+            )
+            index[f"{self.fact_name}[{DERIVED_MEASURE_COL}]"] = {
+                "table": self.fact_name,
+                "column": DERIVED_MEASURE_COL,
+                "analysis": analysis_col,
+                "semantic_role": TableSemanticRoleEnum.FACT,
+            }
         return index
 
     def columns_of_type(self, semantic_type: ColumnSemanticTypeEnum) -> List[Dict[str, object]]:
@@ -102,16 +233,23 @@ class VisualRecommendationEngine:
     # ─────────────────────── selección de medida ────────────────────────────
 
     def _select_primary_measure(self) -> Optional[Dict[str, object]]:
-        """Elige la medida principal: Ventas netas derivadas > monetaria > cantidad > medida continua."""
+        """Elige la medida principal con estricta gobernanza semántica de agregación."""
         derived_key = f"{self.fact_name}[{DERIVED_MEASURE_COL}]"
         if derived_key in self._column_index:
             entry = self._column_index[derived_key]
             dax_measures = self.schema.suggested_dax_measures
-            dax_name = (
-                "Ventas_Netas"
-                if "Ventas_Netas" in dax_measures
-                else ("Ventas_Totales" if "Ventas_Totales" in dax_measures else "Ventas_Netas")
-            )
+            dax_name = "Ventas_Netas"
+            sources = self._derived_source_columns()
+            if len(sources) >= 2:
+                q, p = sources[0], sources[1]
+                d = sources[2] if len(sources) > 2 else None
+                default_formula = f"SUMX('{self.fact_name}', '{self.fact_name}'[{q}] * '{self.fact_name}'[{p}]"
+                if d:
+                    default_formula += f" * (1 - '{self.fact_name}'[{d}])"
+                default_formula += ")"
+            else:
+                default_formula = f"SUM('{self.fact_name}'[{DERIVED_MEASURE_COL}])"
+            dax_formula = dax_measures.get(dax_name, default_formula)
             return {
                 "table": self.fact_name,
                 "column": DERIVED_MEASURE_COL,
@@ -119,9 +257,13 @@ class VisualRecommendationEngine:
                 "label": "Ventas netas",
                 "derived": True,
                 "dax_name": dax_name,
-                "dax_formula": dax_measures.get(dax_name, ""),
-                "source_columns": self._derived_source_columns(),
+                "dax_formula": dax_formula,
+                "source_columns": sources,
+                "aggregation_role": AggregationSemanticRoleEnum.ADDITIVE_AMOUNT,
+                "aggregation_func": "sum",
             }
+
+        # Si no hay ventas netas derivadas, buscar candidatos numéricos en la tabla de hechos
         for preferred in (
             ColumnSemanticTypeEnum.CURRENCY,
             ColumnSemanticTypeEnum.QUANTITY,
@@ -129,21 +271,46 @@ class VisualRecommendationEngine:
         ):
             candidates = [c for c in self.columns_of_type(preferred) if c["table"] == self.fact_name]
             if candidates:
-                # Orden determinista: completitud desc, luego cardinalidad desc, luego nombre
+                # Preferir medidas aditivas sobre unitarias/ratios
                 candidates.sort(
                     key=lambda c: (
+                        (
+                            1
+                            if getattr(c["analysis"], "aggregation_role", None)
+                            in (
+                                AggregationSemanticRoleEnum.UNIT_PRICE_OR_RATE,
+                                AggregationSemanticRoleEnum.RATIO_OR_PERCENTAGE,
+                            )
+                            else 0
+                        ),
                         -float(c["analysis"].completeness_pct),
                         -int(c["analysis"].cardinality),
                         str(c["column"]),
                     )
                 )
                 best = candidates[0]
+                role = getattr(best["analysis"], "aggregation_role", AggregationSemanticRoleEnum.ADDITIVE_AMOUNT)
+                is_unit = role in (
+                    AggregationSemanticRoleEnum.UNIT_PRICE_OR_RATE,
+                    AggregationSemanticRoleEnum.RATIO_OR_PERCENTAGE,
+                )
+                agg_func = "mean" if is_unit else "sum"
+                label = self._measure_label(best, is_unit=is_unit)
+                col_name = str(best["column"])
+                dax_op = "AVERAGE" if is_unit else "SUM"
+                is_price = any(k in col_name.lower() for k in ("price", "precio", "rate", "tarifa"))
+                dax_name = f"{'Precio_Medio' if is_price else 'Promedio' if is_unit else 'Total'}_{col_name}"
+                dax_formula = f"{dax_op}('{best['table']}'[{col_name}])"
                 return {
                     "table": str(best["table"]),
-                    "column": str(best["column"]),
+                    "column": col_name,
                     "analysis": best["analysis"],
-                    "label": self._measure_label(best),
+                    "label": label,
                     "derived": False,
+                    "aggregation_role": role,
+                    "aggregation_func": agg_func,
+                    "dax_name": dax_name,
+                    "dax_formula": dax_formula,
                 }
         return None
 
@@ -163,6 +330,12 @@ class VisualRecommendationEngine:
             return f"[{self.primary_measure['dax_name']}]"
         return f"{self.primary_measure['table']}[{self.primary_measure['column']}]"
 
+    def _measure_dax_formula(self) -> Optional[str]:
+        """Fórmula DAX de la medida principal para la ficha técnica del visual."""
+        if self.primary_measure is None:
+            return None
+        return str(self.primary_measure.get("dax_formula") or f"[{self.primary_measure.get('dax_name', '')}]")
+
     def _measure_fields(self) -> List[str]:
         """Campos reales del modelo que respaldan la medida principal (nunca columnas sintéticas)."""
         if self.primary_measure is None:
@@ -172,9 +345,16 @@ class VisualRecommendationEngine:
         return [f"{self.primary_measure['table']}[{self.primary_measure['column']}]"]
 
     @staticmethod
-    def _measure_label(entry: Dict[str, object]) -> str:
+    def _measure_label(entry: Dict[str, object], is_unit: bool = False) -> str:
         column = str(entry["column"])
-        semantic_type = entry["analysis"].semantic_type
+        role = getattr(entry.get("analysis"), "aggregation_role", None)
+        if is_unit or role == AggregationSemanticRoleEnum.UNIT_PRICE_OR_RATE:
+            if any(k in column.lower() for k in ("unitprice", "precio", "unit_price", "price")):
+                return "Precio unitario medio"
+            return f"{column.replace('_', ' ')} medio"
+        if role == AggregationSemanticRoleEnum.RATIO_OR_PERCENTAGE:
+            return f"{column.replace('_', ' ')} medio"
+        semantic_type = getattr(entry.get("analysis"), "semantic_type", None)
         if semantic_type == ColumnSemanticTypeEnum.CURRENCY:
             return (
                 "Ingresos"
@@ -218,19 +398,28 @@ class VisualRecommendationEngine:
         top_n: int = 8,
         sort_desc: bool = True,
     ) -> Tuple[List[PreviewDataPoint], int]:
-        """Agrega la medida principal por una dimensión. Devuelve puntos y cardinalidad total."""
+        """Agrega la medida principal por una dimensión respetando la función agregadora gobernada."""
         frame = self._merge_with_dim(dim_table, dim_column)
         if frame is None or self.primary_measure is None:
             return [], 0
         measure_col = str(self.primary_measure["column"])
         numeric_frame = frame.copy()
         numeric_frame[measure_col] = pd.to_numeric(numeric_frame[measure_col], errors="coerce")
-        grouped = (
-            numeric_frame.dropna(subset=[dim_column])
-            .groupby(dim_column)[measure_col]
-            .sum()
-            .sort_values(ascending=not sort_desc)
-        )
+        agg_func = self.primary_measure.get("aggregation_func", "sum")
+        if agg_func == "mean":
+            grouped = (
+                numeric_frame.dropna(subset=[dim_column])
+                .groupby(dim_column)[measure_col]
+                .mean()
+                .sort_values(ascending=not sort_desc)
+            )
+        else:
+            grouped = (
+                numeric_frame.dropna(subset=[dim_column])
+                .groupby(dim_column)[measure_col]
+                .sum()
+                .sort_values(ascending=not sort_desc)
+            )
         total_cardinality = int(grouped.shape[0])
         points = [
             PreviewDataPoint(label=str(label)[:24], value=round(float(value), 2))
@@ -265,10 +454,10 @@ class VisualRecommendationEngine:
                 parts.append("-20 completitud < 70%")
         if self.primary_measure is not None:
             score += 10
-            parts.append("+10 medida principal sumable disponible")
+            parts.append("+10 medida principal validada disponible")
         else:
             score -= 25
-            parts.append("-25 sin medida principal sumable")
+            parts.append("-25 sin medida principal validada")
         for delta, why in extra or []:
             score += delta
             parts.append(f"{delta:+d} {why}")
@@ -308,7 +497,7 @@ class VisualRecommendationEngine:
             return {"table": table, "column": column, "entry": entry, "series": series}
         return None
 
-    def _line_visual(self) -> Optional[VisualRecommendation]:
+    def _line_visual(self, redundancy: RedundancyController) -> Optional[VisualRecommendation]:
         if self.primary_measure is None:
             return None
         candidate = self._time_series_candidate()
@@ -347,30 +536,40 @@ class VisualRecommendationEngine:
             base["__periodo"] = base["__fecha"].dt.to_period("M").astype(str)
         else:
             base["__periodo"] = base["__fecha"].dt.strftime("%Y-%m-%d")
-        grouped = base.groupby("__periodo")[measure_col].sum().sort_index()
+
+        agg_func = self.primary_measure.get("aggregation_func", "sum")
+        if agg_func == "mean":
+            grouped = base.groupby("__periodo")[measure_col].mean().sort_index()
+        else:
+            grouped = base.groupby("__periodo")[measure_col].sum().sort_index()
+
         if len(grouped) < 3:
             return None
         points = [
             PreviewDataPoint(label=str(label), value=round(float(value), 2))
             for label, value in grouped.tail(MAX_PREVIEW_POINTS).items()
         ]
-        table = str(candidate["table"])
-        column = str(candidate["column"])
         extra = [(10, "cardinalidad temporal adecuada")] if len(grouped) >= 6 else [(-10, "pocos puntos temporales")]
         score, level, rationale = self._score(55, candidate["entry"], extra)
-        measure_ref = f"{self.primary_measure['table']}[{self.primary_measure['column']}]"
-        return VisualRecommendation(
+        measure_ref = self._measure_reference()
+        measure_label = str(self.primary_measure["label"])
+        dim_ref = f"{table}[{column}]"
+
+        if not redundancy.can_add(dim_ref, "evolución temporal", VisualTypeEnum.LINE):
+            return None
+
+        visual = VisualRecommendation(
             visual_id=f"vis_line_{_slug(column)}",
-            title=f"Evolución de {self.primary_measure['label']} por {'mes' if granularity == 'M' else 'día'}",
+            title=f"Evolución de {measure_label} por {'mes' if granularity == 'M' else 'día'}",
             visual_type=VisualTypeEnum.LINE,
             page_id="page_overview",
-            dimension=f"{table}[{column}]",
+            dimension=dim_ref,
             measure=measure_ref,
-            measure_name=self.primary_measure["label"],
-            fields=[f"{table}[{column}]", measure_ref],
-            axis_label=f"{table}[{column}]",
+            measure_name=measure_label,
+            fields=[dim_ref] + self._measure_fields(),
+            axis_label=dim_ref,
             legend_field=None,
-            filter_suggestion=f"{table}[{column}] (año)",
+            filter_suggestion=f"{dim_ref} (año)",
             reason="La evolución temporal de la medida principal debe leerse como tendencia continua; el gráfico de líneas preserva el orden cronológico y facilita detectar patrones estacionales.",
             confidence=level,
             confidence_rationale=rationale,
@@ -380,22 +579,39 @@ class VisualRecommendationEngine:
             data_quality_notes=self._dq_notes([(table, column)]),
             accessibility_note="Incluir valores numéricos en el tooltip y no codificar la tendencia solo con color.",
             order=0,
+            business_question="¿Cómo evoluciona la métrica en el tiempo y cuál es su tendencia?",
+            analytical_goal="evolución temporal",
+            measure_dax=self._measure_dax_formula(),
+            priority=1,
         )
+        redundancy.register(visual)
+        return visual
 
-    def _category_visuals(self) -> List[VisualRecommendation]:
+    def _category_visuals(self, redundancy: RedundancyController) -> List[VisualRecommendation]:
         visuals: List[VisualRecommendation] = []
         if self.primary_measure is None:
             return visuals
-        seen_titles: set = set()
         category_entries = (
             self.columns_of_type(ColumnSemanticTypeEnum.CATEGORY)
             + self.columns_of_type(ColumnSemanticTypeEnum.SUBCATEGORY)
             + self.columns_of_type(ColumnSemanticTypeEnum.GEOGRAPHY)
         )
 
-        for entry in sorted(category_entries, key=lambda e: (str(e["table"]), str(e["column"]))):
+        # Ordenar por completitud descendente y cardinalidad moderada
+        sorted_entries = sorted(
+            category_entries,
+            key=lambda e: (
+                -float(e["analysis"].completeness_pct),
+                abs(int(e["analysis"].cardinality) - 8),
+                str(e["table"]),
+                str(e["column"]),
+            ),
+        )
+
+        for entry in sorted_entries:
             table = str(entry["table"])
             column = str(entry["column"])
+            dim_key = f"{table}[{column}]"
             if (
                 column.lower() in ("id",)
                 or str(entry["analysis"].semantic_type) == ColumnSemanticTypeEnum.IDENTIFIER.value
@@ -404,19 +620,20 @@ class VisualRecommendationEngine:
             joinable = table == self.fact_name or bool(self._relations_to(table))
             if not joinable:
                 continue
+
             points, total_cardinality = self._aggregate_by(table, column, top_n=8)
-            if total_cardinality < 2 or not points:
+            if total_cardinality < 2 or not points or total_cardinality > MAX_CATEGORIES_BAR:
                 continue
-            if total_cardinality > MAX_CATEGORIES_BAR:
-                continue
-            title = f"{self.primary_measure['label']} por {column.replace('_', ' ')}"
-            if title in seen_titles:
-                continue
-            seen_titles.add(title)
 
             longest_label = max(len(p.label) for p in points)
             use_horizontal = longest_label > 18 or total_cardinality > 12
             visual_type = VisualTypeEnum.HORIZONTAL_BAR if use_horizontal else VisualTypeEnum.BAR
+
+            if not redundancy.can_add(dim_key, "comparación", visual_type, total_cardinality):
+                continue
+
+            dim_display_name = _natural_dimension_name(column)
+            title = f"{self.primary_measure['label']} por {dim_display_name}"
 
             cardinality_bonus = 10 if 3 <= total_cardinality <= 15 else (-5 if total_cardinality > 20 else 0)
             score, level, rationale = self._score(
@@ -424,62 +641,91 @@ class VisualRecommendationEngine:
             )
             reason = (
                 f"Comparación directa de {self.primary_measure['label']} entre {total_cardinality} valores de "
-                f"'{column}'; el gráfico de barras permite leer con precisión el peso relativo de cada categoría."
+                f"'{dim_display_name}'; el gráfico de barras permite leer con precisión el peso relativo de cada categoría."
             )
             alternatives = (
                 [VisualTypeEnum.BAR, VisualTypeEnum.STACKED_BAR]
                 if use_horizontal
                 else [VisualTypeEnum.HORIZONTAL_BAR, VisualTypeEnum.STACKED_BAR]
             )
-            visuals.append(
-                VisualRecommendation(
-                    visual_id=f"vis_bar_{_slug(table + '_' + column)}",
-                    title=title,
-                    visual_type=visual_type,
-                    page_id="page_overview",
-                    dimension=f"{table}[{column}]",
-                    measure=f"{self.primary_measure['table']}[{self.primary_measure['column']}]",
-                    measure_name=self.primary_measure["label"],
-                    fields=[f"{table}[{column}]", f"{self.primary_measure['table']}[{self.primary_measure['column']}]"],
-                    axis_label=column.replace("_", " "),
-                    legend_field=None,
-                    filter_suggestion=f"{table}[{column}]",
-                    reason=reason,
-                    confidence=level,
-                    confidence_rationale=rationale,
-                    alternative_types=alternatives,
-                    preview_data=points,
-                    preview_mode=PreviewModeEnum.REAL,
-                    data_quality_notes=self._dq_notes([(table, column)]),
-                    accessibility_note="Etiquetar cada barra con su valor exacto para no depender solo de la longitud.",
-                    order=0,
-                )
+
+            visual = VisualRecommendation(
+                visual_id=f"vis_bar_{_slug(table + '_' + column)}",
+                title=title,
+                visual_type=visual_type,
+                page_id="page_overview",
+                dimension=dim_key,
+                measure=self._measure_reference(),
+                measure_name=self.primary_measure["label"],
+                fields=[dim_key] + self._measure_fields(),
+                axis_label=dim_display_name,
+                legend_field=None,
+                filter_suggestion=dim_key,
+                reason=reason,
+                confidence=level,
+                confidence_rationale=rationale,
+                alternative_types=alternatives,
+                preview_data=points,
+                preview_mode=PreviewModeEnum.REAL,
+                data_quality_notes=self._dq_notes([(table, column)]),
+                accessibility_note="Etiquetar cada barra con su valor exacto para no depender solo de la longitud.",
+                order=0,
+                business_question=f"¿Cómo se distribuye {self.primary_measure['label'].lower()} entre los principales segmentos de {dim_display_name.lower()}?",
+                analytical_goal="comparación",
+                measure_dax=self._measure_dax_formula(),
+                priority=2,
             )
-            if len(visuals) >= 4:
+            redundancy.register(visual)
+            visuals.append(visual)
+            if len(visuals) >= 3:
                 break
         return visuals
 
-    def _donut_visual(self, category_visuals: List[VisualRecommendation]) -> Optional[VisualRecommendation]:
-        """Donut SOLO con una única composición de pocas categorías (2..6)."""
-        for visual in category_visuals:
-            dim_table, dim_column = self._parse_field(visual.dimension)
-            if not dim_table:
+    def _donut_visual(self, redundancy: RedundancyController) -> Optional[VisualRecommendation]:
+        """Donut SOLO para composición única de 2..6 categorías, nunca geografía, ni dimensión ya usada."""
+        if self.primary_measure is None:
+            return None
+
+        # Evaluar columnas categóricas puras (excluir expresamente geografía)
+        candidates = self.columns_of_type(ColumnSemanticTypeEnum.CATEGORY) + self.columns_of_type(
+            ColumnSemanticTypeEnum.SUBCATEGORY
+        )
+        for entry in candidates:
+            if entry["analysis"].semantic_type == ColumnSemanticTypeEnum.GEOGRAPHY:
                 continue
-            points, total_cardinality = self._aggregate_by(dim_table, dim_column, top_n=MAX_PIE_CATEGORIES + 1)
+            table = str(entry["table"])
+            column = str(entry["column"])
+            dim_key = f"{table}[{column}]"
+
+            # No reutilizar dimensión ya usada para comparación en barras
+            if redundancy.is_dimension_used(dim_key):
+                continue
+
+            joinable = table == self.fact_name or bool(self._relations_to(table))
+            if not joinable:
+                continue
+
+            points, total_cardinality = self._aggregate_by(table, column, top_n=MAX_PIE_CATEGORIES + 1)
             if not (2 <= total_cardinality <= MAX_PIE_CATEGORIES) or len(points) != total_cardinality:
                 continue
+
+            if not redundancy.can_add(dim_key, "composición", VisualTypeEnum.DONUT, total_cardinality):
+                continue
+
+            dim_display_name = _natural_dimension_name(column)
             score, level, rationale = self._score(40, None, [(10, f"composición única con {total_cardinality} partes")])
-            return VisualRecommendation(
-                visual_id=f"vis_donut_{_slug(dim_column)}",
-                title=f"Composición de {self.primary_measure['label']} por {dim_column.replace('_', ' ')}",
+
+            visual = VisualRecommendation(
+                visual_id=f"vis_donut_{_slug(column)}",
+                title=f"Composición de {self.primary_measure['label']} por {dim_display_name}",
                 visual_type=VisualTypeEnum.DONUT,
                 page_id="page_overview",
-                dimension=visual.dimension,
-                measure=visual.measure,
-                measure_name=self.primary_measure["label"] if self.primary_measure else None,
-                fields=visual.fields,
+                dimension=dim_key,
+                measure=self._measure_reference(),
+                measure_name=self.primary_measure["label"],
+                fields=[dim_key] + self._measure_fields(),
                 axis_label=None,
-                legend_field=visual.dimension,
+                legend_field=dim_key,
                 filter_suggestion=None,
                 reason=(
                     f"Única composición de un total con {total_cardinality} categorías; el donut comunica la parte "
@@ -490,19 +736,104 @@ class VisualRecommendationEngine:
                 alternative_types=[VisualTypeEnum.HORIZONTAL_BAR, VisualTypeEnum.PIE],
                 preview_data=points,
                 preview_mode=PreviewModeEnum.REAL,
-                data_quality_notes=visual.data_quality_notes,
+                data_quality_notes=self._dq_notes([(table, column)]),
                 accessibility_note="Añadir leyenda con porcentajes explícitos; nunca diferenciar solo por color.",
                 order=0,
+                business_question=f"¿Cuál es la proporción de {self.primary_measure['label'].lower()} por {dim_display_name.lower()}?",
+                analytical_goal="composición",
+                measure_dax=self._measure_dax_formula(),
+                priority=4,
             )
+            redundancy.register(visual)
+            return visual
         return None
 
-    def _scatter_visual(self) -> Optional[VisualRecommendation]:
+    def _ranking_visual(self, redundancy: RedundancyController) -> Optional[VisualRecommendation]:
+        """Ranking de los principales valores en una dimensión de alta cardinalidad usando barras horizontales."""
+        if self.primary_measure is None:
+            return None
+
+        candidates = (
+            self.columns_of_type(ColumnSemanticTypeEnum.CATEGORY)
+            + self.columns_of_type(ColumnSemanticTypeEnum.SUBCATEGORY)
+            + self.columns_of_type(ColumnSemanticTypeEnum.GEOGRAPHY)
+            + self.columns_of_type(ColumnSemanticTypeEnum.NAME)
+        )
+
+        valid_candidates = []
+        for entry in candidates:
+            table = str(entry["table"])
+            column = str(entry["column"])
+            dim_key = f"{table}[{column}]"
+            if (
+                column.lower() in ("id",)
+                or str(entry["analysis"].semantic_type) == ColumnSemanticTypeEnum.IDENTIFIER.value
+            ):
+                continue
+            joinable = table == self.fact_name or bool(self._relations_to(table))
+            if not joinable:
+                continue
+            cardinality = int(entry["analysis"].cardinality)
+            if cardinality < 2:
+                continue
+            is_used = redundancy.is_dimension_used(dim_key)
+            valid_candidates.append((is_used, -cardinality, table, column, entry))
+
+        if not valid_candidates:
+            return None
+
+        # Ordenar: primero no utilizadas, luego mayor cardinalidad
+        valid_candidates.sort(key=lambda x: (x[0], x[1]))
+
+        for _, _, dim_table, dim_column, _best_entry in valid_candidates:
+            dim_key = f"{dim_table}[{dim_column}]"
+            if not redundancy.can_add(dim_key, "ranking", VisualTypeEnum.HORIZONTAL_BAR):
+                continue
+            points, total_cardinality = self._aggregate_by(dim_table, dim_column, top_n=5, sort_desc=True)
+            if not points:
+                continue
+
+            dim_display_name = _natural_dimension_name(dim_column)
+            score, level, rationale = self._score(55, None, [(10, "ranking de detalle sobre dimensión relevante")])
+
+            visual = VisualRecommendation(
+                visual_id=f"vis_ranking_{_slug(dim_column)}",
+                title=f"Top 5 {dim_display_name} por {self.primary_measure['label']}",
+                visual_type=VisualTypeEnum.HORIZONTAL_BAR,
+                page_id="page_detail",
+                dimension=dim_key,
+                measure=self._measure_reference(),
+                measure_name=self.primary_measure["label"],
+                fields=[dim_key] + self._measure_fields(),
+                axis_label=dim_display_name,
+                legend_field=None,
+                filter_suggestion=dim_key,
+                reason=f"El ranking en barra horizontal ordenada descendente destaca de inmediato los 5 {dim_display_name.lower()} con mayor volumen de negocio.",
+                confidence=level,
+                confidence_rationale=rationale,
+                alternative_types=[VisualTypeEnum.TABLE],
+                preview_data=points,
+                preview_mode=PreviewModeEnum.REAL,
+                data_quality_notes=self._dq_notes([(dim_table, dim_column)]),
+                accessibility_note="Barra horizontal ordenada descendente con etiquetas de valor legibles.",
+                order=0,
+                business_question=f"¿Cuáles son los 5 principales {dim_display_name.lower()} con mayor volumen de {self.primary_measure['label'].lower()}?",
+                analytical_goal="ranking",
+                measure_dax=self._measure_dax_formula(),
+                priority=3,
+            )
+            redundancy.register(visual)
+            return visual
+
+        return None
+
+    def _scatter_visual(self, redundancy: RedundancyController) -> Optional[VisualRecommendation]:
         numeric_columns = [
             c
             for c in self.columns_of_type(ColumnSemanticTypeEnum.MEASURE)
             + self.columns_of_type(ColumnSemanticTypeEnum.CURRENCY)
             + self.columns_of_type(ColumnSemanticTypeEnum.QUANTITY)
-            if c["table"] == self.fact_name
+            if c["table"] == self.fact_name and c["column"] != DERIVED_MEASURE_COL
         ]
         usable = [
             c
@@ -527,15 +858,18 @@ class VisualRecommendationEngine:
         score, level, rationale = self._score(
             45, None, [(10, "dos variables numéricas continuas con datos suficientes")]
         )
-        return VisualRecommendation(
+        dim_ref = f"{self.fact_name}[{x_col}]"
+        measure_ref = f"{self.fact_name}[{y_col}]"
+
+        visual = VisualRecommendation(
             visual_id="vis_scatter_primary",
             title=f"Relación entre {x_col.replace('_', ' ')} y {y_col.replace('_', ' ')}",
             visual_type=VisualTypeEnum.SCATTER,
             page_id="page_analysis",
-            dimension=f"{self.fact_name}[{x_col}]",
-            measure=f"{self.fact_name}[{y_col}]",
+            dimension=dim_ref,
+            measure=measure_ref,
             measure_name=y_col.replace("_", " "),
-            fields=[f"{self.fact_name}[{x_col}]", f"{self.fact_name}[{y_col}]"],
+            fields=[dim_ref, measure_ref],
             axis_label=x_col.replace("_", " "),
             legend_field=None,
             filter_suggestion=None,
@@ -548,9 +882,15 @@ class VisualRecommendationEngine:
             data_quality_notes=self._dq_notes([(self.fact_name, x_col), (self.fact_name, y_col)]),
             accessibility_note="Complementar el scatter con la tabla de detalle accesible.",
             order=0,
+            business_question=f"¿Existe correlación o patrones entre {x_col.replace('_', ' ')} y {y_col.replace('_', ' ')}?",
+            analytical_goal="relación",
+            measure_dax=f"{self.fact_name}[{y_col}]",
+            priority=5,
         )
+        redundancy.register(visual)
+        return visual
 
-    def _histogram_visual(self) -> Optional[VisualRecommendation]:
+    def _histogram_visual(self, redundancy: RedundancyController) -> Optional[VisualRecommendation]:
         if self.primary_measure is None:
             return None
         measure_col = str(self.primary_measure["column"])
@@ -572,16 +912,19 @@ class VisualRecommendationEngine:
         if not points:
             return None
         score, level, rationale = self._score(45, None, [(10, "medida continua con distribución analizable")])
-        return VisualRecommendation(
+        measure_ref = self._measure_reference()
+        measure_label = str(self.primary_measure["label"])
+
+        visual = VisualRecommendation(
             visual_id=f"vis_hist_{_slug(measure_col)}",
-            title=f"Distribución de {self.primary_measure['label']}",
+            title=f"Distribución de {measure_label}",
             visual_type=VisualTypeEnum.HISTOGRAM,
             page_id="page_analysis",
             dimension=None,
-            measure=f"{self.fact_name}[{measure_col}]",
-            measure_name=self.primary_measure["label"],
-            fields=[f"{self.fact_name}[{measure_col}]"],
-            axis_label=measure_col.replace("_", " "),
+            measure=measure_ref,
+            measure_name=measure_label,
+            fields=self._measure_fields(),
+            axis_label=measure_label,
             legend_field=None,
             filter_suggestion=None,
             reason="La distribución de la medida principal ayuda a identificar sesgos, colas largas y concentración de valores; el histograma es la forma estándar de mostrarla.",
@@ -593,43 +936,13 @@ class VisualRecommendationEngine:
             data_quality_notes=self._dq_notes([(self.fact_name, measure_col)]),
             accessibility_note="Mostrar el rango de cada intervalo como etiqueta de texto.",
             order=0,
+            business_question=f"¿Cómo se distribuyen los valores de {measure_label.lower()} en el dataset?",
+            analytical_goal="distribución",
+            measure_dax=self._measure_dax_formula(),
+            priority=6,
         )
-
-    def _ranking_visual(self, category_visuals: List[VisualRecommendation]) -> Optional[VisualRecommendation]:
-        """Tabla de detalle/ranking sobre la dimensión con más categorías."""
-        if self.primary_measure is None or not category_visuals:
-            return None
-        best = max(
-            category_visuals,
-            key=lambda v: len(self._aggregate_by(*self._parse_field(v.dimension), top_n=100)[0]),
-        )
-        dim_table, dim_column = self._parse_field(best.dimension)
-        points, total_cardinality = self._aggregate_by(dim_table, dim_column, top_n=5)
-        if not points:
-            return None
-        score, level, rationale = self._score(55, None, [(10, "ranking de detalle sobre dimensión validada")])
-        return VisualRecommendation(
-            visual_id=f"vis_table_{_slug(dim_column)}",
-            title=f"Top {dim_column.replace('_', ' ')} por {self.primary_measure['label']}",
-            visual_type=VisualTypeEnum.TABLE,
-            page_id="page_detail",
-            dimension=best.dimension,
-            measure=best.measure,
-            measure_name=self.primary_measure["label"],
-            fields=best.fields,
-            axis_label=None,
-            legend_field=None,
-            filter_suggestion=best.filter_suggestion,
-            reason="El ranking en tabla ofrece el detalle exacto que completa la lectura de los gráficos agregados.",
-            confidence=level,
-            confidence_rationale=rationale,
-            alternative_types=[VisualTypeEnum.HORIZONTAL_BAR],
-            preview_data=points,
-            preview_mode=PreviewModeEnum.REAL,
-            data_quality_notes=best.data_quality_notes,
-            accessibility_note="Tabla con encabezados semánticos y orden descendente explícito.",
-            order=0,
-        )
+        redundancy.register(visual)
+        return visual
 
     @staticmethod
     def _parse_field(field: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
@@ -641,25 +954,33 @@ class VisualRecommendationEngine:
     # ─────────────────────── generación completa ────────────────────────────
 
     def generate(self) -> List[VisualRecommendation]:
-        """Genera el pool completo de visuales recomendados (determinista)."""
+        """Genera el pool completo de visuales recomendados con control de redundancia (determinista)."""
+        redundancy = RedundancyController()
         visuals: List[VisualRecommendation] = []
-        line = self._line_visual()
+
+        line = self._line_visual(redundancy)
         if line:
             visuals.append(line)
-        category_visuals = self._category_visuals()
+
+        category_visuals = self._category_visuals(redundancy)
         visuals.extend(category_visuals)
-        donut = self._donut_visual(category_visuals)
+
+        donut = self._donut_visual(redundancy)
         if donut:
             visuals.append(donut)
-        scatter = self._scatter_visual()
-        if scatter:
-            visuals.append(scatter)
-        histogram = self._histogram_visual()
-        if histogram:
-            visuals.append(histogram)
-        ranking = self._ranking_visual(category_visuals)
+
+        ranking = self._ranking_visual(redundancy)
         if ranking:
             visuals.append(ranking)
+
+        scatter = self._scatter_visual(redundancy)
+        if scatter:
+            visuals.append(scatter)
+
+        histogram = self._histogram_visual(redundancy)
+        if histogram:
+            visuals.append(histogram)
+
         for index, visual in enumerate(visuals):
             visual.order = index
         return visuals

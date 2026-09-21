@@ -4,6 +4,26 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.22.0] — 2026-09-21
+
+### 📊 Dashboard Intelligence v2: Gobernanza Semántica de Agregación, Intención Analítica y Control de Redundancia
+
+> **Motivación:** Evolucionar el motor determinista de recomendación de dashboards y visualizaciones para garantizar total rigor matemático y semántico en la agregación de métricas (evitando sumas conceptualmente incorrectas de precios unitarios o ratios), dotar a cada recomendación de intención analítica auditable, eliminar visuales redundantes y sanitizar títulos ejecutivos eliminando ruido técnico.
+
+#### 🛠️ Cambios Realizados
+- **Gobernanza Semántica de Agregación (`AggregationSemanticRoleEnum`):** Clasificación formal de columnas en 6 roles semánticos (`ADDITIVE_AMOUNT`, `ADDITIVE_QUANTITY`, `UNIT_PRICE_OR_RATE`, `RATIO_OR_PERCENTAGE`, `IDENTIFIER_KEY`, `CATEGORICAL`). Prohibición absoluta de operaciones `SUM` sobre precios unitarios o ratios (forzando agregación por promedio `AVERAGE`/`mean` y etiquetado honesto).
+- **Medida Derivada de Ventas Netas (`__ventas_netas`):** Cálculo determinista previo de ventas netas (`Cantidad × Precio × (1 − Descuento)`) como medida principal `Ventas_Netas` con fórmula DAX `SUMX(...)`.
+- **Intención Analítica en Cada Visual:** Poblado obligatorio de `business_question`, `analytical_goal` (`evolución temporal`, `comparación`, `composición`, `ranking`, `relación`, `distribución`), `measure_dax` y `priority` (1..6) en el modelo `VisualRecommendation`.
+- **Control de Redundancia (`RedundancyController`):** Motor que impide duplicar la misma dimensión para el mismo objetivo analítico. Gráficos Donut reservados exclusivamente para composiciones únicas de 2 a 6 categorías (excluyendo geografía y dimensiones ya empleadas en barras comparativas).
+- **Ranking Visual Determinado en Barras Horizontales:** Implementación de visuales de ranking con `VisualTypeEnum.HORIZONTAL_BAR` en orden descendente para los 5 principales valores de dimensiones de alta cardinalidad.
+- **Sanitizador Ejecutivo de Títulos (`ReportTitleSanitizer`):** Eliminación total de tokens técnicos residuales (`dirty`, `clean`, `raw`, `tmp`, `.csv`, `.xlsx`, guiones bajos) traduciendo a títulos ejecutivos limpios en español (ej. *«Rendimiento de Ventas — Detalle de Pedidos»*).
+- **Conteo de Pedidos y Slicers Semánticos:** Discriminación automática entre clave de cabecera (`OrderID`) y líneas de detalle (`OrderDetailID`) en KPIs de conteo. Ordenación de filtros/slicers por prioridad semántica (Fecha > Geografía > Categoría > Estado).
+
+#### 🧪 Verificación
+- **Backend:** 303/303 tests pasando (14 nuevos tests de gobernanza y validación v2 en `test_dashboard_intelligence.py`) | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Frontend:** 63/63 tests pasando | TypeScript estricto (`tsc`) y Vite build verificados sin errores.
+- **Atribución:** Desarrollada con **Gemini 3.8 Flash**.
+
 ## [1.21.1] — 2026-09-14
 
 ### 📦 Dependabot & Tooling: Actualización a Vitest 5.0.0 y Compatibilidad TypeScript

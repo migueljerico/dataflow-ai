@@ -95,6 +95,15 @@ class CheckCategoryEnum(str, Enum):
     QUALITY = "quality"
 
 
+class AggregationSemanticRoleEnum(str, Enum):
+    ADDITIVE_AMOUNT = "additive_amount"
+    ADDITIVE_QUANTITY = "additive_quantity"
+    UNIT_PRICE_OR_RATE = "unit_price_or_rate"
+    RATIO_OR_PERCENTAGE = "ratio_or_percentage"
+    IDENTIFIER_KEY = "identifier_key"
+    CATEGORICAL = "categorical"
+
+
 # ────────────────────────── Análisis semántico ───────────────────────────────
 
 
@@ -107,6 +116,10 @@ class SemanticColumnAnalysis(BaseModel):
     completeness_pct: float = Field(..., description="Completitud 100 - null_percentage")
     inferred_from: str = Field(..., description="Señales usadas: name, type, cardinality, values, relationship")
     is_heuristic: bool = Field(..., description="True si la clasificación es heurística y no categórica")
+    aggregation_role: AggregationSemanticRoleEnum = Field(
+        default=AggregationSemanticRoleEnum.ADDITIVE_AMOUNT,
+        description="Rol semántico de agregación (aditivo, tasa/precio unitario, ratio, clave, categórico)",
+    )
 
 
 class SemanticTableAnalysis(BaseModel):
@@ -177,6 +190,13 @@ class VisualRecommendation(BaseModel):
     data_quality_notes: List[str] = Field(default_factory=list, description="Advertencias de Data Quality")
     accessibility_note: Optional[str] = Field(None, description="Recomendación de accesibilidad específica del visual")
     order: int = Field(..., description="Orden de lectura dentro de su página")
+    business_question: Optional[str] = Field(None, description="Pregunta de negocio a la que responde el visual")
+    analytical_goal: Optional[str] = Field(
+        None,
+        description="Objetivo analítico (comparación, evolución temporal, composición, ranking, relación, distribución)",
+    )
+    measure_dax: Optional[str] = Field(None, description="Fórmula DAX de la medida requerida")
+    priority: Optional[int] = Field(None, description="Nivel de prioridad analítica (1 a 6)")
 
 
 class BusinessQuestion(BaseModel):

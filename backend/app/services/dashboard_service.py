@@ -13,6 +13,7 @@ contraste WCAG, existencia de campos y cálculo de métricas es determinista.
 """
 
 import hashlib
+import re
 import threading
 import time
 from dataclasses import dataclass
@@ -25,6 +26,7 @@ from app.core.number_parsing import to_numeric_series
 from app.models.dashboard import (
     AccessibilityCheckItem,
     AccessibilityRecommendation,
+    AggregationSemanticRoleEnum,
     BusinessQuestion,
     CheckCategoryEnum,
     ColorPalette,
@@ -47,6 +49,7 @@ from app.models.dashboard import (
     KPIRecommendation,
     PowerBIImplementationInstruction,
     PreviewModeEnum,
+    SemanticColumnAnalysis,
     SemanticModelAnalysis,
     ValidationStatusEnum,
     VisualRecommendation,
@@ -55,7 +58,7 @@ from app.models.dashboard import (
 from app.models.workspace import MultiTableStarSchema
 from app.services.relational_service import RelationalService
 from app.services.semantic_analyzer import SemanticModelAnalyzer
-from app.services.visual_engine import VisualRecommendationEngine
+from app.services.visual_engine import DERIVED_MEASURE_COL, VisualRecommendationEngine
 
 DASHBOARD_CACHE: Dict[str, DashboardBlueprint] = {}
 _STATS_LOCK = threading.Lock()
@@ -219,6 +222,82 @@ class DashboardTypeClassifier:
         return winner, f"Dashboard de {winner.value}", confidence, None
 
 
+# ───────────────────────────── Sanitizador de títulos ────────────────────────
+class ReportTitleSanitizer:
+    """Sanitiza títulos ejecutivos de dashboards eliminando ruido técnico (dirty, clean, csv, etc.)."""
+
+    NOISE_TOKENS = {
+        "dirty",
+        "clean",
+        "raw",
+        "tmp",
+        "temp",
+        "csv",
+        "xlsx",
+        "parquet",
+        "tsv",
+        "file",
+        "dataset",
+        "table",
+        "tabla",
+    }
+
+    FRIENDLY_NAMES = {
+        "order details": "Detalle de Pedidos",
+        "order detail": "Detalle de Pedidos",
+        "orderdetails": "Detalle de Pedidos",
+        "orders": "Pedidos",
+        "order": "Pedidos",
+        "pedidos": "Pedidos",
+        "pedido": "Pedidos",
+        "sales": "Ventas",
+        "sale": "Ventas",
+        "ventas": "Ventas",
+        "customers": "Clientes",
+        "customer": "Clientes",
+        "clientes": "Clientes",
+        "cliente": "Clientes",
+        "products": "Productos",
+        "product": "Productos",
+        "productos": "Productos",
+        "producto": "Productos",
+        "inventory": "Inventario",
+        "inventario": "Inventario",
+        "employees": "Empleados",
+        "employee": "Empleados",
+        "empleados": "Empleados",
+        "invoices": "Facturas",
+        "invoice": "Facturas",
+        "facturas": "Facturas",
+    }
+
+    @classmethod
+    def sanitize(cls, domain_title: str, fact_table_name: str) -> str:
+        name = str(fact_table_name)
+        for ext in (".csv", ".xlsx", ".parquet", ".tsv"):
+            if name.lower().endswith(ext):
+                name = name[: -len(ext)]
+        name = re.sub(r"[_\-]+", " ", name).strip()
+        tokens = [t for t in name.split() if t.lower() not in cls.NOISE_TOKENS and not t.isdigit() and len(t) > 1]
+        cleaned_core = " ".join(tokens).strip().lower()
+
+        friendly = cls.FRIENDLY_NAMES.get(cleaned_core)
+        if not friendly and cleaned_core:
+            friendly = " ".join(w.capitalize() for w in tokens)
+
+        if not friendly or friendly.lower() in domain_title.lower():
+            clean_title = domain_title
+        else:
+            clean_title = f"{domain_title} — {friendly}"
+
+        clean_title = clean_title.replace("_", " ")
+        for noise in ("dirty", "raw", "clean", ".csv", ".xlsx"):
+            clean_title = re.sub(rf"\b{noise}\b", "", clean_title, flags=re.IGNORECASE)
+        clean_title = re.sub(r"\s+", " ", clean_title).strip()
+        clean_title = re.sub(r"\s*—\s*$", "", clean_title).strip()
+        return clean_title
+
+
 # ───────────────────────────── KPIs y DAX ───────────────────────────────────
 
 
@@ -246,8 +325,9 @@ class KpiGenerator:
         warnings: List[str] = []
         fact = self.context.schema.fact_table
         order = 0
+        is_unit_or_ratio = False
 
-        # 1) KPI principal: suma de la medida principal
+        # 1) KPI principal: suma de la medida principal (o promedio si es unitario/ratio)
         if primary is not None:
             table = str(primary["table"])
             column = str(primary["column"])
@@ -255,14 +335,39 @@ class KpiGenerator:
             if completeness >= KPI_COMPLETENESS_THRESHOLD:
                 df = self.context.dataframes.get(table, pd.DataFrame())
                 numeric = to_numeric_series(df[column]).dropna() if column in df.columns else pd.Series(dtype=float)
-                total = float(numeric.sum()) if len(numeric) else None
+
+                role = primary.get("aggregation_role") or getattr(primary.get("analysis"), "aggregation_role", None)
+                is_unit_or_ratio = role in (
+                    AggregationSemanticRoleEnum.UNIT_PRICE_OR_RATE,
+                    AggregationSemanticRoleEnum.RATIO_OR_PERCENTAGE,
+                )
+
+                if is_unit_or_ratio:
+                    value = float(numeric.mean()) if len(numeric) else None
+                    kpi_title = str(primary.get("label") or "Precio unitario medio")
+                    dax_name = str(primary.get("dax_name") or f"Promedio_{column}")
+                    dax_formula = str(primary.get("dax_formula") or f"AVERAGE('{table}'[{column}])")
+                    desc = f"Promedio ponderado/aritmético de {column} en {table}."
+                elif primary.get("derived"):
+                    value = float(numeric.sum()) if len(numeric) else None
+                    kpi_title = "Ventas netas"
+                    dax_name = "Ventas_Netas"
+                    dax_formula = str(primary.get("dax_formula") or f"SUM('{table}'[{column}])")
+                    desc = f"Suma total de ventas netas calculadas en {table}."
+                else:
+                    value = float(numeric.sum()) if len(numeric) else None
+                    kpi_title = f"Total {column.replace('_', ' ').lower()}"
+                    dax_name = str(primary.get("dax_name") or f"Total_{column}")
+                    dax_formula = str(primary.get("dax_formula") or f"SUM('{table}'[{column}])")
+                    desc = f"Suma total de {column} en {table}."
+
                 kpis.append(
                     KPIRecommendation(
                         kpi_id=f"kpi_total_{column.lower()}",
-                        title=f"Total {column.replace('_', ' ').lower()}",
-                        description=f"Suma total de {column} en {table}.",
-                        dax_measure_name=f"Total_{column}",
-                        dax_formula=f"SUM('{table}'[{column}])",
+                        title=kpi_title,
+                        description=desc,
+                        dax_measure_name=dax_name,
+                        dax_formula=dax_formula,
                         table_context=table,
                         format_type=(
                             "currency"
@@ -270,9 +375,9 @@ class KpiGenerator:
                             else "number"
                         ),
                         validated=True,
-                        value=round(total, 2) if total is not None else None,
+                        value=round(value, 2) if value is not None else None,
                         value_label=(
-                            self._format_value(total, primary["analysis"].semantic_type) if total is not None else None
+                            self._format_value(value, primary["analysis"].semantic_type) if value is not None else None
                         ),
                         confidence=ConfidenceLevelEnum.HIGH,
                         data_quality_notes=[],
@@ -285,17 +390,49 @@ class KpiGenerator:
                     f"No se recomienda un KPI sobre {table}[{column}] (completitud {completeness:.1f}% < {KPI_COMPLETENESS_THRESHOLD:.0f}%)."
                 )
 
-        # 2) KPI de conteo: registros/pedidos sobre la PK del hecho
+        # 2) KPI de conteo: pedidos o registros sobre la PK o FK del hecho
+        order_col = None
+        for col_name in self.fact_df.columns:
+            lower = col_name.lower().replace("_", "")
+            if lower in ("orderid", "idpedido", "idorden", "numpedido", "pedidoid"):
+                order_col = col_name
+                break
+
         pk_col = fact.primary_keys[0] if fact.primary_keys else None
-        if pk_col is not None and pk_col in self.fact_df.columns:
+
+        if order_col is not None and order_col in self.fact_df.columns:
+            unique_count = int(self.fact_df[order_col].nunique())
+            kpis.append(
+                KPIRecommendation(
+                    kpi_id="kpi_count_orders",
+                    title="Pedidos",
+                    description=f"Número de pedidos únicos ({order_col}) en {fact.table_name}.",
+                    dax_measure_name="Pedidos",
+                    dax_formula=f"DISTINCTCOUNT('{fact.table_name}'[{order_col}])",
+                    table_context=fact.table_name,
+                    format_type="number",
+                    validated=True,
+                    value=float(unique_count),
+                    value_label=f"{unique_count:,}".replace(",", "."),
+                    confidence=ConfidenceLevelEnum.HIGH,
+                    data_quality_notes=[],
+                    order=order,
+                )
+            )
+            order += 1
+        elif pk_col is not None and pk_col in self.fact_df.columns:
             unique_count = int(self.fact_df[pk_col].nunique())
-            is_order_like = any(k in pk_col.lower() for k in ("pedido", "order", "factura"))
+            pk_lower = pk_col.lower()
+            is_detail = "detail" in pk_lower or "detalle" in pk_lower or "line" in pk_lower or "linea" in pk_lower
+            is_order_like = any(k in pk_lower for k in ("pedido", "order", "factura")) and not is_detail
+            kpi_title = "Pedidos" if is_order_like else ("Líneas de detalle" if is_detail else "Registros")
+            dax_name = "Pedidos" if is_order_like else "Total_Registros"
             kpis.append(
                 KPIRecommendation(
                     kpi_id=f"kpi_count_{pk_col.lower()}",
-                    title="Pedidos" if is_order_like else "Registros",
+                    title=kpi_title,
                     description=f"Número de valores únicos de {pk_col} en {fact.table_name}.",
-                    dax_measure_name="Pedidos" if is_order_like else "Total_Registros",
+                    dax_measure_name=dax_name,
                     dax_formula=f"DISTINCTCOUNT('{fact.table_name}'[{pk_col}])",
                     table_context=fact.table_name,
                     format_type="number",
@@ -309,8 +446,14 @@ class KpiGenerator:
             )
             order += 1
 
-        # 3) Ticket medio: DIVIDE entre medida principal y conteo
-        if kpis and len(kpis) >= 2 and kpis[0].format_type in ("currency", "number") and kpis[1].value:
+        # 3) Ticket medio: DIVIDE entre medida principal y conteo (solo si la medida es aditiva de importe)
+        if (
+            kpis
+            and len(kpis) >= 2
+            and not is_unit_or_ratio
+            and kpis[0].format_type in ("currency", "number")
+            and kpis[1].value
+        ):
             revenue = kpis[0].value or 0.0
             count = kpis[1].value or 0.0
             ticket = round(revenue / count, 2) if count else None
@@ -318,7 +461,7 @@ class KpiGenerator:
                 KPIRecommendation(
                     kpi_id="kpi_ticket_medio",
                     title="Ticket medio",
-                    description="Cociente entre la medida principal y el número de registros.",
+                    description="Cociente entre la medida principal y el número de pedidos/registros.",
                     dax_measure_name="Ticket_Medio",
                     dax_formula=f"DIVIDE([{kpis[0].dax_measure_name}], [{kpis[1].dax_measure_name}])",
                     table_context=fact.table_name,
@@ -337,9 +480,14 @@ class KpiGenerator:
             )
             order += 1
 
-        # 4) Precio medio si existe columna de precio distinta de la medida principal
+        # 4) Precio medio si existe columna de precio y la medida principal no fue ya unitaria
         price_col = self._find_column([ColumnSemanticTypeEnum.CURRENCY])
-        if price_col and kpis and price_col[1] != str((primary or {}).get("column", "")):
+        if (
+            price_col
+            and not is_unit_or_ratio
+            and price_col[1] != str((primary or {}).get("column", ""))
+            and DERIVED_MEASURE_COL not in price_col[1]
+        ):
             table, column = price_col
             df = self.context.dataframes.get(table, pd.DataFrame())
             numeric = to_numeric_series(df[column]).dropna() if column in df.columns else pd.Series(dtype=float)
@@ -737,11 +885,12 @@ class DashboardPlanner:
             v
             for v in visuals
             if v is not primary
+            and v.page_id != "page_detail"
             and v.visual_type
             in (VisualTypeEnum.BAR, VisualTypeEnum.HORIZONTAL_BAR, VisualTypeEnum.DONUT, VisualTypeEnum.STACKED_BAR)
         ]
         analysis_visuals = [v for v in visuals if v.visual_type in (VisualTypeEnum.SCATTER, VisualTypeEnum.HISTOGRAM)]
-        detail = [v for v in visuals if v.visual_type == VisualTypeEnum.TABLE]
+        detail = [v for v in visuals if v.page_id == "page_detail" or v.visual_type == VisualTypeEnum.TABLE]
 
         pages: List[DashboardPage] = []
         overview_ids = ([primary.visual_id] if primary else []) + [v.visual_id for v in secondary[:2]]
@@ -751,24 +900,24 @@ class DashboardPlanner:
                 title="Resumen ejecutivo",
                 purpose="Lectura rápida de KPIs, tendencia principal y desglose esencial.",
                 visual_ids=overview_ids,
-                layout_section="Header → KPI row → Primary analytical visual → Secondary visuals",
+                layout_section="Executive overview",
             )
         )
-        if analysis_visuals:
+        if len(secondary) > 2 or analysis_visuals:
             pages.append(
                 DashboardPage(
                     page_id="page_analysis",
-                    title="Análisis",
-                    purpose="Relación entre variables y distribución de la medida principal.",
-                    visual_ids=[v.visual_id for v in analysis_visuals],
-                    layout_section="Secondary analytical visuals",
+                    title="Análisis dimensional",
+                    purpose="Desglose por dimensiones secundarias, correlación y distribución.",
+                    visual_ids=[v.visual_id for v in secondary[2:]] + [v.visual_id for v in analysis_visuals],
+                    layout_section="Dimensional exploration",
                 )
             )
         if detail:
             pages.append(
                 DashboardPage(
                     page_id="page_detail",
-                    title="Detalle",
+                    title="Detalle y ranking",
                     purpose="Ranking y detalle de registro para auditoría de los agregados.",
                     visual_ids=[v.visual_id for v in detail],
                     layout_section="Detail table / ranking",
@@ -779,6 +928,22 @@ class DashboardPlanner:
     def build_filters(self, visuals: List[VisualRecommendation]) -> List[FilterRecommendation]:
         filters: List[FilterRecommendation] = []
         seen: Set[str] = set()
+
+        def _filter_priority(entry_col: Optional[SemanticColumnAnalysis]) -> int:
+            if not entry_col:
+                return 99
+            st = entry_col.semantic_type
+            if st in (ColumnSemanticTypeEnum.DATE, ColumnSemanticTypeEnum.DATETIME):
+                return 1
+            if st == ColumnSemanticTypeEnum.GEOGRAPHY:
+                return 2
+            if st in (ColumnSemanticTypeEnum.CATEGORY, ColumnSemanticTypeEnum.SUBCATEGORY):
+                return 3
+            if st in (ColumnSemanticTypeEnum.BOOLEAN, ColumnSemanticTypeEnum.ORDINAL):
+                return 4
+            return 5
+
+        candidates = []
         for visual in visuals:
             if not visual.dimension:
                 continue
@@ -790,8 +955,19 @@ class DashboardPlanner:
             df = self.context.dataframes.get(table, pd.DataFrame())
             if df.empty or column not in df.columns:
                 continue
-            top_values = df[column].dropna().astype(str).value_counts().head(8).index.tolist()
             seen.add(key)
+            table_analysis = next((t for t in self.analysis.tables if t.table_name == table), None)
+            col_analysis = (
+                next((c for c in table_analysis.columns if c.column_name == column), None) if table_analysis else None
+            )
+            candidates.append((table, column, col_analysis))
+
+        # Ordenar candidatos por prioridad semántica (Fecha > Geografía > Categoría > Estado)
+        candidates.sort(key=lambda c: (_filter_priority(c[2]), c[0], c[1]))
+
+        for i, (table, column, _col_analysis) in enumerate(candidates[:4]):
+            df = self.context.dataframes.get(table, pd.DataFrame())
+            top_values = df[column].dropna().astype(str).value_counts().head(8).index.tolist()
             filters.append(
                 FilterRecommendation(
                     filter_id=f"filter_{table.lower()}_{column.lower()}",
@@ -800,11 +976,9 @@ class DashboardPlanner:
                     label=column.replace("_", " "),
                     recommended_values=[str(v) for v in top_values],
                     purpose=f"Acotar los visuales a valores concretos de {column}.",
-                    order=len(filters),
+                    order=i,
                 )
             )
-            if len(filters) >= 4:
-                break
         return filters
 
     def build_hierarchies(self) -> List[HierarchyRecommendation]:
@@ -1252,6 +1426,21 @@ class DashboardService:
             df, filename = RelationalService._load_dataset_df(dataset_id)
             if not df.empty:
                 dataframes[RelationalService._clean_table_name(filename)] = df
+
+        # Calcular de forma determinista __ventas_netas en la tabla de hechos si tiene cantidad y precio
+        fact_name = schema.fact_table.table_name
+        if fact_name in dataframes:
+            fact_df = dataframes[fact_name]
+            cols = {str(c).lower(): str(c) for c in fact_df.columns}
+            qty_col = next((cols[k] for k in ("quantity", "cantidad", "qty", "unidades", "units") if k in cols), None)
+            price_col = next((cols[k] for k in ("unitprice", "precio", "unit_price", "price") if k in cols), None)
+            disc_col = next((cols[k] for k in ("discount", "descuento", "disc") if k in cols), None)
+            if qty_col and price_col and DERIVED_MEASURE_COL not in fact_df.columns:
+                q = pd.to_numeric(fact_df[qty_col], errors="coerce").fillna(0)
+                p = pd.to_numeric(fact_df[price_col], errors="coerce").fillna(0)
+                d = pd.to_numeric(fact_df[disc_col], errors="coerce").fillna(0) if disc_col else 0
+                fact_df[DERIVED_MEASURE_COL] = q * p * (1.0 - d)
+
         return ModelContext(schema=schema, dataframes=dataframes, dataset_ids=list(dataset_ids)), schema
 
     @staticmethod
@@ -1303,7 +1492,9 @@ class DashboardService:
                 (v for v in visuals if v.visual_type == VisualTypeEnum.LINE), visuals[0] if visuals else None
             )
             if primary_visual and dashboard_type == DashboardTypeEnum.SALES:
-                dashboard_name = f"Rendimiento de Ventas — {schema.fact_table.table_name.replace('_', ' ')}"
+                dashboard_name = ReportTitleSanitizer.sanitize("Rendimiento de Ventas", schema.fact_table.table_name)
+            else:
+                dashboard_name = ReportTitleSanitizer.sanitize(dashboard_name, schema.fact_table.table_name)
 
             overall_confidence = type_confidence
             if visuals and all(v.confidence == ConfidenceLevelEnum.HIGH for v in visuals[:2]):
