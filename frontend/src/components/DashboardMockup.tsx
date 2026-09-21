@@ -41,10 +41,6 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
 
   const labels = {
     filters: en ? 'Filters' : 'Filtros',
-    tips: en ? 'Build tips (DAX · KPI · visuals)' : 'Consejos de construcción (DAX · KPI · visuales)',
-    dax: en ? 'DAX measures to create' : 'Medidas DAX a crear',
-    kpiCards: en ? 'KPI cards' : 'Tarjetas KPI',
-    pbi: en ? 'Power BI assembly' : 'Montaje en Power BI',
     noData: en ? 'Not enough data — see the Power BI tab' : 'Sin datos suficientes — ver pestaña Power BI',
     noKpi: en ? 'No KPIs recommended for this model' : 'Sin KPIs recomendados para este modelo',
     governance: en
@@ -55,8 +51,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
   const visuals = blueprint.visuals ?? [];
   const kpis = (blueprint.kpis ?? []).slice(0, 4);
   const filters = (blueprint.filters ?? []).slice(0, 3);
-  const daxMeasures = (blueprint.dax_measures ?? []).slice(0, 4);
-  const pbiGuide = (blueprint.power_bi_implementation ?? []).slice(0, 3);
+
 
   const lineVisual = pickVisual(visuals, ['line', 'area']) ?? visuals.find((v) => v.preview_data.length >= 3);
   const barVisual = pickVisual(visuals, ['bar', 'horizontal_bar', 'stacked_bar']);
@@ -114,7 +109,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
       const url = URL.createObjectURL(svgBlob);
       const img = new Image();
       img.onload = () => {
-        const scale = 2;
+        const scale = 3;
         const canvas = document.createElement('canvas');
         canvas.width = W * scale;
         canvas.height = H * scale;
@@ -125,7 +120,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           const pngData = canvas.toDataURL('image/png');
           const a = document.createElement('a');
-          a.download = `ejemplo_dashboard_${blueprint.blueprint_id}.png`;
+          a.download = `dashboard_${blueprint.blueprint_id}.png`;
           a.href = pngData;
           document.body.appendChild(a);
           a.click();
@@ -184,7 +179,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           <Download size={14} />
           {isExportingPng
             ? t.powerBiExcel?.mockupGenerating || (en ? 'Generating image...' : 'Generando imagen...')
-            : t.powerBiExcel?.mockupExportPng || (en ? 'Download example PNG' : 'Descargar ejemplo PNG')}
+            : t.powerBiExcel?.mockupExportPng || (en ? 'Download executive PNG' : 'Descargar PNG ejecutivo')}
         </button>
       </div>
 
@@ -397,47 +392,11 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
             </text>
           )}
 
-          {/* Panel: consejos de construcción */}
-          <rect x="1184" y="564" width="400" height="300" rx="12" fill="#0f172a" />
-          <text x="1208" y="594" fill="#f8fafc" fontSize="14" fontWeight="700">
-            {truncate(labels.tips, 34)}
+          {/* Panel vacío para mantener grid estable tras eliminar tips */}
+          <rect x="1184" y="564" width="400" height="300" rx="12" fill="rgba(15,23,42,0.02)" stroke="#e2e8f0" strokeWidth="1" />
+          <text x="1384" y="714" fill="#94a3b8" fontSize="13" textAnchor="middle">
+            {en ? 'Executive layout (without build tips)' : 'Layout ejecutivo (sin consejos de construcción)'}
           </text>
-          <text x="1208" y="620" fill="#38bdf8" fontSize="12" fontWeight="700">
-            {labels.dax}
-          </text>
-          {daxMeasures.map((m, i) => (
-            <text key={m.name} x="1208" y={640 + i * 19} fill="#e2e8f0" fontSize="11.5" fontFamily="monospace, monospace">
-              {truncate(`• ${m.name}`, 38)}
-            </text>
-          ))}
-          <text x="1208" y={640 + daxMeasures.length * 19 + 8} fill="#34d399" fontSize="12" fontWeight="700">
-            {labels.kpiCards}
-          </text>
-          {(blueprint.kpis ?? []).slice(0, 3).map((k, i) => (
-            <text key={k.kpi_id} x="1208" y={640 + daxMeasures.length * 19 + 28 + i * 19} fill="#e2e8f0" fontSize="11.5">
-              {truncate(`• ${k.title} → [${k.dax_measure_name}]`, 38)}
-            </text>
-          ))}
-          <text
-            x="1208"
-            y={640 + daxMeasures.length * 19 + 28 + Math.min(3, (blueprint.kpis ?? []).length) * 19 + 8}
-            fill="#fbbf24"
-            fontSize="12"
-            fontWeight="700"
-          >
-            {labels.pbi}
-          </text>
-          {pbiGuide.map((g, i) => (
-            <text
-              key={`${g.visual}-${i}`}
-              x="1208"
-              y={640 + daxMeasures.length * 19 + 28 + Math.min(3, (blueprint.kpis ?? []).length) * 19 + 28 + i * 19}
-              fill="#e2e8f0"
-              fontSize="11.5"
-            >
-              {truncate(`• ${g.visual} → ${g.visual_type}`, 38)}
-            </text>
-          ))}
 
           {/* Pie del informe */}
           <rect x="16" y="876" width="1568" height="108" rx="12" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
@@ -449,7 +408,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           </text>
           <text x="40" y="956" fill="#94a3b8" fontSize="11">
             {truncate(
-              `${(blueprint.business_questions ?? []).length} preguntas · ${(blueprint.dax_measures ?? []).length} DAX · ${(blueprint.filters ?? []).length} slicers · ${blueprint.validation?.passed_count ?? 0}/${blueprint.validation?.total_count ?? 0} checks`,
+              `${(blueprint.business_questions ?? []).length} preguntas · ${(blueprint.filters ?? []).length} slicers · ${blueprint.validation?.passed_count ?? 0}/${blueprint.validation?.total_count ?? 0} checks`,
               148,
             )}
           </text>
@@ -460,8 +419,8 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
         <ImageIcon size={14} />
         <span>
           {en
-            ? 'The PNG mirrors this example mockup at 2x resolution, ready to attach to the Power BI report.'
-            : 'El PNG reproduce esta maqueta de ejemplo a resolución 2x, lista para adjuntar al informe de Power BI.'}
+            ? 'The PNG mirrors this executive layout at 3x resolution, without build tips.'
+            : 'El PNG reproduce este layout ejecutivo a resolución 3x, sin consejos de construcción.'}
         </span>
       </div>
     </div>
