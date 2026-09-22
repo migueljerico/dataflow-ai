@@ -157,6 +157,9 @@ class KPIRecommendation(BaseModel):
     confidence: ConfidenceLevelEnum = Field(..., description="Confianza rule-based de la recomendación")
     data_quality_notes: List[str] = Field(default_factory=list, description="Advertencias derivadas de Data Quality")
     order: int = Field(..., description="Posición en la fila de KPIs")
+    hidden: bool = Field(
+        False, description="True si el usuario ocultó el KPI en la edición HITL (la propuesta de la IA se conserva)"
+    )
 
 
 class PreviewDataPoint(BaseModel):
@@ -197,6 +200,9 @@ class VisualRecommendation(BaseModel):
     )
     measure_dax: Optional[str] = Field(None, description="Fórmula DAX de la medida requerida")
     priority: Optional[int] = Field(None, description="Nivel de prioridad analítica (1 a 6)")
+    hidden: bool = Field(
+        False, description="True si el usuario ocultó el visual en la edición HITL (la propuesta de la IA se conserva)"
+    )
 
 
 class BusinessQuestion(BaseModel):
@@ -220,6 +226,9 @@ class FilterRecommendation(BaseModel):
     )
     purpose: str = Field(..., description="Para qué sirve el filtro")
     order: int = Field(..., description="Posición en el panel de filtros")
+    hidden: bool = Field(
+        False, description="True si el usuario ocultó el filtro en la edición HITL (la propuesta de la IA se conserva)"
+    )
 
 
 class DashboardPage(BaseModel):

@@ -80,3 +80,43 @@ async def validate_dashboard_blueprint(payload: DashboardValidateRequest):
             code="DASHBOARD_VALIDATE_FAILED",
             status_code=400,
         ) from e
+
+
+@router.put("/{blueprint_id}", response_model=DashboardBlueprint, status_code=status.HTTP_200_OK)
+async def update_dashboard_blueprint(blueprint_id: str, payload: DashboardBlueprint):
+    """
+    Guarda la edición HITL del usuario sobre un Blueprint existente (Paso 5).
+
+    Gobernanza: la IA propone, el usuario decide, Python ejecuta. El endpoint
+    aplica exactamente los cambios enviados, recalcula WCAG sobre la paleta
+    activa, revalida de forma determinista y persiste el resultado en el
+    StorageBackend activo (local/tmpfs o GCS/S3 según STORAGE_BACKEND).
+    """
+    if payload.blueprint_id != blueprint_id:
+        raise FunctionalException(
+            message="El ID del Blueprint del cuerpo no coincide con la ruta.",
+            code="BLUEPRINT_ID_MISMATCH",
+            status_code=400,
+        )
+    if DashboardService.get(blueprint_id) is None:
+        raise FunctionalException(
+            message="Blueprint de dashboard no encontrado o expirado.",
+            code="BLUEPRINT_NOT_FOUND",
+            status_code=404,
+        )
+    if not payload.dataset_ids:
+        raise FunctionalException(
+            message="El Blueprint debe conservar al menos un dataset para poder revalidarse.",
+            code="BLUEPRINT_DATASETS_MISSING",
+            status_code=400,
+        )
+    try:
+        return DashboardService.save_edited(payload)
+    except FunctionalException:
+        raise
+    except Exception as e:
+        raise FunctionalException(
+            message=f"Error al guardar el Blueprint editado: {str(e)}",
+            code="DASHBOARD_UPDATE_FAILED",
+            status_code=400,
+        ) from e

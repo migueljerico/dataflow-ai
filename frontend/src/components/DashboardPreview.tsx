@@ -11,18 +11,32 @@ import {
   Check,
   Download,
   Image,
+  Pencil,
 } from 'lucide-react';
 import { DashboardBlueprint } from '../types';
 import { DashboardMockup } from './DashboardMockup';
+import { DashboardEditor } from './DashboardEditor';
+import { useLanguage } from '../context/LanguageContext';
+import { api } from '../services/api';
 
 interface Props {
   blueprint: DashboardBlueprint;
   onBackToStarSchema?: () => void;
+  /** Notifica al flujo (Paso 5) cuando el usuario guarda una edición HITL. */
+  onBlueprintUpdated?: (blueprint: DashboardBlueprint) => void;
 }
 
-export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchema }) => {
+export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchema, onBlueprintUpdated }) => {
+  const { t } = useLanguage();
   const [copiedDax, setCopiedDax] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'example' | 'visuals' | 'design' | 'powerbi'>('example');
+  const [draft, setDraft] = useState<DashboardBlueprint | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const editing = draft !== null;
+  const view = draft ?? blueprint;
+  const editorLabels = { ...(t.dashboardEdit ?? {}) };
 
   const copyText = (label: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -30,7 +44,34 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
     setTimeout(() => setCopiedDax(null), 2000);
   };
 
-  const validationStatus = blueprint.validation?.status || 'warning';
+  // ── Edición HITL (Paso 5): la IA propone, el usuario decide ──────────────
+  const startEditing = () => {
+    setDraft(JSON.parse(JSON.stringify(blueprint)) as DashboardBlueprint);
+    setSaveError(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!draft) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await api.updateDashboardBlueprint(draft);
+      setDraft(null);
+      onBlueprintUpdated?.(updated);
+    } catch (err: unknown) {
+      const fallback = editorLabels.saveError ?? 'No se pudo guardar la edición del blueprint.';
+      setSaveError(err instanceof Error && err.message ? err.message : fallback);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDiscardEdit = () => {
+    setDraft(null);
+    setSaveError(null);
+  };
+
+  const validationStatus = view.validation?.status || 'warning';
   const validationIcon = validationStatus === 'valid' ? CheckCircle2 : AlertTriangle;
   const validationColor = validationStatus === 'valid' ? 'var(--accent-emerald)' : validationStatus === 'invalid' ? 'var(--accent-rose)' : 'var(--accent-amber)';
 
@@ -45,73 +86,78 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
                 <LayoutDashboard size={22} color="var(--primary)" />
               </div>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  {blueprint.name}
+                <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }} data-testid="blueprint-title">
+                  {view.name}
                 </h2>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-                  Tipo: {blueprint.dashboard_type} · Confianza: {blueprint.confidence}
+                  Tipo: {view.dashboard_type} · Confianza: {view.confidence}
                 </p>
               </div>
             </div>
             <p style={{ fontSize: '14px', color: 'var(--text-main)', margin: '12px 0', lineHeight: 1.5 }}>
-              {blueprint.objective}
+              {view.objective}
             </p>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-              Audiencia: {blueprint.audience}
+              Audiencia: {view.audience}
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', backgroundColor: validationStatus === 'valid' ? 'rgba(16, 185, 129, 0.1)' : validationStatus === 'invalid' ? 'rgba(244, 63, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)', borderRadius: '8px' }}>
               {React.createElement(validationIcon, { size: 16, color: validationColor })}
-              <span style={{ fontSize: '13px', fontWeight: 600, color: validationColor }}>
-                {blueprint.validation?.passed_count}/{blueprint.validation?.total_count} checks
+              <span style={{ fontSize: '13px', fontWeight: 600, color: validationColor }} data-testid="validation-badge">
+                {view.validation?.passed_count}/{view.validation?.total_count} checks
               </span>
             </div>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              {blueprint.design.accessibility.overall_label}
+              {view.design.accessibility.overall_label}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Tabs de navegación */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
-        {[
-          { id: 'example', label: 'Ejemplo', icon: Image },
-          { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
-          { id: 'visuals', label: 'Visuales', icon: BarChart3 },
-          { id: 'design', label: 'Diseño', icon: Palette },
-          { id: 'powerbi', label: 'Power BI', icon: FileCode },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 16px',
-              backgroundColor: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
-              color: activeTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: activeTab === tab.id ? 600 : 400,
-              transition: 'all 0.2s',
-            }}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs de navegación (ocultos durante la edición HITL) */}
+      {!editing && (
+        <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+          {[
+            { id: 'example', label: 'Ejemplo', icon: Image },
+            { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
+            { id: 'visuals', label: 'Visuales', icon: BarChart3 },
+            { id: 'design', label: 'Diseño', icon: Palette },
+            { id: 'powerbi', label: 'Power BI', icon: FileCode },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                backgroundColor: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
+                border: 'none',
+                borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: activeTab === tab.id ? 600 : 400,
+                transition: 'all 0.2s',
+              }}
+            >
+              <tab.icon size={16} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Panel de edición HITL: el usuario decide, Python revalida al guardar */}
+      {editing && draft && <DashboardEditor draft={draft} onChange={setDraft} />}
 
       {/* Panel 0: Maqueta de ejemplo (estilo informe Power BI) exportable a PNG */}
-      {activeTab === 'example' && <DashboardMockup blueprint={blueprint} />}
+      {!editing && activeTab === 'example' && <DashboardMockup blueprint={blueprint} />}
 
       {/* Panel 1: Resumen */}
-      {activeTab === 'overview' && (
+      {!editing && activeTab === 'overview' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           {/* KPIs */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
@@ -120,7 +166,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
               KPIs Recomendados
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {blueprint.kpis.map((kpi) => (
+              {blueprint.kpis.filter((kpi) => !kpi.hidden).map((kpi) => (
                 <div key={kpi.kpi_id} style={{ padding: '12px', backgroundColor: 'var(--bg-input)', borderRadius: '8px' }}>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{kpi.title}</div>
                   <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)' }}>
@@ -154,7 +200,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
               Filtros / Slicers
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {blueprint.filters.map((f) => (
+              {blueprint.filters.filter((f) => !f.hidden).map((f) => (
                 <div key={f.filter_id} style={{ padding: '8px', backgroundColor: 'var(--bg-input)', borderRadius: '6px' }}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{f.label}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -169,9 +215,9 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       )}
 
       {/* Panel 2: Visuales */}
-      {activeTab === 'visuals' && (
+      {!editing && activeTab === 'visuals' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {blueprint.visuals.map((visual) => (
+          {blueprint.visuals.filter((visual) => !visual.hidden).map((visual) => (
             <div key={visual.visual_id} className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
@@ -205,7 +251,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       )}
 
       {/* Panel 3: Diseño */}
-      {activeTab === 'design' && (
+      {!editing && activeTab === 'design' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
           {/* Paleta */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
@@ -273,7 +319,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       )}
 
       {/* Panel 4: Power BI */}
-      {activeTab === 'powerbi' && (
+      {!editing && activeTab === 'powerbi' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
@@ -315,18 +361,52 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       )}
 
       {/* Footer con acciones */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--bg-card)', borderRadius: '10px', marginTop: '8px' }}>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          Blueprint ID: {blueprint.blueprint_id} · Generado en {blueprint.generation_meta.duration_ms.toFixed(0)}ms
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--bg-card)', borderRadius: '10px', marginTop: '8px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ fontSize: '12px', color: saveError ? 'var(--accent-rose)' : 'var(--text-muted)' }} data-testid="editor-save-error">
+          {saveError ?? (
+            <>
+              Blueprint ID: {blueprint.blueprint_id} · Generado en {blueprint.generation_meta.duration_ms.toFixed(0)}ms
+            </>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {onBackToStarSchema && (
-            <button
-              onClick={onBackToStarSchema}
-              style={{ padding: '8px 16px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
-            >
-              Volver al Esquema Estrella
-            </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {editing ? (
+            <>
+              <button
+                onClick={handleDiscardEdit}
+                data-testid="edit-cancel-btn"
+                style={{ padding: '8px 16px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+              >
+                {editorLabels.cancelBtn ?? 'Descartar cambios'}
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                data-testid="edit-save-btn"
+                style={{ padding: '8px 16px', backgroundColor: 'var(--primary)', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: saving ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 600, opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? (editorLabels.saving ?? 'Guardando…') : (editorLabels.saveBtn ?? 'Guardar y revalidar')}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={startEditing}
+                data-testid="edit-blueprint-btn"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+              >
+                <Pencil size={14} />
+                {editorLabels.editBtn ?? 'Editar blueprint'}
+              </button>
+              {onBackToStarSchema && (
+                <button
+                  onClick={onBackToStarSchema}
+                  style={{ padding: '8px 16px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                >
+                  Volver al Esquema Estrella
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

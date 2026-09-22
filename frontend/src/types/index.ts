@@ -679,6 +679,7 @@ export interface KPIRecommendation {
   confidence: ConfidenceLevel;
   data_quality_notes: string[];
   order: number;
+  hidden?: boolean;
 }
 
 export interface VisualRecommendation {
@@ -702,6 +703,7 @@ export interface VisualRecommendation {
   data_quality_notes: string[];
   accessibility_note?: string;
   order: number;
+  hidden?: boolean;
 }
 
 export interface FilterRecommendation {
@@ -712,6 +714,7 @@ export interface FilterRecommendation {
   recommended_values: string[];
   purpose: string;
   order: number;
+  hidden?: boolean;
 }
 
 export interface DashboardPage {

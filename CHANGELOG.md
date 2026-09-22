@@ -4,6 +4,23 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.24.0] — 2026-09-22
+
+### 💾 Persistencia Fase 2 de Blueprints (StorageBackend/GCS) y Edición HITL del Paso 5
+
+> **Motivación:** Los blueprints de dashboard solo vivían en la caché en memoria del backend (se perdían tras un reinicio de Cloud Run) y el Paso 5 era de solo lectura. Esta release persiste los blueprints en el `StorageBackend` existente (local/tmpfs por defecto, **GCS** con `STORAGE_BACKEND=gcs`) y añade un editor completo prevalidado con botón de revalidación, cerrando los dos ítems priorizados del handoff v1.23.1.
+
+#### 🛠️ Cambios Realizados
+- **Persistencia Fase 2 (`dashboard_service.py`):** Los blueprints se serializan como JSON en el `StorageBackend` bajo el prefijo `blueprint_` (`persist_blueprint` en `analyze`, `load_persisted_blueprint` como fallback de `get` al perder la caché en memoria). Funciona igual en local, tmpfs y GCS sin cambiar la arquitectura efímera del resto de cachés.
+- **Edición HITL (Paso 5):** Nuevo endpoint `PUT /api/v1/dashboard/{blueprint_id}` que recalcula WCAG (`DesignSystemGenerator.recheck_accessibility`), revalida deterministamente y persiste la edición. Errores gobernados: `404 BLUEPRINT_NOT_FOUND`, `400 BLUEPRINT_ID_MISMATCH` y `400 BLUEPRINT_DATASETS_MISSING`.
+- **Editor completo prevalidado (`DashboardEditor.tsx`):** Nombre/objetivo del dashboard, tipo de dashboard, ordenar/ocultar KPIs, visuales y filtros (campo `hidden` que conserva la propuesta de la IA sin borrar), cambio de tipo de visual entre alternativas prevalidadas, selección de paleta por variantes WCAG y botón **Revalidar** (el guardado incluye la revalidación). Sin edición de DAX ni renombrado de elementos.
+- **Frontend:** `api.updateDashboardBlueprint` (PUT), integración de edición en `DashboardPreview.tsx` (`startEditing`/`handleSaveEdit`/`handleDiscardEdit`, nueva prop `onBlueprintUpdated` conectada en `App.tsx`), filtrado de ocultos en `DashboardMockup.tsx` y `DashboardPreview.tsx`, tipos `hidden` (py + TS) y claves i18n `dashboardEdit` (es + en, opcionales para los 11 idiomas restantes).
+
+#### 🧪 Verificación
+- **Frontend:** 71/71 tests pasando (7 nuevos en `DashboardEditor.test.tsx`) | TypeScript estricto (`tsc`) y Vite build sin errores.
+- **Backend:** 311/311 tests pasando (8 nuevos en `test_dashboard_hitl_persistence.py`) | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Atribución:** Desarrollada con **MiMo V2.6 Flash Free** (OpenCode).
+
 ## [1.23.1] — 2026-09-21
 
 ### 🛠️ Dashboard Ejecutivo v2.1: Exportaciones Reales y Rediseño Visible del Preview

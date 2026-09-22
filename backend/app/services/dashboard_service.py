@@ -13,6 +13,7 @@ contraste WCAG, existencia de campos y cálculo de métricas es determinista.
 """
 
 import hashlib
+import logging
 import re
 import threading
 import time
@@ -23,6 +24,7 @@ import pandas as pd
 
 from app.core import wcag
 from app.core.number_parsing import to_numeric_series
+from app.core.storage import get_storage
 from app.models.dashboard import (
     AccessibilityCheckItem,
     AccessibilityRecommendation,
@@ -101,6 +103,51 @@ def get_dashboard_stats() -> DashboardStats:
 def _increment(key: str, amount: float = 1) -> None:
     with _STATS_LOCK:
         DASHBOARD_STATS[key] += amount
+
+
+# ─────────────────── Persistencia de Blueprints (Fase 2: local → GCS) ───────
+
+logger = logging.getLogger("dataflow.dashboard")
+
+BLUEPRINT_STORAGE_PREFIX = "blueprint_"
+
+
+def _blueprint_filename(blueprint_id: str) -> str:
+    """Nombre seguro del artefacto JSON del Blueprint en el StorageBackend."""
+    safe_id = re.sub(r"[^A-Za-z0-9_-]", "", blueprint_id)[:64] or "unknown"
+    return f"{BLUEPRINT_STORAGE_PREFIX}{safe_id}.json"
+
+
+def persist_blueprint(blueprint: DashboardBlueprint) -> bool:
+    """
+    Persiste el Blueprint en el StorageBackend activo.
+
+    Con STORAGE_BACKEND=local el JSON vive en tmpfs/disco; con 'gcs' o 's3' se
+    sube al bucket configurado, de modo que los Blueprints (y las ediciones
+    HITL del usuario) sobreviven a los reinicios de instancias de Cloud Run.
+    Un fallo de almacenamiento nunca rompe el flujo: el Blueprint sigue
+    disponible en la caché en memoria (degradación elegante).
+    """
+    try:
+        content = blueprint.model_dump_json().encode("utf-8")
+        get_storage().save_file(_blueprint_filename(blueprint.blueprint_id), content)
+        return True
+    except Exception as exc:
+        logger.warning("No se pudo persistir el blueprint '%s': %s", blueprint.blueprint_id, exc)
+        return False
+
+
+def load_persisted_blueprint(blueprint_id: str) -> Optional[DashboardBlueprint]:
+    """Recupera un Blueprint persistido cuando la caché en memoria está vacía."""
+    try:
+        storage = get_storage()
+        filename = _blueprint_filename(blueprint_id)
+        if not storage.exists(filename):
+            return None
+        return DashboardBlueprint.model_validate_json(storage.read_file(filename))
+    except Exception as exc:
+        logger.warning("No se pudo cargar el blueprint persistido '%s': %s", blueprint_id, exc)
+        return None
 
 
 # ───────────────────────────── Contexto del modelo ──────────────────────────
@@ -681,19 +728,9 @@ class DesignSystemGenerator:
                 all_pass = False
         return palette, checks, all_pass
 
-    @classmethod
-    def build(cls) -> Tuple[DesignSystem, bool]:
-        palettes: List[ColorPalette] = []
-        all_checks: List[ContrastPairCheck] = []
-        wcag_pass = True
-        for base in _PALETTE_BASES:
-            palette, checks, ok = cls._build_palette(base)
-            palettes.append(palette)
-            all_checks.extend(checks)
-            if not ok:
-                wcag_pass = False
-
-        checklist = [
+    @staticmethod
+    def _accessibility_checklist(wcag_pass: bool) -> List[AccessibilityCheckItem]:
+        return [
             AccessibilityCheckItem(
                 label="Contraste",
                 status="pass" if wcag_pass else "warning",
@@ -723,7 +760,10 @@ class DesignSystemGenerator:
                 detail="Evitar rojo/verde como único diferenciador; en KPIs de variación acompañar con icono ▲/▼ y signo.",
             ),
         ]
-        declarations = [
+
+    @staticmethod
+    def _accessibility_declarations() -> List[str]:
+        return [
             "No depender exclusivamente del color para transmitir información.",
             "Tamaño de fuente mínimo 11px para etiquetas y 14px para texto de apoyo.",
             "Máximo 6-8 categorías por visual; agrupar el resto.",
@@ -732,6 +772,65 @@ class DesignSystemGenerator:
             "Títulos descriptivos y tooltips informativos con valores exactos.",
             "Filtros comprensibles con valores reales del dataset.",
         ]
+
+    @classmethod
+    def recheck_accessibility(cls, palette: ColorPalette) -> AccessibilityRecommendation:
+        """
+        Recalcula los pares de contraste WCAG de la paleta activa.
+
+        Se usa en la edición HITL del Paso 5: cuando el usuario cambia la
+        paleta por una variante prevalidada, la validación debe reflejar sus
+        colores reales y no los de la paleta propuesta originalmente por la IA.
+        """
+        bg = palette.background_color
+        pairs_spec = [
+            ("Texto principal sobre fondo", palette.text_color, bg, False, False),
+            ("Texto atenuado sobre fondo", palette.muted_text_color, bg, False, False),
+            ("Texto sobre color primario (botones)", bg, palette.primary_color, False, False),
+            ("Primario sobre fondo (gráficos/UI)", palette.primary_color, bg, False, True),
+            ("Positivo sobre fondo", palette.positive_color, bg, False, True),
+            ("Negativo sobre fondo", palette.negative_color, bg, False, True),
+            ("Aviso sobre fondo", palette.warning_color, bg, False, True),
+        ]
+        checks: List[ContrastPairCheck] = []
+        all_pass = True
+        for label, fg, background, large, is_ui in pairs_spec:
+            ratio = wcag.contrast_ratio(fg, background)
+            levels = wcag.wcag_check(ratio, large_text=large, ui_component=is_ui)
+            checks.append(
+                ContrastPairCheck(
+                    label=label,
+                    foreground=fg.upper(),
+                    background=background.upper(),
+                    contrast_ratio=ratio,
+                    aa=levels["aa"],
+                    aaa=levels["aaa"],
+                    large_text=large,
+                )
+            )
+            if not levels["aa"]:
+                all_pass = False
+        return AccessibilityRecommendation(
+            contrast_pairs=checks,
+            checklist=cls._accessibility_checklist(all_pass),
+            overall_label="WCAG AA: PASS" if all_pass else "WCAG AA: FAIL",
+            declarations=cls._accessibility_declarations(),
+        )
+
+    @classmethod
+    def build(cls) -> Tuple[DesignSystem, bool]:
+        palettes: List[ColorPalette] = []
+        all_checks: List[ContrastPairCheck] = []
+        wcag_pass = True
+        for base in _PALETTE_BASES:
+            palette, checks, ok = cls._build_palette(base)
+            palettes.append(palette)
+            all_checks.extend(checks)
+            if not ok:
+                wcag_pass = False
+
+        checklist = cls._accessibility_checklist(wcag_pass)
+        declarations = cls._accessibility_declarations()
         accessibility = AccessibilityRecommendation(
             contrast_pairs=all_checks,
             checklist=checklist,
@@ -1547,6 +1646,7 @@ class DashboardService:
                 _increment("dashboard_validation_failed")
 
             DASHBOARD_CACHE[blueprint_id] = blueprint
+            persist_blueprint(blueprint)
             return blueprint
         except Exception:
             _increment("dashboard_generation_failed")
@@ -1554,7 +1654,15 @@ class DashboardService:
 
     @classmethod
     def get(cls, blueprint_id: str) -> Optional[DashboardBlueprint]:
-        return DASHBOARD_CACHE.get(blueprint_id)
+        cached = DASHBOARD_CACHE.get(blueprint_id)
+        if cached is not None:
+            return cached
+        # Fallback de persistencia: la caché en memoria se pierde al reciclar
+        # la instancia de Cloud Run, pero el JSON sigue en el StorageBackend.
+        persisted = load_persisted_blueprint(blueprint_id)
+        if persisted is not None:
+            DASHBOARD_CACHE[blueprint_id] = persisted
+        return persisted
 
     @classmethod
     def validate_blueprint(cls, dataset_ids: List[str], blueprint: DashboardBlueprint) -> DashboardValidation:
@@ -1564,3 +1672,22 @@ class DashboardService:
         if validation.status == ValidationStatusEnum.INVALID:
             _increment("dashboard_validation_failed")
         return validation
+
+    @classmethod
+    def save_edited(cls, blueprint: DashboardBlueprint) -> DashboardBlueprint:
+        """
+        Guarda la edición HITL del usuario sobre un Blueprint (Paso 5).
+
+        Gobernanza: la IA propone, el usuario decide, Python ejecuta. Este
+        método nunca reescribe las decisiones del usuario: recalcula WCAG
+        sobre la paleta activa, revalida de forma determinista contra el
+        modelo estrella real y persiste el resultado en el StorageBackend.
+        """
+        blueprint.design.accessibility = DesignSystemGenerator.recheck_accessibility(blueprint.design.palette)
+        # La paleta activa no debe seguir figurando como variante disponible
+        active_name = blueprint.design.palette.name
+        blueprint.design.palette_variants = [p for p in blueprint.design.palette_variants if p.name != active_name]
+        blueprint.validation = cls.validate_blueprint(list(blueprint.dataset_ids), blueprint)
+        DASHBOARD_CACHE[blueprint.blueprint_id] = blueprint
+        persist_blueprint(blueprint)
+        return blueprint

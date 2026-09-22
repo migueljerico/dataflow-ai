@@ -306,4 +306,15 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  // Edición HITL del Paso 5: guarda los cambios del usuario, revalida en el
+  // backend de forma determinista y persiste en el StorageBackend (local/GCS).
+  updateDashboardBlueprint: async (blueprint: DashboardBlueprint): Promise<DashboardBlueprint> => {
+    const res = await fetch(`${API_BASE}/dashboard/${encodeURIComponent(blueprint.blueprint_id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(blueprint),
+    });
+    return handleResponse<DashboardBlueprint>(res);
+  },
 };

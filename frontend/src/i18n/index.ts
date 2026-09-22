@@ -282,6 +282,27 @@ export interface Translations {
     mockupExportPng?: string;
     mockupGenerating?: string;
   };
+  dashboardEdit?: {
+    editBtn: string;
+    hint: string;
+    nameLabel: string;
+    objectiveLabel: string;
+    typeLabel: string;
+    kpisTitle: string;
+    visualsTitle: string;
+    filtersTitle: string;
+    paletteLabel: string;
+    visualTypeLabel: string;
+    moveUp: string;
+    moveDown: string;
+    hide: string;
+    show: string;
+    hiddenMark: string;
+    saveBtn: string;
+    saving: string;
+    cancelBtn: string;
+    saveError: string;
+  };
   cacheModal?: {
     title: string;
     subtitle: string;
@@ -660,6 +681,27 @@ export const translations: Record<Language, Translations> = {
       mockupDesc: 'Maqueta ejecutiva construida con los datos reales del Blueprint: KPIs, tendencia, composición, desglose y ranking.',
       mockupExportPng: 'Descargar PNG ejecutivo',
       mockupGenerating: 'Generando imagen...',
+    },
+    dashboardEdit: {
+      editBtn: 'Editar blueprint',
+      hint: 'La IA propone, el usuario decide, Python ejecuta: los cambios se revalidan de forma determinista antes de guardarse.',
+      nameLabel: 'Nombre del dashboard',
+      objectiveLabel: 'Objetivo',
+      typeLabel: 'Tipo de dashboard',
+      kpisTitle: 'KPIs',
+      visualsTitle: 'Visuales',
+      filtersTitle: 'Filtros / Slicers',
+      paletteLabel: 'Paleta de colores',
+      visualTypeLabel: 'Tipo de visual',
+      moveUp: 'Subir',
+      moveDown: 'Bajar',
+      hide: 'Ocultar',
+      show: 'Mostrar',
+      hiddenMark: 'Oculto',
+      saveBtn: 'Guardar y revalidar',
+      saving: 'Guardando…',
+      cancelBtn: 'Descartar cambios',
+      saveError: 'No se pudo guardar la edición del blueprint.',
     },
     cacheModal: {
       title: 'Observabilidad de Caché Distribuida',
@@ -1040,6 +1082,27 @@ export const translations: Record<Language, Translations> = {
       mockupDesc: 'Executive mockup built with the real Blueprint data: KPIs, trend, composition, breakdown and ranking.',
       mockupExportPng: 'Download executive PNG',
       mockupGenerating: 'Generating image...',
+    },
+    dashboardEdit: {
+      editBtn: 'Edit blueprint',
+      hint: 'AI proposes, the user decides, Python executes: changes are deterministically revalidated before saving.',
+      nameLabel: 'Dashboard name',
+      objectiveLabel: 'Objective',
+      typeLabel: 'Dashboard type',
+      kpisTitle: 'KPIs',
+      visualsTitle: 'Visuals',
+      filtersTitle: 'Filters / Slicers',
+      paletteLabel: 'Color palette',
+      visualTypeLabel: 'Visual type',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
+      hide: 'Hide',
+      show: 'Show',
+      hiddenMark: 'Hidden',
+      saveBtn: 'Save and revalidate',
+      saving: 'Saving…',
+      cancelBtn: 'Discard changes',
+      saveError: 'Could not save the blueprint edit.',
     },
     cacheModal: {
       title: 'Distributed Cache Observability',

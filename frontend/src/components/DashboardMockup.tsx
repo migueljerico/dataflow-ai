@@ -81,9 +81,9 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
   const warning = palette?.warning_color || FALLBACK.warning;
   const categorical = [primary, secondary, accent, positive, warning, FALLBACK.rose];
 
-  const visuals = blueprint.visuals ?? [];
-  const kpis = (blueprint.kpis ?? []).slice(0, 4);
-  const filters = (blueprint.filters ?? []).slice(0, 4);
+  const visuals = (blueprint.visuals ?? []).filter((v) => !v.hidden);
+  const kpis = (blueprint.kpis ?? []).filter((k) => !k.hidden).slice(0, 4);
+  const filters = (blueprint.filters ?? []).filter((f) => !f.hidden).slice(0, 4);
   const questions = (blueprint.business_questions ?? []).slice(0, 3);
 
   const lineVisual = pickVisual(visuals, ['line', 'area']) ?? visuals.find((v) => v.preview_data.length >= 3);
