@@ -10,10 +10,11 @@ import {
   Copy,
   Check,
   Download,
+  History,
   Image,
   Pencil,
 } from 'lucide-react';
-import { DashboardBlueprint } from '../types';
+import { DashboardBlueprint, DashboardBlueprintList } from '../types';
 import { DashboardMockup } from './DashboardMockup';
 import { DashboardEditor } from './DashboardEditor';
 import { useLanguage } from '../context/LanguageContext';
@@ -24,15 +25,23 @@ interface Props {
   onBackToStarSchema?: () => void;
   /** Notifica al flujo (Paso 5) cuando el usuario guarda una edición HITL. */
   onBlueprintUpdated?: (blueprint: DashboardBlueprint) => void;
+  /** Notifica al flujo (Paso 5) cuando el usuario carga un blueprint del historial. */
+  onBlueprintLoad?: (blueprint: DashboardBlueprint) => void;
 }
 
-export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchema, onBlueprintUpdated }) => {
+export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchema, onBlueprintUpdated, onBlueprintLoad }) => {
   const { t } = useLanguage();
   const [copiedDax, setCopiedDax] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'example' | 'visuals' | 'design' | 'powerbi'>('example');
   const [draft, setDraft] = useState<DashboardBlueprint | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // ── Historial (v1.25.0): propuestas anteriores persistidas ────────────────
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyList, setHistoryList] = useState<DashboardBlueprintList | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
 
   const editing = draft !== null;
   const view = draft ?? blueprint;
@@ -69,6 +78,42 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
   const handleDiscardEdit = () => {
     setDraft(null);
     setSaveError(null);
+  };
+
+  // ── Historial: listar propuestas anteriores y cargarlas en el preview ─────
+  const toggleHistory = async () => {
+    if (historyOpen) {
+      setHistoryOpen(false);
+      return;
+    }
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      setHistoryList(await api.listDashboardBlueprints());
+    } catch (err: unknown) {
+      const fallback = editorLabels.historyError ?? 'No se pudo cargar el historial.';
+      setHistoryError(err instanceof Error && err.message ? err.message : fallback);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleLoadHistoryItem = async (blueprintId: string) => {
+    setLoadingItemId(blueprintId);
+    setHistoryError(null);
+    try {
+      const loaded = await api.getDashboardBlueprint(blueprintId);
+      setDraft(null);
+      setSaveError(null);
+      onBlueprintLoad?.(loaded);
+      setHistoryOpen(false);
+    } catch (err: unknown) {
+      const fallback = editorLabels.historyError ?? 'No se pudo cargar el historial.';
+      setHistoryError(err instanceof Error && err.message ? err.message : fallback);
+    } finally {
+      setLoadingItemId(null);
+    }
   };
 
   const validationStatus = view.validation?.status || 'warning';
@@ -114,6 +159,87 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           </div>
         </div>
       </div>
+
+      {/* Panel de historial: propuestas anteriores persistidas (Paso 5) */}
+      {!editing && historyOpen && (
+        <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }} data-testid="history-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
+              {editorLabels.historyTitle ?? 'Historial de propuestas'}
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {historyList && historyList.retention_days > 0 && (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {editorLabels.historyRetention ?? 'Retención'}: {historyList.retention_days} {editorLabels.historyRetentionDays ?? 'días'}
+                </span>
+              )}
+              <button
+                onClick={() => setHistoryOpen(false)}
+                data-testid="history-close-btn"
+                style={{ padding: '4px 10px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          {historyLoading && !historyList && (
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '8px 0' }} data-testid="history-loading">
+              {editorLabels.historyLoading ?? 'Cargando…'}
+            </div>
+          )}
+          {historyError && (
+            <div style={{ fontSize: '12px', color: 'var(--accent-rose)', padding: '8px 0' }} data-testid="history-error">
+              {historyError}
+            </div>
+          )}
+          {historyList && historyList.items.length === 0 && !historyError && (
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '8px 0' }} data-testid="history-empty">
+              {editorLabels.historyEmpty ?? 'Sin propuestas guardadas todavía.'}
+            </div>
+          )}
+          {historyList && historyList.items.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {historyList.items.map((item) => {
+                const isCurrent = item.blueprint_id === view.blueprint_id;
+                return (
+                  <div
+                    key={item.blueprint_id}
+                    data-testid={`history-item-${item.blueprint_id}`}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '10px 12px', backgroundColor: 'var(--bg-input)', borderRadius: '8px', flexWrap: 'wrap' }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>{item.name}</span>
+                        {isCurrent && (
+                          <span
+                            data-testid="history-current-mark"
+                            style={{ fontSize: '10px', fontWeight: 700, color: 'var(--primary)', backgroundColor: 'rgba(14, 165, 233, 0.12)', padding: '2px 6px', borderRadius: '999px' }}
+                          >
+                            {editorLabels.historyCurrent ?? 'Actual'}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {new Date(item.created_at).toLocaleString()} · {item.kpi_count} {editorLabels.historyKpis ?? 'KPIs'} · {item.visual_count}{' '}
+                        {editorLabels.historyVisuals ?? 'visuales'}
+                        {item.validation_status ? ` · ${item.passed_count}/${item.total_count}` : ''}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleLoadHistoryItem(item.blueprint_id)}
+                      disabled={loadingItemId !== null}
+                      data-testid={`history-load-${item.blueprint_id}`}
+                      style={{ padding: '6px 14px', backgroundColor: 'var(--primary)', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: loadingItemId !== null ? 'wait' : 'pointer', fontSize: '12px', fontWeight: 600, opacity: loadingItemId !== null ? 0.7 : 1 }}
+                    >
+                      {loadingItemId === item.blueprint_id ? (editorLabels.historyLoading ?? 'Cargando…') : (editorLabels.historyLoad ?? 'Cargar')}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs de navegación (ocultos durante la edición HITL) */}
       {!editing && (
@@ -321,6 +447,39 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       {/* Panel 4: Power BI */}
       {!editing && activeTab === 'powerbi' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Export del blueprint editado: TMDL y proyecto .pbip (v1.25.0) */}
+          <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }} data-testid="export-model-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
+                  {editorLabels.exportTitle ?? 'Exportar modelo editado'}
+                </h3>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                  {editorLabels.exportHint ?? 'Descarga generada desde el blueprint (ediciones incluidas).'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={api.dashboardExportUrl(view.blueprint_id, 'tmdl')}
+                  data-testid="export-tmdl-btn"
+                  download
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-main)', fontSize: '13px', fontWeight: 500, textDecoration: 'none', cursor: 'pointer' }}
+                >
+                  <FileCode size={14} />
+                  {editorLabels.exportTmdl ?? 'Script TMDL'}
+                </a>
+                <a
+                  href={api.dashboardExportUrl(view.blueprint_id, 'pbip')}
+                  data-testid="export-pbip-btn"
+                  download
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: 'var(--primary)', border: 'none', borderRadius: '6px', color: '#ffffff', fontSize: '13px', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+                >
+                  <Download size={14} />
+                  {editorLabels.exportPbip ?? 'Proyecto .pbip'}
+                </a>
+              </div>
+            </div>
+          </div>
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
               Medidas DAX
@@ -390,6 +549,26 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
             </>
           ) : (
             <>
+              <button
+                onClick={toggleHistory}
+                data-testid="history-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  backgroundColor: historyOpen ? 'rgba(14, 165, 233, 0.1)' : 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                }}
+              >
+                <History size={14} />
+                {editorLabels.historyBtn ?? 'Historial'}
+              </button>
               <button
                 onClick={startEditing}
                 data-testid="edit-blueprint-btn"

@@ -29,9 +29,18 @@ const INK = '#0f172a';
 const MUTED = '#475569';
 const FAINT = '#64748b';
 const CARD_STROKE = '#e2e8f0';
-const PILL_BG = '#eff6ff';
-const PILL_STROKE = '#bfdbf8';
-const PILL_INK = '#1e40af';
+/** Cabecera oscura derivada del primario de la paleta (garantiza contraste WCAG). */
+const headerBgOf = (hex: string): string => {
+  const match = /^#([0-9a-f]{6})$/i.exec((hex ?? '').trim());
+  if (!match) return INK;
+  const hex6 = match[1] ?? '';
+  const num = parseInt(hex6, 16);
+  if (Number.isNaN(num)) return INK;
+  const r = Math.round(((num >> 16) & 255) * 0.45);
+  const g = Math.round(((num >> 8) & 255) * 0.45);
+  const b = Math.round((num & 255) * 0.45);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+};
 
 const truncate = (value: string, max: number): string =>
   value.length > max ? `${value.slice(0, Math.max(0, max - 1))}…` : value;
@@ -114,19 +123,19 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
   const lineLabelEvery = Math.max(1, Math.ceil(linePoints.length / 8));
 
   // ── Barras ──────────────────────────────────────────────────────────────────
-  const barPoints = (barVisual?.preview_data ?? []).slice(0, 8);
+  // Barras horizontales del desglose (estilo Power BI ejecutivo)
+  const barPoints = (barVisual?.preview_data ?? []).slice(0, 5);
   const barMax = Math.max(1, ...barPoints.map((p) => p.value));
-  const barBaseY = 992;
-  const barAreaH = 170;
-  const barSlotW = barPoints.length > 0 ? 688 / barPoints.length : 688;
 
   // ── Donut ───────────────────────────────────────────────────────────────────
   const donutPoints = (donutVisual?.preview_data ?? []).slice(0, 6);
   const donutTotal = donutPoints.reduce((acc, p) => acc + p.value, 0) || 1;
-  let donutOffset = 25;
+  // Inicio en las 12 en punto (estándar Power BI); tMid sitúa el % sobre el anillo
+  let donutOffset = 50;
   const donutSegments = donutPoints.map((p, i) => {
     const pct = (p.value / donutTotal) * 100;
-    const seg = { point: p, pct, offset: donutOffset, color: categorical[i % categorical.length] };
+    const tMid = (((-donutOffset) % 100) + 100 + pct / 2) % 100;
+    const seg = { point: p, pct, tMid, offset: donutOffset, color: categorical[i % categorical.length] };
     donutOffset -= pct;
     return seg;
   });
@@ -164,16 +173,10 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
   const kpiCount = Math.max(kpis.length, 1);
   const kpiCardW = (1568 - (kpiCount - 1) * 16) / kpiCount;
 
-  const confidenceBg =
-    blueprint.confidence === 'high'
-      ? '#dcfce7'
-      : blueprint.confidence === 'medium'
-        ? '#fef3c7'
-        : '#ffe4e6';
   const confidenceInk =
     blueprint.confidence === 'high' ? '#166534' : blueprint.confidence === 'medium' ? '#92400e' : '#9f1239';
 
-  const filterPillW = filters.length > 0 ? (1568 - 32 - (filters.length - 1) * 12) / filters.length : 0;
+  const filterPillW = filters.length > 0 ? (1418 - (filters.length - 1) * 12) / filters.length : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} data-testid="dashboard-mockup">
@@ -255,32 +258,33 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
         >
           <rect x="0" y="0" width={W} height={H} fill="#ffffff" />
 
-          {/* Cabecera ejecutiva */}
-          <rect x="16" y="16" width="1568" height="100" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
-          <rect x="16" y="16" width="1568" height="100" rx="12" fill={primary} opacity="0.04" />
-          <text x="40" y="46" fill={primary} fontSize="11" fontWeight="700" letterSpacing="1.5">
+          {/* Cabecera ejecutiva: franja temática en el color de la paleta */}
+          <rect x="16" y="16" width="1568" height="100" rx="12" fill={headerBgOf(primary)} />
+          <text x="40" y="46" fill="#ffffff" fillOpacity="0.75" fontSize="11" fontWeight="700" letterSpacing="1.5">
             {truncate(`DATAFLOW AI · ${blueprint.dashboard_type.toUpperCase()} · ${blueprint.audience.toUpperCase()}`, 96)}
           </text>
-          <text x="40" y="76" fill={INK} fontSize="26" fontWeight="700">
+          <text x="40" y="76" fill="#ffffff" fontSize="26" fontWeight="700">
             {truncate(blueprint.name, 54)}
           </text>
-          <text x="40" y="99" fill={MUTED} fontSize="13">
+          <text x="40" y="99" fill="#ffffff" fillOpacity="0.85" fontSize="13">
             {truncate(blueprint.objective, 110)}
           </text>
-          <rect x="1290" y="36" width="130" height="30" rx="15" fill={confidenceBg} />
+          <rect x="1290" y="36" width="130" height="30" rx="15" fill="#ffffff" />
           <text x="1355" y="56" fill={confidenceInk} fontSize="12" fontWeight="700" textAnchor="middle">
             {truncate(`${blueprint.confidence}`, 16)}
           </text>
-          <text x="1544" y="56" fill={FAINT} fontSize="11" textAnchor="end">
+          <text x="1544" y="56" fill="#ffffff" fillOpacity="0.7" fontSize="11" textAnchor="end">
             {truncate(blueprint.blueprint_id, 24)}
           </text>
-          <text x="1544" y="76" fill={FAINT} fontSize="11" textAnchor="end">
+          <text x="1544" y="76" fill="#ffffff" fillOpacity="0.7" fontSize="11" textAnchor="end">
             {truncate(palette?.name ?? '', 28)}
           </text>
+          {/* Franja de acento de la paleta bajo la cabecera */}
+          <rect x="16" y="119" width="1568" height="6" rx="3" fill={accent} />
 
           {/* Filtros / slicers */}
-          <rect x="16" y="128" width="1568" height="68" rx="12" fill="#f8fafc" stroke={CARD_STROKE} strokeWidth="1" />
-          <text x="40" y="168" fill={INK} fontSize="14" fontWeight="700">
+          <rect x="16" y="134" width="1568" height="62" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
+          <text x="40" y="171" fill={INK} fontSize="14" fontWeight="700">
             {labels.filters}
           </text>
           {filters.length > 0 ? (
@@ -288,62 +292,54 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
               const px = 150 + i * (filterPillW + 12);
               return (
                 <g key={f.filter_id}>
-                  <rect x={px} y="140" width={filterPillW} height="44" rx="22" fill={PILL_BG} stroke={PILL_STROKE} strokeWidth="1" />
-                  <text x={px + 18} y="158" fill={PILL_INK} fontSize="12" fontWeight="700">
+                  <rect x={px} y="146" width={filterPillW} height="44" rx="10" fill="#f8fafc" stroke={CARD_STROKE} strokeWidth="1" />
+                  <rect x={px + 14} y="156" width="8" height="8" rx="2" fill={primary} />
+                  <text x={px + 30} y="164" fill={INK} fontSize="12" fontWeight="700">
                     {truncate(f.label, 18)}
                   </text>
-                  <text x={px + 18} y="174" fill={PILL_INK} fontSize="11" opacity="0.8">
+                  <text x={px + 30} y="180" fill={FAINT} fontSize="11">
                     {truncate(f.recommended_values.slice(0, 3).join(' · '), 34)}
                   </text>
                 </g>
               );
             })
           ) : (
-            <text x="150" y="168" fill={FAINT} fontSize="12">
+            <text x="150" y="171" fill={FAINT} fontSize="12">
               {labels.noFilters}
             </text>
           )}
 
-          {/* KPIs ejecutivos (sin código técnico) */}
+          {/* KPIs ejecutivos: tarjeta de borde fino + icono circular + número grande */}
           {kpis.length > 0 ? (
-            kpis.map((kpi, i) => (
-              <g key={kpi.kpi_id}>
-                <rect
-                  x={16 + i * (kpiCardW + 16)}
-                  y="208"
-                  width={kpiCardW}
-                  height="128"
-                  rx="12"
-                  fill="#ffffff"
-                  stroke={CARD_STROKE}
-                  strokeWidth="1"
-                />
-                <rect
-                  x={16 + i * (kpiCardW + 16)}
-                  y="208"
-                  width={kpiCardW}
-                  height="5"
-                  rx="2"
-                  fill={categorical[i % categorical.length]}
-                />
-                <text
-                  x={36 + i * (kpiCardW + 16)}
-                  y="240"
-                  fill={MUTED}
-                  fontSize="12"
-                  fontWeight="700"
-                  letterSpacing="0.8"
-                >
-                  {truncate(kpi.title.toUpperCase(), 30)}
-                </text>
-                <text x={36 + i * (kpiCardW + 16)} y="280" fill={INK} fontSize="34" fontWeight="700">
-                  {truncate(kpi.value_label || '—', 16)}
-                </text>
-                <text x={36 + i * (kpiCardW + 16)} y="306" fill={MUTED} fontSize="12">
-                  {truncate(kpi.description || '', 38)}
-                </text>
-              </g>
-            ))
+            kpis.map((kpi, i) => {
+              const cx0 = 16 + i * (kpiCardW + 16);
+              const kColor = categorical[i % categorical.length];
+              const compact = kpiCardW < 430;
+              return (
+                <g key={kpi.kpi_id}>
+                  <rect x={cx0} y="208" width={kpiCardW} height="128" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1.5" />
+                  <text x={cx0 + 20} y="234" fill={MUTED} fontSize="11" fontWeight="700" letterSpacing="0.8">
+                    {truncate(kpi.title.toUpperCase(), compact ? 26 : 44)}
+                  </text>
+                  <circle cx={cx0 + 54} cy="284" r="24" fill={kColor} fillOpacity="0.12" stroke={kColor} strokeWidth="1.5" />
+                  <path
+                    d={`M ${cx0 + 44} 291 L ${cx0 + 50} 283 L ${cx0 + 55} 287 L ${cx0 + 64} 277`}
+                    fill="none"
+                    stroke={kColor}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx={cx0 + 64} cy="277" r="3" fill={kColor} />
+                  <text x={cx0 + 92} y="296" fill={INK} fontSize={compact ? 28 : 34} fontWeight="700">
+                    {truncate(kpi.value_label || '—', compact ? 14 : 20)}
+                  </text>
+                  <text x={cx0 + 92} y="318" fill={FAINT} fontSize="11">
+                    {truncate(kpi.description || '', compact ? 34 : 60)}
+                  </text>
+                </g>
+              );
+            })
           ) : (
             <g>
               <rect x="16" y="208" width="1568" height="128" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" strokeDasharray="6 4" />
@@ -375,6 +371,18 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
               <path d={linePath} fill="none" stroke={primary} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
               {lineCoords.map((c, i) => (
                 <g key={i}>
+                  {lineCoords.length <= 8 && (
+                    <text
+                      x={c.x}
+                      y={Math.max(plotY + 12, c.y - 12)}
+                      fill={MUTED}
+                      fontSize="10"
+                      fontWeight="700"
+                      textAnchor="middle"
+                    >
+                      {shortNumber(c.point.value)}
+                    </text>
+                  )}
                   <circle cx={c.x} cy={c.y} r="4.5" fill={primary} stroke="#ffffff" strokeWidth="1.5" />
                   {i % lineLabelEvery === 0 && (
                     <text x={c.x} y={plotY + plotH + 22} fill={MUTED} fontSize="11" textAnchor="middle">
@@ -416,6 +424,29 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
                   transform="rotate(90 1170 540)"
                 />
               ))}
+              {/* Porcentaje impreso sobre el anillo (segmentos suficientemente grandes) */}
+              {donutSegments
+                .filter((s) => s.pct >= 9)
+                .map((s, i) => {
+                  const phi = ((90 + s.tMid * 3.6) * Math.PI) / 180;
+                  return (
+                    <text
+                      key={`pct-${i}`}
+                      x={(1170 + 72 * Math.cos(phi)).toFixed(1)}
+                      y={(540 + 72 * Math.sin(phi) + 4).toFixed(1)}
+                      fill="#ffffff"
+                      fontSize="12"
+                      fontWeight="700"
+                      textAnchor="middle"
+                      stroke="#0f172a"
+                      strokeOpacity="0.45"
+                      strokeWidth="3"
+                      paintOrder="stroke"
+                    >
+                      {`${s.pct.toFixed(1)}%`}
+                    </text>
+                  );
+                })}
               <text x="1170" y="534" fill={INK} fontSize="20" fontWeight="700" textAnchor="middle">
                 {shortNumber(donutTotal)}
               </text>
@@ -429,7 +460,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
                     {truncate(s.point.label, 20)}
                   </text>
                   <text x="1300" y={493 + i * 34} fill={MUTED} fontSize="11">
-                    {`${shortNumber(s.point.value)} · ${s.pct.toFixed(1)}%`}
+                    {shortNumber(s.point.value)}
                   </text>
                 </g>
               ))}
@@ -440,7 +471,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
             </text>
           )}
 
-          {/* Desglose barras */}
+          {/* Desglose: barras horizontales con etiqueta a la izquierda y valor al final */}
           <rect x="16" y="720" width="768" height="330" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
           <text x="40" y="752" fill={INK} fontSize="16" fontWeight="700">
             {truncate(barVisual?.title ?? (en ? 'Breakdown' : 'Desglose'), 42)}
@@ -450,17 +481,17 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           </text>
           {barPoints.length > 0 ? (
             barPoints.map((p, i) => {
-              const bw = Math.min(64, barSlotW - 18);
-              const bx = 56 + i * barSlotW + (barSlotW - bw) / 2;
-              const bh = Math.max(6, (barAreaH * p.value) / barMax);
+              const rowY = 794 + i * 50;
+              const barW = Math.max(10, (440 * p.value) / barMax);
               return (
                 <g key={i}>
-                  <rect x={bx} y={barBaseY - bh} width={bw} height={bh} rx="6" fill={categorical[i % categorical.length]} />
-                  <text x={bx + bw / 2} y={barBaseY - bh - 8} fill={INK} fontSize="12" fontWeight="700" textAnchor="middle">
-                    {shortNumber(p.value)}
+                  <text x="40" y={rowY + 13} fill={INK} fontSize="12" fontWeight="600">
+                    {truncate(p.label, 20)}
                   </text>
-                  <text x={bx + bw / 2} y={barBaseY + 20} fill={MUTED} fontSize="11" textAnchor="middle">
-                    {truncate(p.label, 12)}
+                  <rect x="200" y={rowY} width="440" height="18" rx="9" fill="#f1f5f9" />
+                  <rect x="200" y={rowY} width={barW} height="18" rx="9" fill={categorical[i % categorical.length]} />
+                  <text x="760" y={rowY + 13} fill={INK} fontSize="12" fontWeight="700" textAnchor="end">
+                    {shortNumber(p.value)}
                   </text>
                 </g>
               );

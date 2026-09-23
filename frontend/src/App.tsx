@@ -426,6 +426,7 @@ const AppContent: React.FC = () => {
             <DashboardPreview
               blueprint={dashboardBlueprint}
               onBlueprintUpdated={setDashboardBlueprint}
+              onBlueprintLoad={setDashboardBlueprint}
               onBackToStarSchema={() => setStep(4)}
             />
           )}

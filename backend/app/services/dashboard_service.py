@@ -13,16 +13,23 @@ contraste WCAG, existencia de campos y cálculo de métricas es determinista.
 """
 
 import hashlib
+import io
+import json
 import logging
 import re
 import threading
 import time
+import unicodedata
+import uuid
+import zipfile
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
 from app.core import wcag
+from app.core.config import settings
 from app.core.number_parsing import to_numeric_series
 from app.core.storage import get_storage
 from app.models.dashboard import (
@@ -36,6 +43,8 @@ from app.models.dashboard import (
     ConfidenceLevelEnum,
     ContrastPairCheck,
     DashboardBlueprint,
+    DashboardBlueprintList,
+    DashboardBlueprintSummary,
     DashboardCheck,
     DashboardPage,
     DashboardStats,
@@ -53,6 +62,7 @@ from app.models.dashboard import (
     PreviewModeEnum,
     SemanticColumnAnalysis,
     SemanticModelAnalysis,
+    SemanticTableAnalysis,
     ValidationStatusEnum,
     VisualRecommendation,
     VisualTypeEnum,
@@ -148,6 +158,331 @@ def load_persisted_blueprint(blueprint_id: str) -> Optional[DashboardBlueprint]:
     except Exception as exc:
         logger.warning("No se pudo cargar el blueprint persistido '%s': %s", blueprint_id, exc)
         return None
+
+
+# ─────────────────── Historial de Blueprints (Paso 5, v1.25.0) ─────────────────
+
+
+def _as_utc(moment: datetime) -> datetime:
+    """Normaliza a timezone-aware UTC para comparaciones y ordenación."""
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(timezone.utc)
+
+
+def _blueprint_is_expired(blueprint: DashboardBlueprint, retention_days: int) -> bool:
+    """True si el Blueprint supera la retención (TTL) configurada; 0 = sin TTL."""
+    if retention_days <= 0:
+        return False
+    return datetime.now(timezone.utc) - _as_utc(blueprint.created_at) > timedelta(days=retention_days)
+
+
+def _summarize_blueprint(blueprint: DashboardBlueprint) -> DashboardBlueprintSummary:
+    """Resumen ligero (sin preview_data) para el panel de historial del Paso 5."""
+    validation = blueprint.validation
+    return DashboardBlueprintSummary(
+        blueprint_id=blueprint.blueprint_id,
+        name=blueprint.name,
+        dashboard_type=blueprint.dashboard_type,
+        objective=blueprint.objective,
+        confidence=blueprint.confidence,
+        validation_status=validation.status if validation else None,
+        passed_count=validation.passed_count if validation else 0,
+        total_count=validation.total_count if validation else 0,
+        dataset_ids=list(blueprint.dataset_ids),
+        kpi_count=len(blueprint.kpis),
+        visual_count=len(blueprint.visuals),
+        palette_name=blueprint.design.palette.name,
+        created_at=blueprint.created_at,
+    )
+
+
+def list_persisted_blueprints() -> DashboardBlueprintList:
+    """
+    Historial de Blueprints (Paso 5): fusiona la caché en memoria con los
+    artefactos del StorageBackend (local/GCS/S3), aplica la retención (TTL)
+    de settings.BLUEPRINT_RETENTION_DAYS —borrando de forma perezosa los
+    caducados— y devuelve resúmenes ordenados por fecha descendente.
+    """
+    retention_days = max(0, int(settings.BLUEPRINT_RETENTION_DAYS))
+    candidates: Dict[str, DashboardBlueprint] = dict(DASHBOARD_CACHE)
+    expired_files: List[str] = []
+    try:
+        storage = get_storage()
+        for filename in storage.list_files(prefix=BLUEPRINT_STORAGE_PREFIX):
+            if not filename.endswith(".json"):
+                continue
+            bp_id = filename[len(BLUEPRINT_STORAGE_PREFIX) : -len(".json")]
+            if not bp_id:
+                continue
+            blueprint = candidates.get(bp_id)
+            if blueprint is None:
+                blueprint = load_persisted_blueprint(bp_id)
+                if blueprint is None:
+                    continue
+                candidates[bp_id] = blueprint
+            if _blueprint_is_expired(blueprint, retention_days):
+                expired_files.append(filename)
+        # Retención perezosa: se eliminan del storage los artefactos caducados.
+        for filename in expired_files:
+            try:
+                storage.delete_file(filename)
+            except Exception as exc:
+                logger.warning("No se pudo eliminar el blueprint caducado '%s': %s", filename, exc)
+    except Exception as exc:
+        logger.warning("No se pudo construir el historial de blueprints: %s", exc)
+
+    summaries: List[DashboardBlueprintSummary] = []
+    for bp_id, bp in list(candidates.items()):
+        if _blueprint_is_expired(bp, retention_days):
+            DASHBOARD_CACHE.pop(bp_id, None)
+            continue
+        summaries.append(_summarize_blueprint(bp))
+    summaries.sort(key=lambda summary: _as_utc(summary.created_at), reverse=True)
+    return DashboardBlueprintList(items=summaries, total=len(summaries), retention_days=retention_days)
+
+
+# ─────────────────── Exportación TMDL / PBIP del Blueprint (v1.25.0) ────────────
+
+TMDL_NUMERIC_FORMATS = {"currency": "#,##0.00", "decimal": "#,##0.00", "percentage": "0.00%", "number": "0"}
+
+
+def _safe_model_name(raw: str) -> str:
+    """Nombre ASCII seguro para el proyecto .pbip (sin acentos ni símbolos)."""
+    ascii_only = unicodedata.normalize("NFKD", raw or "").encode("ascii", "ignore").decode("ascii")
+    sanitized = re.sub(r"[^A-Za-z0-9]+", "_", ascii_only).strip("_")
+    return sanitized or "DataFlow_Dashboard"
+
+
+def _measure_expression(name: str, formula: str) -> str:
+    """Extrae la expresión DAX de 'Nombre = expr' (o devuelve la fórmula tal cual)."""
+    expr = (formula or "").strip()
+    if expr.startswith(f"{name} ="):
+        return expr[len(name) + 1 :].strip()
+    head, sep, tail = expr.partition("=")
+    if sep and "(" not in head and len(head) <= 80:
+        return tail.strip()
+    return expr
+
+
+def _detect_sales_columns(fact_df: pd.DataFrame) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """Detecta (cantidad, precio, descuento) por nombre de columna: la misma regla
+    determinista que `_load_context` usa para calcular __ventas_netas."""
+    cols = {str(c).lower(): str(c) for c in fact_df.columns}
+    qty_col = next((cols[k] for k in ("quantity", "cantidad", "qty", "unidades", "units") if k in cols), None)
+    price_col = next((cols[k] for k in ("unitprice", "precio", "unit_price", "price") if k in cols), None)
+    disc_col = next((cols[k] for k in ("discount", "descuento", "disc") if k in cols), None)
+    return qty_col, price_col, disc_col
+
+
+def _tmdl_data_type(semantic_type: ColumnSemanticTypeEnum) -> str:
+    """Mapeo determinista tipo semántico → dataType TMDL (fallback sin dataset fuente)."""
+    if semantic_type in (ColumnSemanticTypeEnum.DATE, ColumnSemanticTypeEnum.DATETIME):
+        return "dateTime"
+    if semantic_type in (
+        ColumnSemanticTypeEnum.MEASURE,
+        ColumnSemanticTypeEnum.CURRENCY,
+        ColumnSemanticTypeEnum.PERCENTAGE,
+        ColumnSemanticTypeEnum.QUANTITY,
+    ):
+        return "double"
+    if semantic_type == ColumnSemanticTypeEnum.BOOLEAN:
+        return "boolean"
+    return "string"
+
+
+def _m_source_csv(filename: str, m_types: List[Tuple[str, str]]) -> str:
+    """Script Power Query M (CSV) apuntado al archivo real del StorageBackend."""
+    safe_fn = str(filename).replace('"', "")
+    types_formatted = ",\n        ".join(f'{{"{name}", {pq_type}}}' for name, pq_type in m_types)
+    return (
+        f"let\n"
+        f'    Source = Csv.Document(File.Contents("{safe_fn}"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n'
+        f'    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),\n'
+        f'    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{\n'
+        f"        {types_formatted}\n"
+        f"    }})\n"
+        f"in\n"
+        f'    #"Changed Type"'
+    )
+
+
+def _blueprint_table_tmdl(
+    table: SemanticTableAnalysis,
+    measures: List[DaxMeasure],
+    source: Optional[Tuple[pd.DataFrame, str]],
+    kpi_formats: Dict[str, str],
+) -> str:
+    """Definición TMDL de una tabla del Blueprint: medidas DAX (con ediciones
+    HITL), columnas y partición M cuando el archivo fuente sigue disponible."""
+    from app.services.analytics_service import AnalyticsService  # import local: evita ciclos
+
+    table_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table.table_name}.blueprint.table"))
+    lines: List[str] = [f"table '{table.table_name}'", f"\tlineageTag: {table_guid}", ""]
+
+    # Medidas DAX (incluye las decisiones editadas por el usuario)
+    for m in measures:
+        m_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table.table_name}.measure.{m.name}"))
+        expr = _measure_expression(m.name, m.formula)
+        expr_indented = "\n\t\t\t".join(expr.split("\n"))
+        lines.append(f"\tmeasure '{m.name}' = \n\t\t\t{expr_indented}")
+        fmt = kpi_formats.get(m.name)
+        if fmt:
+            lines.append(f"\t\tformatString: {fmt}")
+        lines.append(f"\t\tlineageTag: {m_guid}")
+        lines.append("")
+
+    # Columnas: dtype real si el dataset fuente existe; si no, tipo semántico
+    column_specs: List[Tuple[str, str, str]] = []  # (nombre, dataType TMDL, summarizeBy)
+    m_types: List[Tuple[str, str]] = []  # (nombre, tipo Power Query M) del origen real
+    if source is not None:
+        df = source[0]
+        for col_name in df.columns:
+            name = str(col_name)
+            if name == DERIVED_MEASURE_COL:
+                continue
+            pq_type, role = AnalyticsService._map_to_power_query_type(name, df[col_name])
+            tmdl_type = AnalyticsService._map_to_tmdl_type(pq_type)
+            column_specs.append((name, tmdl_type, "sum" if role == "numeric" else "none"))
+            m_types.append((name, pq_type))
+    else:
+        for col in table.columns:
+            if col.column_name == DERIVED_MEASURE_COL:
+                continue
+            tmdl_type = _tmdl_data_type(col.semantic_type)
+            summarize_by = "sum" if tmdl_type in ("int64", "double") else "none"
+            column_specs.append((col.column_name, tmdl_type, summarize_by))
+
+    for name, tmdl_type, summarize_by in column_specs:
+        col_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table.table_name}.col.{name}"))
+        lines.append(f"\tcolumn '{name}'")
+        lines.append(f"\t\tdataType: {tmdl_type}")
+        if tmdl_type == "int64":
+            lines.append("\t\tformatString: 0")
+        elif tmdl_type == "double":
+            lines.append("\t\tformatString: #,##0.00")
+        elif tmdl_type == "dateTime":
+            lines.append("\t\tformatString: yyyy-mm-dd")
+        lines.append(f"\t\tlineageTag: {col_guid}")
+        lines.append(f"\t\tsummarizeBy: {summarize_by}")
+        lines.append(f"\t\tsourceColumn: '{name}'")
+        lines.append("")
+
+    # __ventas_netas: columna calculada determinista (no existe en el CSV original)
+    if source is not None:
+        df = source[0]
+        qty_col, price_col, disc_col = _detect_sales_columns(df)
+        if qty_col and price_col:
+            d_guid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{table.table_name}.col.{DERIVED_MEASURE_COL}"))
+            derived_expr = f"'{table.table_name}'[{qty_col}] * '{table.table_name}'[{price_col}]"
+            if disc_col:
+                derived_expr += f" * (1 - '{table.table_name}'[{disc_col}])"
+            lines.append(f"\tcolumn '{DERIVED_MEASURE_COL}' = {derived_expr}")
+            lines.append("\t\tdataType: double")
+            lines.append("\t\tformatString: #,##0.00")
+            lines.append(f"\t\tlineageTag: {d_guid}")
+            lines.append("\t\tsummarizeBy: sum")
+            lines.append("")
+
+    # Partición M solo cuando el archivo fuente existe (sin referencias ficticias)
+    if source is not None and m_types:
+        m_script = _m_source_csv(source[1], m_types)
+        m_indented = "\n\t\t\t".join(m_script.split("\n"))
+        lines.append(f"\tpartition '{table.table_name}' = m")
+        lines.append("\t\tmode: import")
+        lines.append(f"\t\tsource =\n\t\t\t{m_indented}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _blueprint_tmdl_parts(blueprint: DashboardBlueprint) -> Tuple[str, Dict[str, str], str]:
+    """Compone (model.tmdl, {tabla: definición TMDL}, nombre seguro del proyecto)."""
+    tables = list(blueprint.semantic_model.tables)
+    table_names = [t.table_name for t in tables]
+
+    # Fuentes reales por tabla (si el dataset sigue en el StorageBackend)
+    sources: Dict[str, Tuple[pd.DataFrame, str]] = {}
+    for table in tables:
+        if table.table_name in sources:
+            continue
+        try:
+            df, filename = RelationalService._load_dataset_df(table.table_id)
+            if not df.empty:
+                sources[table.table_name] = (df, filename)
+        except Exception as exc:
+            logger.info("Fuente no disponible para exportar '%s': %s", table.table_name, exc)
+
+    # model.tmdl: reutiliza el generador del esquema estrella si los datos existen
+    model_tmdl = ""
+    try:
+        schema = RelationalService.infer_star_schema(list(blueprint.dataset_ids))
+        model_tmdl = schema.tmdl_definition or ""
+    except Exception as exc:
+        logger.info("Esquema estrella no disponible para '%s': %s", blueprint.blueprint_id, exc)
+    if not model_tmdl:
+        fallback = ["model Model", "\tculture: es-ES", "\tdefaultPowerBIDataSourceVersion: powerBI_V3", ""]
+        fallback.extend(f"ref table '{name}'" for name in table_names)
+        model_tmdl = "\n".join(fallback) + "\n"
+
+    # Medidas agrupadas por tabla (las huérfanas van a la primera tabla)
+    measures_by_table: Dict[str, List[DaxMeasure]] = {name: [] for name in table_names}
+    for m in blueprint.dax_measures:
+        if m.table_context in measures_by_table:
+            measures_by_table[m.table_context].append(m)
+        elif table_names:
+            measures_by_table[table_names[0]].append(m)
+
+    kpi_formats: Dict[str, str] = {}
+    for kpi in blueprint.kpis:
+        fmt = TMDL_NUMERIC_FORMATS.get(str(kpi.format_type))
+        if fmt and kpi.dax_measure_name and kpi.dax_measure_name not in kpi_formats:
+            kpi_formats[kpi.dax_measure_name] = fmt
+
+    table_tmdl = {
+        name: _blueprint_table_tmdl(table, measures_by_table[name], sources.get(name), kpi_formats)
+        for table, name in zip(tables, table_names, strict=True)
+    }
+    return model_tmdl, table_tmdl, _safe_model_name(blueprint.name)
+
+
+def export_blueprint_tmdl(blueprint: DashboardBlueprint) -> str:
+    """Script TMDL completo (modelo + tablas + medidas) del Blueprint editado."""
+    model_tmdl, table_tmdl, _ = _blueprint_tmdl_parts(blueprint)
+    parts = [model_tmdl.rstrip("\n")]
+    parts.extend(definition.rstrip("\n") for definition in table_tmdl.values())
+    return "\n\n".join(parts) + "\n"
+
+
+def export_blueprint_pbip(blueprint: DashboardBlueprint) -> bytes:
+    """ZIP .pbip (Power BI Developer Mode) con el modelo del Blueprint editado."""
+    model_tmdl, table_tmdl, name = _blueprint_tmdl_parts(blueprint)
+
+    pbip_json = json.dumps(
+        {
+            "version": "1.0",
+            "artifacts": [{"semanticModel": {"path": f"{name}.SemanticModel"}}],
+            "settings": {"enableAutoAuth": True},
+        },
+        indent=2,
+    )
+    pbidataset_json = json.dumps({"version": "1.0", "settings": {}}, indent=2)
+    diagram_json = json.dumps({"version": "1.0.0", "diagrams": []}, indent=2)
+    database_tmdl = f"database '{name}'\n\tcompatibilityLevel: 1567\n"
+    culture_tmdl = "culture es-ES\n"
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{name}.pbip", pbip_json)
+        zf.writestr(f"{name}.SemanticModel/definition.pbidataset", pbidataset_json)
+        zf.writestr(f"{name}.SemanticModel/diagramLayout.json", diagram_json)
+        zf.writestr(f"{name}.SemanticModel/definition/database.tmdl", database_tmdl)
+        zf.writestr(f"{name}.SemanticModel/definition/model.tmdl", model_tmdl)
+        zf.writestr(f"{name}.SemanticModel/definition/cultures/es-ES.tmdl", culture_tmdl)
+        for table_name, definition in table_tmdl.items():
+            zf.writestr(f"{name}.SemanticModel/definition/tables/{table_name}.tmdl", definition)
+    buf.seek(0)
+    return buf.getvalue()
 
 
 # ───────────────────────────── Contexto del modelo ──────────────────────────
@@ -1530,10 +1865,7 @@ class DashboardService:
         fact_name = schema.fact_table.table_name
         if fact_name in dataframes:
             fact_df = dataframes[fact_name]
-            cols = {str(c).lower(): str(c) for c in fact_df.columns}
-            qty_col = next((cols[k] for k in ("quantity", "cantidad", "qty", "unidades", "units") if k in cols), None)
-            price_col = next((cols[k] for k in ("unitprice", "precio", "unit_price", "price") if k in cols), None)
-            disc_col = next((cols[k] for k in ("discount", "descuento", "disc") if k in cols), None)
+            qty_col, price_col, disc_col = _detect_sales_columns(fact_df)
             if qty_col and price_col and DERIVED_MEASURE_COL not in fact_df.columns:
                 q = pd.to_numeric(fact_df[qty_col], errors="coerce").fillna(0)
                 p = pd.to_numeric(fact_df[price_col], errors="coerce").fillna(0)

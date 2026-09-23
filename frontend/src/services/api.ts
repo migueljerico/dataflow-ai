@@ -19,6 +19,7 @@ import {
   ScheduleExecutionLog,
   MultiTableStarSchema,
   DashboardBlueprint,
+  DashboardBlueprintList,
   DashboardStats,
 } from '../types';
 import { getApiKey } from '../utils/security';
@@ -297,6 +298,15 @@ export const api = {
     const res = await fetch(`${API_BASE}/dashboard/stats`);
     return handleResponse<DashboardStats>(res);
   },
+
+  // ── v1.25.0: Historial de blueprints (Paso 5) y export TMDL/PBIP ────────
+  listDashboardBlueprints: async (): Promise<DashboardBlueprintList> => {
+    const res = await fetch(`${API_BASE}/dashboard`);
+    return handleResponse<DashboardBlueprintList>(res);
+  },
+
+  dashboardExportUrl: (blueprintId: string, format: 'tmdl' | 'pbip'): string =>
+    `${API_BASE}/dashboard/${encodeURIComponent(blueprintId)}/export/${format}`,
 
   validateDashboardBlueprint: async (datasetIds: string[], blueprint: DashboardBlueprint): Promise<any> => {
     const res = await fetch(`${API_BASE}/dashboard/validate`, {

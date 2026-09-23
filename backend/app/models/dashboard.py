@@ -415,6 +415,34 @@ class DashboardValidateRequest(BaseModel):
     blueprint: DashboardBlueprint = Field(..., description="Blueprint a validar (posiblemente editado por el usuario)")
 
 
+class DashboardBlueprintSummary(BaseModel):
+    """Resumen ligero de un Blueprint persistido para el historial (Paso 5)."""
+
+    blueprint_id: str = Field(..., description="ID determinista del Blueprint")
+    name: str = Field(..., description="Nombre del dashboard")
+    dashboard_type: DashboardTypeEnum = Field(..., description="Tipo de dashboard")
+    objective: str = Field("", description="Objetivo analítico")
+    confidence: ConfidenceLevelEnum = Field(..., description="Confianza de la propuesta")
+    validation_status: Optional[ValidationStatusEnum] = Field(
+        None, description="Estado de la última validación determinista"
+    )
+    passed_count: int = Field(0, description="Chequeos superados en la última validación")
+    total_count: int = Field(0, description="Total de chequeos de la última validación")
+    dataset_ids: List[str] = Field(default_factory=list, description="Datasets del modelo origen")
+    kpi_count: int = Field(0, description="KPIs del Blueprint")
+    visual_count: int = Field(0, description="Visuales del Blueprint")
+    palette_name: str = Field("", description="Paleta activa del sistema de diseño")
+    created_at: datetime = Field(..., description="Fecha de creación (UTC)")
+
+
+class DashboardBlueprintList(BaseModel):
+    """Listado/historial de Blueprints persistidos en el StorageBackend activo."""
+
+    items: List[DashboardBlueprintSummary] = Field(default_factory=list)
+    total: int = Field(0, description="Número de Blueprints devueltos tras aplicar retención")
+    retention_days: int = Field(0, description="Días de retención configurados (0 = sin TTL)")
+
+
 class DashboardStats(BaseModel):
     dashboard_generation_total: int = Field(0)
     dashboard_generation_failed: int = Field(0)

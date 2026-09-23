@@ -888,3 +888,25 @@ export interface DashboardStats {
   cached_blueprints: number;
 }
 
+export interface DashboardBlueprintSummary {
+  blueprint_id: string;
+  name: string;
+  dashboard_type: DashboardType;
+  objective: string;
+  confidence: ConfidenceLevel;
+  validation_status?: 'valid' | 'warning' | 'invalid' | null;
+  passed_count: number;
+  total_count: number;
+  dataset_ids: string[];
+  kpi_count: number;
+  visual_count: number;
+  palette_name: string;
+  created_at: string;
+}
+
+export interface DashboardBlueprintList {
+  items: DashboardBlueprintSummary[];
+  total: number;
+  retention_days: number;
+}
+

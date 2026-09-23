@@ -302,6 +302,21 @@ export interface Translations {
     saving: string;
     cancelBtn: string;
     saveError: string;
+    historyBtn?: string;
+    historyTitle?: string;
+    historyEmpty?: string;
+    historyLoad?: string;
+    historyCurrent?: string;
+    historyLoading?: string;
+    historyError?: string;
+    historyRetention?: string;
+    historyRetentionDays?: string;
+    historyKpis?: string;
+    historyVisuals?: string;
+    exportTitle?: string;
+    exportTmdl?: string;
+    exportPbip?: string;
+    exportHint?: string;
   };
   cacheModal?: {
     title: string;
@@ -702,6 +717,21 @@ export const translations: Record<Language, Translations> = {
       saving: 'Guardando…',
       cancelBtn: 'Descartar cambios',
       saveError: 'No se pudo guardar la edición del blueprint.',
+      historyBtn: 'Historial',
+      historyTitle: 'Historial de propuestas',
+      historyEmpty: 'Sin propuestas guardadas todavía.',
+      historyLoad: 'Cargar',
+      historyCurrent: 'Actual',
+      historyLoading: 'Cargando…',
+      historyError: 'No se pudo cargar el historial.',
+      historyRetention: 'Retención',
+      historyRetentionDays: 'días',
+      historyKpis: 'KPIs',
+      historyVisuals: 'visuales',
+      exportTitle: 'Exportar modelo editado',
+      exportTmdl: 'Script TMDL',
+      exportPbip: 'Proyecto .pbip',
+      exportHint: 'Descarga generada desde el blueprint (ediciones incluidas).',
     },
     cacheModal: {
       title: 'Observabilidad de Caché Distribuida',
@@ -1103,6 +1133,21 @@ export const translations: Record<Language, Translations> = {
       saving: 'Saving…',
       cancelBtn: 'Discard changes',
       saveError: 'Could not save the blueprint edit.',
+      historyBtn: 'History',
+      historyTitle: 'Proposal history',
+      historyEmpty: 'No saved proposals yet.',
+      historyLoad: 'Load',
+      historyCurrent: 'Current',
+      historyLoading: 'Loading…',
+      historyError: 'Could not load the history.',
+      historyRetention: 'Retention',
+      historyRetentionDays: 'days',
+      historyKpis: 'KPIs',
+      historyVisuals: 'visuals',
+      exportTitle: 'Export edited model',
+      exportTmdl: 'TMDL script',
+      exportPbip: '.pbip project',
+      exportHint: 'Download generated from the blueprint (edits included).',
     },
     cacheModal: {
       title: 'Distributed Cache Observability',

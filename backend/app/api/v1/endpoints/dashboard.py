@@ -7,16 +7,25 @@ La validación del Blueprint es determinista; el usuario puede editar propuestas
 y revalidarlas sin que la IA sobrescriba sus decisiones.
 """
 
+import re
+
 from app.core.exceptions import FunctionalException
 from app.models.dashboard import (
     DashboardAnalyzeRequest,
     DashboardBlueprint,
+    DashboardBlueprintList,
     DashboardStats,
     DashboardValidateRequest,
     DashboardValidation,
 )
-from app.services.dashboard_service import DashboardService, get_dashboard_stats
-from fastapi import APIRouter, status
+from app.services.dashboard_service import (
+    DashboardService,
+    export_blueprint_pbip,
+    export_blueprint_tmdl,
+    get_dashboard_stats,
+    list_persisted_blueprints,
+)
+from fastapi import APIRouter, Response, status
 
 router = APIRouter()
 
@@ -50,6 +59,24 @@ async def get_dashboard_observability_stats() -> DashboardStats:
     return get_dashboard_stats()
 
 
+@router.get("", response_model=DashboardBlueprintList)
+async def list_dashboard_blueprints() -> DashboardBlueprintList:
+    """
+    Historial de Blueprints persistidos (Paso 5): resúmenes ordenados por
+    fecha de creación con la retención (TTL) aplicada sobre el StorageBackend.
+    """
+    try:
+        return list_persisted_blueprints()
+    except FunctionalException:
+        raise
+    except Exception as e:
+        raise FunctionalException(
+            message=f"Error al listar el historial de dashboards: {str(e)}",
+            code="DASHBOARD_HISTORY_FAILED",
+            status_code=400,
+        ) from e
+
+
 @router.get("/{blueprint_id}", response_model=DashboardBlueprint)
 async def get_dashboard_blueprint(blueprint_id: str):
     """Recupera un Blueprint previamente generado (caché en memoria)."""
@@ -61,6 +88,68 @@ async def get_dashboard_blueprint(blueprint_id: str):
             status_code=404,
         )
     return blueprint
+
+
+@router.get("/{blueprint_id}/export/tmdl")
+async def export_dashboard_blueprint_tmdl(blueprint_id: str):
+    """
+    Exporta el Blueprint (con las ediciones HITL del usuario) como script
+    TMDL: modelo, tablas, columnas y medidas DAX para Power BI Developer Mode.
+    """
+    blueprint = DashboardService.get(blueprint_id)
+    if not blueprint:
+        raise FunctionalException(
+            message="Blueprint de dashboard no encontrado o expirado.",
+            code="BLUEPRINT_NOT_FOUND",
+            status_code=404,
+        )
+    try:
+        content = export_blueprint_tmdl(blueprint)
+    except FunctionalException:
+        raise
+    except Exception as e:
+        raise FunctionalException(
+            message=f"Error al exportar el Blueprint a TMDL: {str(e)}",
+            code="DASHBOARD_TMDL_EXPORT_FAILED",
+            status_code=400,
+        ) from e
+    safe_id = re.sub(r"[^A-Za-z0-9_-]", "", blueprint_id)[:64] or "blueprint"
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/plain",
+        headers={"Content-Disposition": f'attachment; filename="blueprint_{safe_id}.tmdl"'},
+    )
+
+
+@router.get("/{blueprint_id}/export/pbip")
+async def export_dashboard_blueprint_pbip(blueprint_id: str):
+    """
+    Exporta el Blueprint editado como proyecto completo .pbip (Power BI
+    Developer Mode): modelo semántico, tablas TMDL y medidas DAX.
+    """
+    blueprint = DashboardService.get(blueprint_id)
+    if not blueprint:
+        raise FunctionalException(
+            message="Blueprint de dashboard no encontrado o expirado.",
+            code="BLUEPRINT_NOT_FOUND",
+            status_code=404,
+        )
+    try:
+        content = export_blueprint_pbip(blueprint)
+    except FunctionalException:
+        raise
+    except Exception as e:
+        raise FunctionalException(
+            message=f"Error al exportar el Blueprint a PBIP: {str(e)}",
+            code="DASHBOARD_PBIP_EXPORT_FAILED",
+            status_code=400,
+        ) from e
+    safe_id = re.sub(r"[^A-Za-z0-9_-]", "", blueprint_id)[:64] or "blueprint"
+    return Response(
+        content=content,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="blueprint_{safe_id}.pbip.zip"'},
+    )
 
 
 @router.post("/validate", response_model=DashboardValidation)

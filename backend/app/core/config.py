@@ -40,6 +40,10 @@ class Settings:
     STORAGE_S3_SECRET_ACCESS_KEY: Optional[str] = os.getenv("STORAGE_S3_SECRET_ACCESS_KEY", None)
     STORAGE_PREFIX: str = os.getenv("STORAGE_PREFIX", "dataflow/")
 
+    # Retención (TTL) de los Blueprints de dashboard persistidos (historial Paso 5).
+    # Días de vida útil del artefacto JSON; 0 desactiva el TTL.
+    BLUEPRINT_RETENTION_DAYS: int = int(os.getenv("BLUEPRINT_RETENTION_DAYS", "30"))
+
     # CORS: en desarrollo el frontend Vite hace proxy de /api, por lo que esta
     # lista es una red de seguridad. En producción (Cloud Run) se configura vía
     # la variable de entorno BACKEND_CORS_ORIGINS (orígenes separados por coma).
