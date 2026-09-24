@@ -166,7 +166,7 @@ export const PlanReview: React.FC<Props> = ({
                   cursor: 'pointer',
                   border: 'none',
                 }}
-                title="Respuesta recuperada instantáneamente desde la caché de inferencia semántica (ahorro del 100% en tokens). Clic para abrir el panel de observabilidad."
+                title={t.plan?.cacheTooltip ?? 'Respuesta recuperada instantáneamente desde la caché de inferencia semántica (ahorro del 100% en tokens). Clic para abrir el panel de observabilidad.'}
               >
                 <Zap size={12} /> {t.plan?.aiCachedBadge || 'Caché de Inferencia (100% Ahorro)'}
               </button>
@@ -356,13 +356,13 @@ export const PlanReview: React.FC<Props> = ({
                     }}
                   >
                     <td style={{ padding: '8px 10px', fontWeight: 600, color: '#a855f7' }}>
-                      cluster <span style={{ fontSize: '0.75rem' }}>(nueva)</span>
+                      cluster <span style={{ fontSize: '0.75rem' }}>{t.plan?.newColSuffix ?? '(nueva)'}</span>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <span className="badge badge-blue">numeric (int)</span>
                     </td>
                     <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>0, 1, 2...</td>
-                    <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>0 nulos · segmentación K-Means</td>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>{t.plan?.clusterQuality ?? '0 nulos · segmentación K-Means'}</td>
                     <td style={{ padding: '8px 10px' }}>
                       <span className="badge badge-emerald">cluster_kmeans</span>
                     </td>
@@ -449,7 +449,7 @@ export const PlanReview: React.FC<Props> = ({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                   <span className="badge badge-blue">{step.step_id}</span>
                   <span className="badge badge-emerald">{step.operation}</span>
-                  {step.column && <span className="badge badge-amber">Columna: {step.column}</span>}
+                  {step.column && <span className="badge badge-amber">{t.plan?.colLabel ?? 'Columna:'} {step.column}</span>}
                   <span
                     className={`badge ${
                       step.risk === 'high' ? 'badge-rose' : step.risk === 'medium' ? 'badge-amber' : 'badge-emerald'
@@ -563,19 +563,19 @@ export const PlanReview: React.FC<Props> = ({
                     <>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', color: 'var(--text-muted)' }}>
                         <div>
-                          <strong>Nulos:</strong> {stepColProfile.null_count} ({stepColProfile.null_percentage.toFixed(1)}%)
+                          <strong>{t.plan?.nullsLabel ?? 'Nulos:'}</strong> {stepColProfile.null_count} ({stepColProfile.null_percentage.toFixed(1)}%)
                         </div>
                         <div>
-                          <strong>Únicos:</strong> {stepColProfile.unique_count}
+                          <strong>{t.plan?.uniquesLabel ?? 'Únicos:'}</strong> {stepColProfile.unique_count}
                         </div>
                         {stepColProfile.min_value !== undefined && (
                           <div>
-                            <strong>Mín:</strong> {stepColProfile.min_value}
+                            <strong>{t.plan?.minLabel ?? 'Mín:'}</strong> {stepColProfile.min_value}
                           </div>
                         )}
                         {stepColProfile.max_value !== undefined && (
                           <div>
-                            <strong>Máx:</strong> {stepColProfile.max_value}
+                            <strong>{t.plan?.maxLabel ?? 'Máx:'}</strong> {stepColProfile.max_value}
                           </div>
                         )}
                       </div>
@@ -613,7 +613,7 @@ export const PlanReview: React.FC<Props> = ({
                     </>
                   ) : (
                     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.775rem' }}>
-                      Información detallada de perfilado no disponible para esta columna.
+                      {t.plan?.noProfileInfo ?? 'Información detallada de perfilado no disponible para esta columna.'}
                     </p>
                   )}
                 </div>
@@ -637,7 +637,7 @@ export const PlanReview: React.FC<Props> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-rose)', fontWeight: 600 }}>
                     <AlertTriangle size={16} />
-                    <span>Aviso de Protección de Datos: Posible Descarte Irreversible de Texto</span>
+                    <span>{t.plan?.dataLossTitle ?? 'Aviso de Protección de Datos: Posible Descarte Irreversible de Texto'}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                     {step.data_loss_warning}
@@ -653,7 +653,7 @@ export const PlanReview: React.FC<Props> = ({
                       style={{ cursor: 'pointer', accentColor: 'var(--accent-rose)' }}
                     />
                     <label htmlFor={`ack-${step.step_id}`} style={{ cursor: 'pointer', color: 'var(--text-main)' }}>
-                      He revisado esta columna y confirmo la transformación aunque descarte texto libre no parseable.
+                      {t.plan?.dataLossAck ?? 'He revisado esta columna y confirmo la transformación aunque descarte texto libre no parseable.'}
                     </label>
                   </div>
                 </div>

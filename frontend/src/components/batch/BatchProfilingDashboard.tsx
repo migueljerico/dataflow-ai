@@ -56,21 +56,20 @@ export const BatchProfilingDashboard: React.FC<Props> = ({
 
         <div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '8px' }}>
-            Auditoría de Calidad — Lote de {items.length} Tablas Relacionadas
+            {(t.batchProfiling?.auditTitle ?? 'Auditoría de Calidad — Lote de {n} Tablas Relacionadas').replace('{n}', String(items.length))}
           </h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '0.9rem' }}>
-            Se han analizado en paralelo todas las tablas del modelo relacional. Se detectaron {totalIssues} anomalías
-            distribuidas en el lote que serán saneadas en el siguiente paso.
+            {(t.batchProfiling?.auditSubtitle ?? 'Se han analizado en paralelo todas las tablas del modelo relacional. Se detectaron {n} anomalías distribuidas en el lote que serán saneadas en el siguiente paso.').replace('{n}', String(totalIssues))}
           </p>
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <span className="badge badge-blue">
               <Database size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-              {items.length} Tablas
+              {(t.batchProfiling?.tablesCount ?? '{n} Tablas').replace('{n}', String(items.length))}
             </span>
-            <span className="badge badge-blue">Filas Totales: {totalRows.toLocaleString()}</span>
-            <span className="badge badge-blue">Columnas Totales: {totalCols}</span>
-            <span className="badge badge-rose">Incidencias Totales: {totalIssues}</span>
+            <span className="badge badge-blue">{(t.batchProfiling?.totalRowsLabel ?? 'Filas Totales: {n}').replace('{n}', totalRows.toLocaleString())}</span>
+            <span className="badge badge-blue">{(t.batchProfiling?.totalColsLabel ?? 'Columnas Totales: {n}').replace('{n}', String(totalCols))}</span>
+            <span className="badge badge-rose">{(t.batchProfiling?.totalIssuesLabel ?? 'Incidencias Totales: {n}').replace('{n}', String(totalIssues))}</span>
           </div>
         </div>
       </div>
@@ -78,16 +77,16 @@ export const BatchProfilingDashboard: React.FC<Props> = ({
       {/* Tabla resumen de cada dataset del lote */}
       <div className="card" style={{ marginBottom: '24px', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Table size={18} className="text-primary" /> Desglose por Tabla
+          <Table size={18} className="text-primary" /> {t.batchProfiling?.breakdownTitle ?? 'Desglose por Tabla'}
         </h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-              <th style={{ padding: '10px 14px' }}>Tabla / Archivo</th>
-              <th style={{ padding: '10px 14px' }}>Filas</th>
-              <th style={{ padding: '10px 14px' }}>Columnas</th>
-              <th style={{ padding: '10px 14px' }}>Duplicados</th>
-              <th style={{ padding: '10px 14px' }}>Incidencias</th>
+              <th style={{ padding: '10px 14px' }}>{t.batchProfiling?.colTableFile ?? 'Tabla / Archivo'}</th>
+              <th style={{ padding: '10px 14px' }}>{t.batchProfiling?.colRows ?? 'Filas'}</th>
+              <th style={{ padding: '10px 14px' }}>{t.batchProfiling?.colColumns ?? 'Columnas'}</th>
+              <th style={{ padding: '10px 14px' }}>{t.batchProfiling?.colDuplicates ?? 'Duplicados'}</th>
+              <th style={{ padding: '10px 14px' }}>{t.batchProfiling?.colIssues ?? 'Incidencias'}</th>
               <th style={{ padding: '10px 14px' }}>Data Score</th>
             </tr>
           </thead>
@@ -134,10 +133,10 @@ export const BatchProfilingDashboard: React.FC<Props> = ({
       {/* Acciones de generación del plan para todas las tablas */}
       <div className="card" style={{ textAlign: 'center', padding: '24px' }}>
         <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '8px' }}>
-          Siguiente Paso: Propuesta de Limpieza para Todas las Tablas
+          {t.batchProfiling?.nextStepTitle ?? 'Siguiente Paso: Propuesta de Limpieza para Todas las Tablas'}
         </h4>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '20px' }}>
-          El motor analizará las anomalías de cada tabla y propondrá un plan de correcciones ejecutables para sanear todo el conjunto a la vez.
+          {t.batchProfiling?.nextStepDesc ?? 'El motor analizará las anomalías de cada tabla y propondrá un plan de correcciones ejecutables para sanear todo el conjunto a la vez.'}
         </p>
         <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
@@ -148,7 +147,7 @@ export const BatchProfilingDashboard: React.FC<Props> = ({
             style={{ padding: '10px 24px', fontSize: '0.95rem' }}
           >
             <Sparkles size={18} />
-            <span>{loadingPlan ? 'Generando planes...' : 'Proponer Plan de Limpieza con IA (Todas las Tablas)'}</span>
+            <span>{loadingPlan ? (t.batchProfiling?.generatingPlans ?? 'Generando planes...') : (t.batchProfiling?.proposeAiPlanAll ?? 'Proponer Plan de Limpieza con IA (Todas las Tablas)')}</span>
           </button>
           <button
             type="button"
@@ -158,7 +157,7 @@ export const BatchProfilingDashboard: React.FC<Props> = ({
             style={{ padding: '10px 24px', fontSize: '0.95rem' }}
           >
             <ShieldCheck size={18} />
-            <span>{loadingPlan ? 'Generando planes...' : 'Proponer Plan por Reglas Deterministas (Todas)'}</span>
+            <span>{loadingPlan ? (t.batchProfiling?.generatingPlans ?? 'Generando planes...') : (t.batchProfiling?.proposeRulesPlanAll ?? 'Proponer Plan por Reglas Deterministas (Todas)')}</span>
           </button>
         </div>
       </div>

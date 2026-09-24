@@ -180,7 +180,7 @@ export const CacheObservabilityModal: React.FC<CacheObservabilityModalProps> = (
                 <span
                   className="badge badge-amber"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem' }}
-                  title="Errores o timeouts detectados en Redis; degradación elegante a memoria activa"
+                  title={m?.redisErrorsTitle ?? 'Errores o timeouts detectados en Redis; degradación elegante a memoria activa'}
                 >
                   <AlertTriangle size={12} />
                   Redis timeouts: {stats.redis_errors}
@@ -194,7 +194,7 @@ export const CacheObservabilityModal: React.FC<CacheObservabilityModalProps> = (
         {loading && !stats && (
           <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted, #94a3b8)' }}>
             <RefreshCw size={24} className="spin-animate" style={{ margin: '0 auto 8px' }} />
-            <p style={{ fontSize: '0.85rem' }}>Cargando métricas de caché...</p>
+            <p style={{ fontSize: '0.85rem' }}>{m?.loadingStats ?? 'Cargando métricas de caché...'}</p>
           </div>
         )}
 
@@ -316,7 +316,7 @@ export const CacheObservabilityModal: React.FC<CacheObservabilityModalProps> = (
                   {stats.misses}
                 </strong>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #94a3b8)' }}>
-                  Inferencia generativa ejecutada
+                  {m?.inferenceRun ?? 'Inferencia generativa ejecutada'}
                 </span>
               </div>
 
@@ -364,7 +364,7 @@ export const CacheObservabilityModal: React.FC<CacheObservabilityModalProps> = (
                   ${stats.saved_cost_usd.toFixed(6)}
                 </strong>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #94a3b8)' }}>
-                  Ahorro 100% en llamadas cacheadas
+                  {m?.savedCached ?? 'Ahorro 100% en llamadas cacheadas'}
                 </span>
               </div>
             </div>
@@ -383,7 +383,7 @@ export const CacheObservabilityModal: React.FC<CacheObservabilityModalProps> = (
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-main, #f8fafc)' }}>
-                  Distribución de Tráfico de Inferencia
+                  {m?.trafficDistTitle ?? 'Distribución de Tráfico de Inferencia'}
                 </span>
                 <span style={{ color: 'var(--text-muted, #94a3b8)', fontSize: '0.75rem' }}>
                   {stats.cached_entries} entradas en LRU local (máx. 500)

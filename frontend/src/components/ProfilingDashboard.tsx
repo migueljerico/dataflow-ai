@@ -52,10 +52,10 @@ export const ProfilingDashboard: React.FC<Props> = ({
           </p>
 
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <span className="badge badge-blue">Rows: {profiling.row_count.toLocaleString()}</span>
-            <span className="badge badge-blue">Cols: {profiling.column_count}</span>
-            <span className="badge badge-amber">Duplicates: {profiling.duplicates_count} ({profiling.duplicates_percentage}%)</span>
-            <span className="badge badge-rose">Issues: {quality.issues_count}</span>
+            <span className="badge badge-blue">{t.profiling?.rowsLabel ?? 'Rows:'} {profiling.row_count.toLocaleString()}</span>
+            <span className="badge badge-blue">{t.profiling?.colsLabel ?? 'Cols:'} {profiling.column_count}</span>
+            <span className="badge badge-amber">{t.profiling?.duplicatesLabel ?? 'Duplicates:'} {profiling.duplicates_count} ({profiling.duplicates_percentage}%)</span>
+            <span className="badge badge-rose">{t.profiling?.issuesLabel ?? 'Issues:'} {quality.issues_count}</span>
           </div>
         </div>
       </div>
@@ -65,56 +65,56 @@ export const ProfilingDashboard: React.FC<Props> = ({
       <div className="dimensions-grid">
         <div className="dim-card">
           <div className="dim-header">
-            <span>Datos Completos (30%)</span>
+            <span>{t.profiling?.dimCompleteData ?? 'Datos Completos (30%)'}</span>
             <ShieldCheck size={16} className="text-primary" />
           </div>
           <div className="dim-score">{score.completeness.score}%</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {score.completeness.issues_count} columnas con nulos
+            {(t.profiling?.nullColumnsCount ?? '{n} columnas con nulos').replace('{n}', String(score.completeness.issues_count))}
           </div>
         </div>
 
         <div className="dim-card">
           <div className="dim-header">
-            <span>Formatos Válidos (25%)</span>
+            <span>{t.profiling?.dimValidFormats ?? 'Formatos Válidos (25%)'}</span>
             <ShieldCheck size={16} className="text-primary" />
           </div>
           <div className="dim-score">{score.validity.score}%</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {score.validity.issues_count} correcciones de tipo/fecha
+            {(t.profiling?.typeFixesCount ?? '{n} correcciones de tipo/fecha').replace('{n}', String(score.validity.issues_count))}
           </div>
         </div>
 
         <div className="dim-card">
           <div className="dim-header">
-            <span>Formato Homogéneo (20%)</span>
+            <span>{t.profiling?.dimConsistentFormat ?? 'Formato Homogéneo (20%)'}</span>
             <ShieldCheck size={16} className="text-primary" />
           </div>
           <div className="dim-score">{score.consistency.score}%</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {score.consistency.issues_count} variantes de texto
+            {(t.profiling?.textVariantsCount ?? '{n} variantes de texto').replace('{n}', String(score.consistency.issues_count))}
           </div>
         </div>
 
         <div className="dim-card">
           <div className="dim-header">
-            <span>Registros Únicos (15%)</span>
+            <span>{t.profiling?.dimUniqueRecords ?? 'Registros Únicos (15%)'}</span>
             <ShieldCheck size={16} className="text-primary" />
           </div>
           <div className="dim-score">{score.uniqueness.score}%</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {score.uniqueness.issues_count} filas duplicadas
+            {(t.profiling?.duplicateRowsCount ?? '{n} filas duplicadas').replace('{n}', String(score.uniqueness.issues_count))}
           </div>
         </div>
 
         <div className="dim-card">
           <div className="dim-header">
-            <span>Reglas de Negocio (10%)</span>
+            <span>{t.profiling?.dimBusinessRules ?? 'Reglas de Negocio (10%)'}</span>
             <ShieldCheck size={16} className="text-primary" />
           </div>
           <div className="dim-score">{score.integrity.score}%</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {score.integrity.issues_count} desvíos de rango/lógica
+            {(t.profiling?.rangeDeviationsCount ?? '{n} desvíos de rango/lógica').replace('{n}', String(score.integrity.issues_count))}
           </div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
 
         <div className="table-wrapper">
           <table>
-              <caption className="sr-only" style={{position:'absolute',left:-9999}}>Perfilado de columnas del dataset</caption>
+              <caption className="sr-only" style={{position:'absolute',left:-9999}}>{t.profiling?.columnsCaption ?? 'Perfilado de columnas del dataset'}</caption>
             <thead>
               <tr>
                 <th scope="col">{t.profiling.colName}</th>
@@ -155,8 +155,8 @@ export const ProfilingDashboard: React.FC<Props> = ({
                 <th scope="col">{t.profiling.colSemantic}</th>
                 <th scope="col">{t.profiling.colNulls}</th>
                 <th scope="col">{t.profiling.colUnique}</th>
-                <th scope="col">Sample</th>
-                <th scope="col">Warnings</th>
+                <th scope="col">{t.profiling?.colSample ?? 'Sample'}</th>
+                <th scope="col">{t.profiling?.colWarnings ?? 'Warnings'}</th>
               </tr>
             </thead>
 
@@ -191,7 +191,7 @@ export const ProfilingDashboard: React.FC<Props> = ({
                         </div>
                       ))
                     ) : (
-                      <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>Sin incidencias</span>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>{t.profiling?.noIssuesCell ?? 'Sin incidencias'}</span>
                     )}
                   </td>
                 </tr>

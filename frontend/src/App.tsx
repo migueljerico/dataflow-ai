@@ -314,7 +314,7 @@ const AppContent: React.FC = () => {
 
       <main className="container">
         {/* Stepper común de 4 pasos */}
-        <nav className="stepper" aria-label="Progreso del flujo / Workflow progress">
+        <nav className="stepper" aria-label={t.stepper?.workflowProgress ?? 'Progreso del flujo / Workflow progress'}>
           <div
             className={`step-item ${step === 1 ? 'active' : step > 1 ? 'completed' : ''}`}
             aria-current={step === 1 ? 'step' : undefined}

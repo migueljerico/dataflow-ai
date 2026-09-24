@@ -152,7 +152,7 @@ export const InstallPwaModal: React.FC<Props> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-emerald)' }}>
-              <Check size={16} aria-hidden="true" /> <strong>Web App:</strong> Installable on Desktop & Mobile.
+              <Check size={16} aria-hidden="true" /> <strong>{t.pwaModal?.webApp ?? 'Web App:'}</strong> Installable on Desktop & Mobile.
             </div>
           </div>
         )}

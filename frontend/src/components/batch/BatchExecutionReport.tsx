@@ -17,6 +17,7 @@ import { ExecutionResult, MultiTableStarSchema, StarSchemaTableNode } from '../.
 import { MultiTableStarSchemaViewer } from '../MultiTableStarSchema';
 import { BusinessInsights } from '../BusinessInsights';
 import { api } from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
 
 export interface BatchExecutionItem {
   datasetId: string;
@@ -57,6 +58,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
   dashboardReady,
   onResetSession,
 }) => {
+  const { t } = useLanguage();
   // Seleccionar la tabla activa para inspeccionar Business Insights y fórmulas DAX
   // Por defecto, selecciona la tabla de hechos si está identificada en cleanStarSchema, o la primera
   const defaultSelectedId = useMemo(() => {
@@ -101,10 +103,10 @@ export const BatchExecutionReport: React.FC<Props> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <h2 className="card-title text-emerald" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle size={24} /> ¡Lote de {results.length} Tablas Limpiado con Éxito!
+              <CheckCircle size={24} /> {(t.batchReport?.batchSuccessTitle ?? '¡Lote de {n} Tablas Limpiado con Éxito!').replace('{n}', String(results.length))}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '4px' }}>
-              Todas las transformaciones deterministas han sido aprobadas y aplicadas. Datasets limpios listos para descarga individual o en ZIP, fórmulas DAX contextuales y modelo estrella.
+              {t.batchReport?.batchSuccessSubtitle ?? 'Todas las transformaciones deterministas han sido aprobadas y aplicadas. Datasets limpios listos para descarga individual o en ZIP, fórmulas DAX contextuales y modelo estrella.'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -122,13 +124,13 @@ export const BatchExecutionReport: React.FC<Props> = ({
                   fontWeight: 600,
                   boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
                 }}
-                title="Descargar paquete completo con todos los CSVs limpios, Parquet columnar y Scripts de Python en un solo archivo ZIP"
+                title={t.batchReport?.zipDownloadTitle ?? 'Descargar paquete completo con todos los CSVs limpios, Parquet columnar y Scripts de Python en un solo archivo ZIP'}
               >
-                <Archive size={18} /> Descargar Lote Completo (.ZIP)
+                <Archive size={18} /> {t.batchReport?.zipDownloadBtn ?? 'Descargar Lote Completo (.ZIP)'}
               </a>
             )}
             <button className="btn btn-outline" onClick={onResetSession}>
-              Iniciar Nueva Sesión
+              {t.batchReport?.newSessionBtn ?? 'Iniciar Nueva Sesión'}
             </button>
           </div>
         </div>
@@ -143,44 +145,44 @@ export const BatchExecutionReport: React.FC<Props> = ({
           }}
         >
           <div style={{ backgroundColor: 'var(--bg-input)', padding: '14px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Calidad Media (Antes → Después)</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.batchReport?.avgQualityLabel ?? 'Calidad Media (Antes → Después)'}</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>{avgScoreBefore}%</span>
               <ArrowRight size={14} className="text-primary" />
               <span className="text-emerald">{avgScoreAfter}%</span>
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', marginTop: '4px' }}>
-              +{Math.round((avgScoreAfter - avgScoreBefore) * 10) / 10} pts de mejora media
+              {(t.batchReport?.avgImprovement ?? '+{n} pts de mejora media').replace('{n}', String(Math.round((avgScoreAfter - avgScoreBefore) * 10) / 10))}
             </div>
           </div>
 
           <div style={{ backgroundColor: 'var(--bg-input)', padding: '14px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Filas Totales Saneadas</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.batchReport?.totalRowsLabel ?? 'Filas Totales Saneadas'}</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '4px' }}>
               {totalRowsAfter.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', marginTop: '4px' }}>
-              Duplicados eliminados: {totalRowsBefore - totalRowsAfter}
+              {(t.batchReport?.duplicatesRemoved ?? 'Duplicados eliminados: {n}').replace('{n}', String(totalRowsBefore - totalRowsAfter))}
             </div>
           </div>
 
           <div style={{ backgroundColor: 'var(--bg-input)', padding: '14px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pasos ETL Ejecutados</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.batchReport?.etlStepsLabel ?? 'Pasos ETL Ejecutados'}</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '4px', color: 'var(--primary)' }}>
-              {totalStepsApplied} pasos
+              {(t.batchReport?.stepsCount ?? '{n} pasos').replace('{n}', String(totalStepsApplied))}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              100% Determinista
+              {t.batchReport?.deterministicBadge ?? '100% Determinista'}
             </div>
           </div>
 
           <div style={{ backgroundColor: 'var(--bg-input)', padding: '14px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Estado del Modelo</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.batchReport?.modelStatusLabel ?? 'Estado del Modelo'}</div>
             <div style={{ fontSize: '1rem', fontWeight: 700, marginTop: '6px', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ShieldCheck size={16} /> 100% Saneado
+              <ShieldCheck size={16} /> {t.batchReport?.modelStatusClean ?? '100% Saneado'}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', marginTop: '4px' }}>
-              Sin pérdida de registros válidos
+              {t.batchReport?.noDataLoss ?? 'Sin pérdida de registros válidos'}
             </div>
           </div>
         </div>
@@ -191,14 +193,14 @@ export const BatchExecutionReport: React.FC<Props> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Database size={20} className="text-primary" /> Datasets Limpios & Artefactos de Exportación ({results.length} Tablas)
+              <Database size={20} className="text-primary" /> {(t.batchReport?.exportsTitle ?? 'Datasets Limpios & Artefactos de Exportación ({n} Tablas)').replace('{n}', String(results.length))}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
-              Acceso directo a los archivos saneados por el motor ETL determinista en formatos CSV estándar, Apache Parquet columnar y scripts reproducibles de Python.
+              {t.batchReport?.exportsSubtitle ?? 'Acceso directo a los archivos saneados por el motor ETL determinista en formatos CSV estándar, Apache Parquet columnar y scripts reproducibles de Python.'}
             </p>
           </div>
           <span className="badge badge-emerald" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}>
-            <ShieldCheck size={14} /> 100% Calidad Verificada
+            <ShieldCheck size={14} /> {t.batchReport?.qualityVerifiedBadge ?? '100% Calidad Verificada'}
           </span>
         </div>
 
@@ -229,21 +231,21 @@ export const BatchExecutionReport: React.FC<Props> = ({
                     <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{r.filename}</span>
                     {isFact && (
                       <span className="badge badge-amber" style={{ fontSize: '0.7rem' }}>
-                        ★ Tabla de Hechos (Fact)
+                        {t.batchReport?.factTableBadge ?? '★ Tabla de Hechos (Fact)'}
                       </span>
                     )}
                     {isSelected && (
                       <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>
-                        Seleccionada para Fórmulas
+                        {t.batchReport?.selectedForFormulas ?? 'Seleccionada para Fórmulas'}
                       </span>
                     )}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                     <span>
-                      Archivo limpio: <code style={{ color: 'var(--primary)', fontWeight: 600 }}>{r.result.clean_filename}</code>
+                      {t.batchReport?.cleanFileLabel ?? 'Archivo limpio: '}<code style={{ color: 'var(--primary)', fontWeight: 600 }}>{r.result.clean_filename}</code>
                     </span>
                     <span>
-                      Filas: {r.result.rows_before} → <strong className="text-emerald">{r.result.rows_after}</strong>
+                      {t.batchReport?.rowsLabel ?? 'Filas: '}{r.result.rows_before} → <strong className="text-emerald">{r.result.rows_after}</strong>
                     </span>
                     <span>
                       Score: <strong className="text-emerald">{r.scoreAfter}%</strong>
@@ -268,9 +270,9 @@ export const BatchExecutionReport: React.FC<Props> = ({
                       textDecoration: 'none',
                       fontWeight: 600,
                     }}
-                    title={`Descargar CSV depurado ${r.result.clean_filename}`}
+                    title={(t.batchReport?.csvDownloadTitle ?? 'Descargar CSV depurado {n}').replace('{n}', r.result.clean_filename)}
                   >
-                    <Download size={15} /> Descargar CSV
+                    <Download size={15} /> {t.batchReport?.downloadCsvBtn ?? 'Descargar CSV'}
                   </a>
 
                   {/* Descarga Parquet */}
@@ -290,7 +292,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
                         color: 'var(--primary)',
                         fontWeight: 600,
                       }}
-                      title="Descargar en formato nativo columnar Apache Parquet"
+                      title={t.batchReport?.parquetDownloadTitle ?? 'Descargar en formato nativo columnar Apache Parquet'}
                     >
                       <Database size={15} /> Parquet
                     </a>
@@ -311,7 +313,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
                         textDecoration: 'none',
                         fontWeight: 600,
                       }}
-                      title="Descargar script de Python reproducible con todos los pasos ETL ejecutados"
+                      title={t.batchReport?.scriptDownloadTitle ?? 'Descargar script de Python reproducible con todos los pasos ETL ejecutados'}
                     >
                       <FileCode size={15} /> Script .py
                     </a>
@@ -330,7 +332,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
                       gap: '6px',
                     }}
                   >
-                    <Layers size={15} /> {isSelected ? 'Viendo DAX & Insights' : 'Ver Fórmulas & DAX'}
+                    <Layers size={15} /> {isSelected ? (t.batchReport?.viewingDax ?? 'Viendo DAX & Insights') : (t.batchReport?.viewFormulas ?? 'Ver Fórmulas & DAX')}
                   </button>
                 </div>
               </div>
@@ -346,16 +348,16 @@ export const BatchExecutionReport: React.FC<Props> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: 'var(--primary)' }}>
-                  <Layers size={22} /> Fórmulas DAX, Power Query M y Business Insights
+                  <Layers size={22} /> {t.batchReport?.formulasTitle ?? 'Fórmulas DAX, Power Query M y Business Insights'}
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
-                  Selecciona cualquier tabla del lote para inspeccionar sus fórmulas DAX adaptadas, código Power Query M, fórmulas Excel, KPIs y segmentación.
+                  {t.batchReport?.formulasSubtitle ?? 'Selecciona cualquier tabla del lote para inspeccionar sus fórmulas DAX adaptadas, código Power Query M, fórmulas Excel, KPIs y segmentación.'}
                 </p>
               </div>
 
               {/* Selector de Tabla (Pills) */}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '4px' }}>Tabla:</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '4px' }}>{t.batchReport?.tableLabel ?? 'Tabla:'}</span>
                 {results.map((r) => {
                   const isSel = r.result.run_id === selectedRunId;
                   const isFact = isFactTable(r.filename, r.result.clean_filename, cleanStarSchema?.fact_table);
@@ -400,9 +402,9 @@ export const BatchExecutionReport: React.FC<Props> = ({
               }}
             >
               <div>
-                Explorando: <strong>{activeItem.filename}</strong> · Modelo limpio: <code style={{ color: 'var(--primary)', fontWeight: 600 }}>{activeItem.result.clean_filename}</code> ({activeItem.result.rows_after.toLocaleString()} registros)
+                {t.batchReport?.exploringLabel ?? 'Explorando: '}<strong>{activeItem.filename}</strong> · {t.batchReport?.cleanModelLabel ?? 'Modelo limpio: '}<code style={{ color: 'var(--primary)', fontWeight: 600 }}>{activeItem.result.clean_filename}</code> {(t.batchReport?.recordsCount ?? '({n} registros)').replace('{n}', activeItem.result.rows_after.toLocaleString())}
               </div>
-              <span className="badge badge-blue">DAX y Power Query 100% Adaptados</span>
+              <span className="badge badge-blue">{t.batchReport?.daxAdaptedBadge ?? 'DAX y Power Query 100% Adaptados'}</span>
             </div>
           </div>
 
@@ -416,10 +418,10 @@ export const BatchExecutionReport: React.FC<Props> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Network size={20} /> 7️⃣ Esquema de Estrella del Modelo Semántico Limpio
+              <Network size={20} /> {t.batchReport?.starSchemaTitle ?? '7️⃣ Esquema de Estrella del Modelo Semántico Limpio'}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
-              Modelo relacional generado a partir de las tablas limpiadas: tabla de hechos central, dimensiones satélite, cardinalidades `1:*` e integridad referencial auditada lista para Power BI.
+              {t.batchReport?.starSchemaSubtitle ?? 'Modelo relacional generado a partir de las tablas limpiadas: tabla de hechos central, dimensiones satélite, cardinalidades `1:*` e integridad referencial auditada lista para Power BI.'}
             </p>
           </div>
 
@@ -432,7 +434,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
               style={{ padding: '8px 20px', fontSize: '0.9rem' }}
             >
               <Sparkles size={16} />
-              <span>{loadingStarSchema ? 'Calculando relaciones limpias...' : 'Generar Esquema de Estrella'}</span>
+              <span>{loadingStarSchema ? (t.batchReport?.calculatingRelations ?? 'Calculando relaciones limpias...') : (t.batchReport?.generateStarSchema ?? 'Generar Esquema de Estrella')}</span>
             </button>
           )}
         </div>
@@ -440,17 +442,17 @@ export const BatchExecutionReport: React.FC<Props> = ({
         {loadingStarSchema ? (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <RefreshCw size={32} className="text-primary spin" style={{ margin: '0 auto 12px auto' }} />
-            <div style={{ fontWeight: 600 }}>Analizando integridad referencial entre las tablas limpias...</div>
+            <div style={{ fontWeight: 600 }}>{t.batchReport?.analyzingIntegrity ?? 'Analizando integridad referencial entre las tablas limpias...'}</div>
           </div>
         ) : cleanStarSchema ? (
           <MultiTableStarSchemaViewer schema={cleanStarSchema} />
         ) : (
           <div style={{ textAlign: 'center', padding: '30px', backgroundColor: 'var(--bg-input)', borderRadius: '8px' }}>
             <p style={{ color: 'var(--text-muted)', marginBottom: '12px' }}>
-              Pulsa el botón superior para calcular y visualizar el Esquema de Estrella sobre el lote limpio.
+              {t.batchReport?.starSchemaEmptyMsg ?? 'Pulsa el botón superior para calcular y visualizar el Esquema de Estrella sobre el lote limpio.'}
             </p>
             <button type="button" className="btn btn-primary" onClick={onGenerateStarSchema}>
-              Generar Esquema de Estrella Ahora
+              {t.batchReport?.generateStarSchemaNow ?? 'Generar Esquema de Estrella Ahora'}
             </button>
           </div>
         )}
@@ -461,17 +463,17 @@ export const BatchExecutionReport: React.FC<Props> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Sparkles size={20} /> 8️⃣ Propuesta de Dashboard para Power BI
+              <Sparkles size={20} /> {t.batchReport?.dashboardTitle ?? '8️⃣ Propuesta de Dashboard para Power BI'}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px', margin: 0 }}>
-              A partir del esquema estrella: tipo de dashboard, KPIs, visuales justificados, paleta WCAG validada, medidas DAX y guía de implementación.
+              {t.batchReport?.dashboardSubtitle ?? 'A partir del esquema estrella: tipo de dashboard, KPIs, visuales justificados, paleta WCAG validada, medidas DAX y guía de implementación.'}
             </p>
           </div>
 
           {loadingDashboard ? (
             <button type="button" className="btn btn-primary" disabled style={{ padding: '8px 20px', fontSize: '0.9rem', opacity: 0.7 }}>
               <RefreshCw size={16} className="spin" />
-              <span>Generando propuesta...</span>
+              <span>{t.batchReport?.generatingProposal ?? 'Generando propuesta...'}</span>
             </button>
           ) : dashboardReady ? (
             <button
@@ -481,7 +483,7 @@ export const BatchExecutionReport: React.FC<Props> = ({
               style={{ padding: '8px 20px', fontSize: '0.9rem' }}
               data-testid="go-dashboard-preview"
             >
-              <span>Ver Dashboard Preview</span>
+              <span>{t.batchReport?.viewDashboardPreview ?? 'Ver Dashboard Preview'}</span>
               <ArrowRight size={16} />
             </button>
           ) : (
@@ -490,12 +492,12 @@ export const BatchExecutionReport: React.FC<Props> = ({
               className="btn btn-primary"
               onClick={onGenerateDashboard}
               disabled={!cleanStarSchema}
-              title={!cleanStarSchema ? 'Primero genera el Esquema de Estrella' : 'Generar propuesta de dashboard'}
+              title={!cleanStarSchema ? (t.batchReport?.generateStarFirst ?? 'Primero genera el Esquema de Estrella') : (t.batchReport?.generateDashboardTooltip ?? 'Generar propuesta de dashboard')}
               style={{ padding: '8px 20px', fontSize: '0.9rem' }}
               data-testid="generate-dashboard"
             >
               <Sparkles size={16} />
-              <span>Generar Propuesta de Dashboard</span>
+              <span>{t.batchReport?.generateDashboardBtn ?? 'Generar Propuesta de Dashboard'}</span>
             </button>
           )}
         </div>

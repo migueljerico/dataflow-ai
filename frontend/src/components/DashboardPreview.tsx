@@ -135,7 +135,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
                   {view.name}
                 </h2>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-                  Tipo: {view.dashboard_type} · Confianza: {view.confidence}
+                  {t.dashboardPreview?.typeLabel ?? 'Tipo:'} {view.dashboard_type} · {t.dashboardPreview?.confidenceLabel ?? 'Confianza:'} {view.confidence}
                 </p>
               </div>
             </div>
@@ -245,11 +245,11 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
       {!editing && (
         <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
           {[
-            { id: 'example', label: 'Ejemplo', icon: Image },
-            { id: 'overview', label: 'Resumen', icon: LayoutDashboard },
-            { id: 'visuals', label: 'Visuales', icon: BarChart3 },
-            { id: 'design', label: 'Diseño', icon: Palette },
-            { id: 'powerbi', label: 'Power BI', icon: FileCode },
+            { id: 'example', label: t.dashboardPreview?.tabExample ?? 'Ejemplo', icon: Image },
+            { id: 'overview', label: t.dashboardPreview?.tabOverview ?? 'Resumen', icon: LayoutDashboard },
+            { id: 'visuals', label: t.dashboardPreview?.tabVisuals ?? 'Visuales', icon: BarChart3 },
+            { id: 'design', label: t.dashboardPreview?.tabDesign ?? 'Diseño', icon: Palette },
+            { id: 'powerbi', label: t.dashboardPreview?.tabPowerbi ?? 'Power BI', icon: FileCode },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -289,7 +289,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <TrendingUp size={16} color="var(--primary)" />
-              KPIs Recomendados
+              {t.dashboardPreview?.kpiRecommended ?? 'KPIs Recomendados'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {blueprint.kpis.filter((kpi) => !kpi.hidden).map((kpi) => (
@@ -309,7 +309,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           {/* Preguntas de negocio */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Preguntas de Negocio
+              {t.dashboardPreview?.businessQuestions ?? 'Preguntas de Negocio'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {blueprint.business_questions.map((q) => (
@@ -323,7 +323,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           {/* Filtros */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Filtros / Slicers
+              {t.dashboardPreview?.filtersSlicers ?? 'Filtros / Slicers'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {blueprint.filters.filter((f) => !f.hidden).map((f) => (
@@ -351,7 +351,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
                     {visual.title}
                   </h3>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                    Tipo: {visual.visual_type} · Confianza: {visual.confidence}
+                    {t.dashboardPreview?.typeLabel ?? 'Tipo:'} {visual.visual_type} · {t.dashboardPreview?.confidenceLabel ?? 'Confianza:'} {visual.confidence}
                   </p>
                 </div>
                 <div style={{ padding: '4px 8px', backgroundColor: visual.confidence === 'high' ? 'rgba(16, 185, 129, 0.1)' : visual.confidence === 'medium' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(244, 63, 94, 0.1)', borderRadius: '4px', fontSize: '11px', fontWeight: 600, color: visual.confidence === 'high' ? 'var(--accent-emerald)' : visual.confidence === 'medium' ? 'var(--accent-amber)' : 'var(--accent-rose)' }}>
@@ -382,7 +382,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           {/* Paleta */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Paleta de Colores
+              {t.dashboardPreview?.paletteTitle ?? 'Paleta de Colores'}
             </h3>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
               {blueprint.design.palette.name}
@@ -408,7 +408,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           {/* Accesibilidad */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Accesibilidad WCAG
+              {t.dashboardPreview?.accessibilityTitle ?? 'Accesibilidad WCAG'}
             </h3>
             <div style={{ padding: '12px', backgroundColor: blueprint.design.accessibility.overall_label.includes('PASS') ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)', borderRadius: '8px', marginBottom: '12px' }}>
               <div style={{ fontSize: '16px', fontWeight: 700, color: blueprint.design.accessibility.overall_label.includes('PASS') ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
@@ -431,14 +431,14 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           {/* Estilo */}
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Sistema de Diseño
+              {t.dashboardPreview?.designSystemTitle ?? 'Sistema de Diseño'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              <div><span style={{ color: 'var(--text-muted)' }}>Estilo:</span> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{blueprint.design.style.style_name}</span></div>
-              <div><span style={{ color: 'var(--text-muted)' }}>Canvas:</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.canvas}</span></div>
-              <div><span style={{ color: 'var(--text-muted)' }}>Layout:</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.layout}</span></div>
-              <div><span style={{ color: 'var(--text-muted)' }}>Densidad:</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.density}</span></div>
-              <div><span style={{ color: 'var(--text-muted)' }}>Tipografía:</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.typography}</span></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>{t.dashboardPreview?.styleLabel ?? 'Estilo:'}</span> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{blueprint.design.style.style_name}</span></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>{t.dashboardPreview?.canvasLabel ?? 'Canvas:'}</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.canvas}</span></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>{t.dashboardPreview?.layoutLabel ?? 'Layout:'}</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.layout}</span></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>{t.dashboardPreview?.densityLabel ?? 'Densidad:'}</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.density}</span></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>{t.dashboardPreview?.typographyLabel ?? 'Tipografía:'}</span> <span style={{ color: 'var(--text-main)' }}>{blueprint.design.style.typography}</span></div>
             </div>
           </div>
         </div>
@@ -482,7 +482,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           </div>
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Medidas DAX
+              {t.dashboardPreview?.daxMeasures ?? 'Medidas DAX'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {blueprint.dax_measures.slice(0, 6).map((measure) => (
@@ -494,7 +494,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
                       style={{ padding: '4px 8px', backgroundColor: 'transparent', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                       {copiedDax === measure.name ? <Check size={12} /> : <Copy size={12} />}
-                      {copiedDax === measure.name ? 'Copiado' : 'Copiar'}
+                      {copiedDax === measure.name ? (t.dashboardPreview?.copiedBtn ?? 'Copiado') : (t.dashboardPreview?.copyBtn ?? 'Copiar')}
                     </button>
                   </div>
                   <code style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -507,7 +507,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
 
           <div className="card" style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '12px' }}>
-              Guía de Implementación
+              {t.dashboardPreview?.implementationGuide ?? 'Guía de Implementación'}
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.5, marginBottom: '12px' }}>
               {blueprint.power_bi_summary}
@@ -524,7 +524,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
         <div style={{ fontSize: '12px', color: saveError ? 'var(--accent-rose)' : 'var(--text-muted)' }} data-testid="editor-save-error">
           {saveError ?? (
             <>
-              Blueprint ID: {blueprint.blueprint_id} · Generado en {blueprint.generation_meta.duration_ms.toFixed(0)}ms
+              {t.dashboardPreview?.blueprintIdLabel ?? 'Blueprint ID:'} {blueprint.blueprint_id} · {(t.dashboardPreview?.generatedInLabel ?? 'Generado en {n}ms').replace('{n}', blueprint.generation_meta.duration_ms.toFixed(0))}
             </>
           )}
         </div>
@@ -582,7 +582,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
                   onClick={onBackToStarSchema}
                   style={{ padding: '8px 16px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
                 >
-                  Volver al Esquema Estrella
+                  {t.dashboardPreview?.backToStarSchema ?? 'Volver al Esquema Estrella'}
                 </button>
               )}
             </>

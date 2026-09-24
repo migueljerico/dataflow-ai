@@ -54,7 +54,7 @@ export const ExecutionHistoryModal: React.FC<Props> = ({
         setSelectedRunA(data[0].run_id);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al cargar el historial de ejecuciones');
+      setError(err instanceof Error ? err.message : (t.historyModal?.loadError ?? 'Error al cargar el historial de ejecuciones'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export const ExecutionHistoryModal: React.FC<Props> = ({
       const comp = await api.compareRuns(selectedRunA, selectedRunB);
       setComparison(comp);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al comparar versiones');
+      setError(err instanceof Error ? err.message : (t.historyModal?.compareError ?? 'Error al comparar versiones'));
     } finally {
       setComparing(false);
     }
@@ -147,7 +147,7 @@ export const ExecutionHistoryModal: React.FC<Props> = ({
               className="btn btn-outline"
               onClick={fetchHistory}
               disabled={loading}
-              title="Refrescar historial"
+              title={t.historyModal?.refreshHistory ?? 'Refrescar historial'}
               style={{ padding: '6px 12px' }}
             >
               <RefreshCw size={14} className={loading ? 'spin' : ''} />
@@ -155,7 +155,7 @@ export const ExecutionHistoryModal: React.FC<Props> = ({
             <button
               className="btn btn-outline"
               onClick={onClose}
-              aria-label="Cerrar modal"
+              aria-label={t.historyModal?.closeModal ?? 'Cerrar modal'}
               style={{ padding: '6px 10px' }}
             >
               <X size={18} />
@@ -220,7 +220,7 @@ export const ExecutionHistoryModal: React.FC<Props> = ({
                     <th style={{ width: '40px' }}>B</th>
                     <th>Run ID</th>
                     <th>{t.historyModal?.date || 'Fecha'}</th>
-                    <th>Filas (Crudo → Limpio)</th>
+                    <th>{t.historyModal?.rowsHeader ?? 'Filas (Crudo → Limpio)'}</th>
                     <th>Quality Score</th>
                     <th>Pasos</th>
                     <th>Descargas</th>
@@ -385,7 +385,7 @@ export const ExecutionHistoryModal: React.FC<Props> = ({
                   </div>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Score Global</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t.historyModal?.globalScore ?? 'Score Global'}</div>
                       <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>
                         <span>{comparison.overall_score_before}</span>
                         <ArrowRight size={14} style={{ display: 'inline', margin: '0 4px' }} />

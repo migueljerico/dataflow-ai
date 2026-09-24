@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 export type ToastKind = 'error' | 'success' | 'info' | 'warning';
 
@@ -14,12 +15,13 @@ interface Props {
 }
 
 export const ToastContainer: React.FC<Props> = ({ toasts, onDismiss }) => {
+  const { t } = useLanguage();
   if (!toasts.length) return null;
   return (
     <div
       role="region"
       aria-live="polite"
-      aria-label="Notificaciones"
+      aria-label={t.toast?.title ?? 'Notificaciones'}
       style={{
         position: 'fixed',
         bottom: 16,
@@ -39,6 +41,7 @@ export const ToastContainer: React.FC<Props> = ({ toasts, onDismiss }) => {
 };
 
 const Toast: React.FC<{ item: ToastItem; onDismiss: (id: string) => void }> = ({ item, onDismiss }) => {
+  const { t } = useLanguage();
   useEffect(() => {
     const id = window.setTimeout(() => onDismiss(item.id), 6000);
     return () => window.clearTimeout(id);
@@ -73,7 +76,7 @@ const Toast: React.FC<{ item: ToastItem; onDismiss: (id: string) => void }> = ({
       <span style={{ flex: 1 }}>{item.message}</span>
       <button
         onClick={() => onDismiss(item.id)}
-        aria-label="Cerrar notificación"
+        aria-label={t.toast?.close ?? 'Cerrar notificación'}
         style={{
           background: 'rgba(255,255,255,0.2)',
           border: 'none',

@@ -4,7 +4,7 @@ import { LANGUAGES, type Language } from '../i18n';
 import FlagIcon from './FlagIcon';
 
 export const LanguageSelector: React.FC = () => {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -50,8 +50,8 @@ export const LanguageSelector: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-label="Select language"
-        title={`Idioma: ${currentOption.nativeName} (${currentOption.code.toUpperCase()})`}
+        aria-label={t.header?.selectLanguage ?? 'Select language'}
+        title={(t.header?.languageTitle ?? 'Idioma: {n}').replace('{n}', `${currentOption.nativeName} (${currentOption.code.toUpperCase()})`)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -75,7 +75,7 @@ export const LanguageSelector: React.FC = () => {
       {isOpen && (
         <div
           role="listbox"
-          aria-label="Languages"
+          aria-label={t.header?.languages ?? 'Languages'}
           style={{
             position: 'absolute',
             right: 0,

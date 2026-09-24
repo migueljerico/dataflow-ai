@@ -101,7 +101,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
 
   const uploadMultipleFiles = async (files: File[]) => {
     setLoading(true);
-    setLoadingStatus(`Subiendo y analizando lote de ${files.length} archivos simultáneamente...`);
+    setLoadingStatus((t.upload?.batchUploadStatus ?? 'Subiendo y analizando lote de {n} archivos simultáneamente...').replace('{n}', String(files.length)));
     setError(null);
     try {
       const datasets = await api.uploadDatasetsBatch(files);
@@ -111,7 +111,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
         onUploadSuccess(datasets[0]);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al subir el lote de archivos.');
+      setError(err instanceof Error ? err.message : (t.upload?.batchUploadError ?? 'Error al subir el lote de archivos.'));
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -120,17 +120,17 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
 
   const uploadFile = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
-      setError('El archivo supera el límite de 10 MB.');
+      setError(t.upload?.fileTooLargeError ?? 'El archivo supera el límite de 10 MB.');
       return;
     }
     setLoading(true);
-    setLoadingStatus('Validando archivo y analizando estructura...');
+    setLoadingStatus(t.upload?.validatingStatus ?? 'Validando archivo y analizando estructura...');
     setError(null);
     try {
       const metadata = await api.uploadDataset(file);
       onUploadSuccess(metadata);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al subir el archivo.');
+      setError(err instanceof Error ? err.message : (t.upload?.fileUploadError ?? 'Error al subir el archivo.'));
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -140,25 +140,25 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
   const importFromUrl = async (targetUrl: string) => {
     const cleanUrl = targetUrl.trim();
     if (!cleanUrl) {
-      setError('Por favor, ingresa una URL válida que empiece por http:// o https://.');
+      setError(t.upload?.urlRequiredError ?? 'Por favor, ingresa una URL válida que empiece por http:// o https://.');
       return;
     }
 
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-      setError('La URL debe comenzar por http:// o https://.');
+      setError(t.upload?.urlSchemeError ?? 'La URL debe comenzar por http:// o https://.');
       return;
     }
 
     setLoading(true);
     setError(null);
-    setLoadingStatus('Conectando de forma segura con el servidor remoto (Anti-SSRF)...');
+    setLoadingStatus(t.upload?.connectingStatus ?? 'Conectando de forma segura con el servidor remoto (Anti-SSRF)...');
 
     statusTimer1Ref.current = window.setTimeout(() => {
-      setLoadingStatus('Descargando dataset en streaming (máx. 20 MB)...');
+      setLoadingStatus(t.upload?.downloadingStatus ?? 'Descargando dataset en streaming (máx. 20 MB)...');
     }, 1200);
 
     statusTimer2Ref.current = window.setTimeout(() => {
-      setLoadingStatus('Analizando calidad, tipos de datos y perfil semántico...');
+      setLoadingStatus(t.upload?.analyzingStatus ?? 'Analizando calidad, tipos de datos y perfil semántico...');
     }, 2800);
 
     try {
@@ -169,7 +169,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
     } catch (err: unknown) {
       if (statusTimer1Ref.current) window.clearTimeout(statusTimer1Ref.current);
       if (statusTimer2Ref.current) window.clearTimeout(statusTimer2Ref.current);
-      setError(err instanceof Error ? err.message : 'No se pudo descargar el dataset desde la URL proporcionada.');
+      setError(err instanceof Error ? err.message : (t.upload?.urlDownloadError ?? 'No se pudo descargar el dataset desde la URL proporcionada.'));
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -189,7 +189,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
       const resp = await api.searchOpenDatasets(openDataSearchQuery, 12);
       setOpenDataResults(resp.results || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al buscar en el catálogo Open Data.');
+      setError(err instanceof Error ? err.message : (t.upload?.openDataSearchError ?? 'Error al buscar en el catálogo Open Data.'));
     } finally {
       setOpenDataLoading(false);
     }
@@ -197,13 +197,13 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
 
   const loadSample = async (sampleId: string) => {
     setLoading(true);
-    setLoadingStatus('Cargando dataset demo de negocio...');
+    setLoadingStatus(t.upload?.sampleLoadingStatus ?? 'Cargando dataset demo de negocio...');
     setError(null);
     try {
       const metadata = await api.loadSampleDataset(sampleId);
       onUploadSuccess(metadata);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al cargar el dataset de demostración.');
+      setError(err instanceof Error ? err.message : (t.upload?.sampleLoadError ?? 'Error al cargar el dataset de demostración.'));
     } finally {
       setLoading(false);
       setLoadingStatus('');
@@ -231,6 +231,16 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
     ? openDataResults 
     : openDataResults.filter(item => item.tags.some(t => t.toLowerCase().includes(selectedTag.toLowerCase()))), [openDataResults, selectedTag]);
 
+  const tagLabel = (value: string): string => {
+    if (value === 'Todos') return t.upload?.tagTodos ?? 'Todos';
+    if (value === 'Economía') return t.upload?.tagEconomia ?? 'Economía';
+    if (value === 'Movilidad') return t.upload?.tagMovilidad ?? 'Movilidad';
+    if (value === 'Población') return t.upload?.tagPoblacion ?? 'Población';
+    if (value === 'Ventas') return t.upload?.tagVentas ?? 'Ventas';
+    if (value === 'Medioambiente') return t.upload?.tagMedioambiente ?? 'Medioambiente';
+    return value;
+  };
+
   return (
     <div>
       <div className="card" style={{ marginBottom: '24px' }}>
@@ -240,7 +250,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
           </h2>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <span className="badge badge-blue">
-              {activeTab === 'file' ? 'Máx. 10 MB | CSV / XLSX' : 'Máx. 20 MB | HTTP / HTTPS'}
+              {activeTab === 'file' ? (t.upload?.maxSizeFileNotice ?? 'Máx. 10 MB | CSV / XLSX') : (t.upload?.maxSizeUrlNotice ?? 'Máx. 20 MB | HTTP / HTTPS')}
             </span>
           </div>
         </div>
@@ -353,7 +363,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                     marginBottom: '8px' 
                   }}
                 >
-                  Enlace directo a archivo CSV o Excel remoto:
+                  {t.upload?.remoteUrlLabel ?? 'Enlace directo a archivo CSV o Excel remoto:'}
                 </label>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
@@ -397,11 +407,11 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                   >
                     {loading ? (
                       <>
-                        <Loader2 size={16} className="spin" /> Descargando...
+                        <Loader2 size={16} className="spin" /> {t.upload?.remoteImporting ?? 'Descargando...'}
                       </>
                     ) : (
                       <>
-                        <Download size={16} /> Importar Dataset
+                        <Download size={16} /> {t.upload?.remoteImportBtn ?? 'Importar Dataset'}
                       </>
                     )}
                   </button>
@@ -426,14 +436,14 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
             >
               <ShieldCheck size={16} className="text-primary" />
               <span>
-                Conexión segura protegida contra SSRF con resolución DNS verificada y límite de 20 MB.
+                {t.upload?.remoteSsrfNotice ?? 'Conexión segura protegida contra SSRF con resolución DNS verificada y límite de 20 MB.'}
               </span>
             </div>
 
             {/* Ejemplos de URLs de Prueba Rápidas */}
             <div>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
-                🔗 O prueba con un enlace público directo:
+                {t.upload?.tryPublicLinkHint ?? '🔗 O prueba con un enlace público directo:'}
               </span>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {EXAMPLE_URLS.map((ex, idx) => (
@@ -484,7 +494,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                   </div>
                   <input
                     type="text"
-                    placeholder="Buscar por temática: precios, transporte, energía, demografía..."
+                    placeholder={t.upload?.openDataSearchPlaceholder ?? 'Buscar por temática: precios, transporte, energía, demografía...'}
                     value={openDataSearchQuery}
                     onChange={(e) => setOpenDataSearchQuery(e.target.value)}
                     disabled={loading || openDataLoading}
@@ -508,11 +518,11 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                 >
                   {openDataLoading ? (
                     <>
-                      <Loader2 size={16} className="spin" /> Buscando...
+                      <Loader2 size={16} className="spin" /> {t.upload?.openDataSearching ?? 'Buscando...'}
                     </>
                   ) : (
                     <>
-                      <Search size={16} /> Buscar
+                      <Search size={16} /> {t.upload?.openDataSearchBtn ?? 'Buscar'}
                     </>
                   )}
                 </button>
@@ -525,7 +535,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                       api.getFeaturedOpenDatasets().then(setOpenDataResults);
                     }}
                     disabled={loading || openDataLoading}
-                    title="Restablecer destacados"
+                    title={t.upload?.openDataResetFeatured ?? 'Restablecer destacados'}
                   >
                     <RefreshCw size={16} />
                   </button>
@@ -552,7 +562,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                     fontWeight: selectedTag === tag ? 700 : 500
                   }}
                 >
-                  {tag}
+                  {tagLabel(tag)}
                 </button>
               ))}
             </div>
@@ -605,13 +615,13 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
                       onClick={() => importFromUrl(item.resource_url)}
                       disabled={loading}
                     >
-                      <Download size={14} /> Importar a DataFlow
+                      <Download size={14} /> {t.upload?.importToDataflow ?? 'Importar a DataFlow'}
                     </button>
                   </div>
                 ))
               ) : (
                 <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
-                  No se encontraron datasets para la búsqueda realizada. Prueba con otro término o selecciona "Todos".
+                  {t.upload?.openDataNoResults ?? 'No se encontraron datasets para la búsqueda realizada. Prueba con otro término o selecciona "Todos".'}
                 </div>
               )}
             </div>
@@ -636,7 +646,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
             }}
           >
             <Loader2 size={18} className="spin" />
-            <span>{loadingStatus || 'Procesando dataset...'}</span>
+            <span>{loadingStatus || (t.upload?.processingDataset ?? 'Procesando dataset...')}</span>
           </div>
         )}
 
@@ -670,7 +680,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
           <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={18} className="text-primary" /> {t.upload.sampleDataTitle}
           </h3>
-          <span className="badge badge-emerald">Ready</span>
+          <span className="badge badge-emerald">{t.upload?.readyBadge ?? 'Ready'}</span>
         </div>
 
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '14px' }}>
@@ -715,7 +725,7 @@ export const FileUpload: React.FC<Props> = ({ onUploadSuccess, onBatchUploadSucc
               </div>
             ))
           ) : (
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading samples...</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t.upload?.loadingSamples ?? 'Loading samples...'}</div>
           )}
         </div>
       </div>

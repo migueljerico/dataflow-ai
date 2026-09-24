@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface Props {
   loading: boolean;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export const FileDropzone: React.FC<Props> = ({ loading, onUpload, onUploadMultiple }) => {
+  const { t } = useLanguage();
   const ref = useRef<HTMLInputElement>(null);
 
   const handleFiles = (fileList: FileList | null) => {
@@ -31,7 +33,7 @@ export const FileDropzone: React.FC<Props> = ({ loading, onUpload, onUploadMulti
       className="dropzone"
       role="button"
       tabIndex={0}
-      aria-label="Zona de arrastre"
+      aria-label={t.upload?.dropzoneAriaLabel ?? 'Zona de arrastre'}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
       onClick={() => !loading && ref.current?.click()}
@@ -57,10 +59,10 @@ export const FileDropzone: React.FC<Props> = ({ loading, onUpload, onUploadMulti
         <FileSpreadsheet size={48} className="text-primary" style={{ margin: "0 auto" }} aria-hidden="true" />
       </div>
       <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "8px" }}>
-        Arrastra tus archivos CSV o XLSX aquí (uno o varios a la vez)
+        {t.upload?.dropzoneHeading ?? 'Arrastra tus archivos CSV o XLSX aquí (uno o varios a la vez)'}
       </h3>
       <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
-        Soporta subida multi-archivo para modelado relacional y Esquema de Estrella (Northwind, ventas, etc.).
+        {t.upload?.dropzoneMultiNotice ?? 'Soporta subida multi-archivo para modelado relacional y Esquema de Estrella (Northwind, ventas, etc.).'}
       </p>
     </div>
   );

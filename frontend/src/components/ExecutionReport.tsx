@@ -124,7 +124,7 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
           }}
         >
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-            Columnas Estructuradas
+            {t.report?.structuredColumns ?? 'Columnas Estructuradas'}
           </div>
           <div style={{ fontSize: '1.4rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>{result.columns_before}</span>
@@ -132,7 +132,7 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
             <span className="text-emerald">{result.columns_after}</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Esquema tipado para Power BI
+            {t.report?.typedSchema ?? 'Esquema tipado para Power BI'}
           </div>
         </div>
 
@@ -145,10 +145,10 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
           }}
         >
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-            Pasos ETL Aplicados
+            {t.report?.etlStepsApplied ?? 'Pasos ETL Aplicados'}
           </div>
           <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--primary)' }}>
-            {result.applied_steps_count} Pasos
+            {(t.report?.stepsCount ?? '{n} Pasos').replace('{n}', String(result.applied_steps_count))}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             100% Determinista
@@ -164,7 +164,7 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
           }}
         >
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-            Quality Score Real
+            {t.report?.qualityScoreReal ?? 'Quality Score Real'}
           </div>
           <div style={{ fontSize: '1.4rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>{scoreBefore}</span>
@@ -275,8 +275,7 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
               gap: '8px',
             }}
           >
-            <FileCheck2 size={18} className="text-primary" aria-hidden="true" /> Log de Validación Explícita y
-            Trazabilidad de Cambios
+            <FileCheck2 size={18} className="text-primary" aria-hidden="true" /> {t.report?.auditTrailTitle ?? 'Log de Validación Explícita y Trazabilidad de Cambios'}
           </h3>
           <div
             style={{
@@ -327,11 +326,11 @@ export const ExecutionReport: React.FC<Props> = ({ result, reportBeforeAfter, on
             marginBottom: '6px',
           }}
         >
-          <span style={{ color: 'var(--text-muted)' }}>Input File MD5:</span>
+          <span style={{ color: 'var(--text-muted)' }}>{t.report?.inputFileMd5 ?? 'Input File MD5:'}</span>
           <span>{result.input_hash_md5}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-          <span style={{ color: 'var(--text-muted)' }}>Clean File MD5:</span>
+          <span style={{ color: 'var(--text-muted)' }}>{t.report?.cleanFileMd5 ?? 'Clean File MD5:'}</span>
           <span className="text-emerald">{result.output_hash_md5}</span>
         </div>
       </div>

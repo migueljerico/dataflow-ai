@@ -173,7 +173,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onKey
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
               <Shield size={14} aria-hidden="true" style={{ color: 'var(--accent-emerald)', flexShrink: 0, marginTop: '2px' }} />
-              <span><strong style={{ color: 'var(--text-main)' }}>Privacy / Security:</strong> {t.apiKeyModal.note}</span>
+              <span><strong style={{ color: 'var(--text-main)' }}>{t.apiKeyModal?.privacySecurity ?? 'Privacy / Security:'}</strong> {t.apiKeyModal.note}</span>
             </div>
           </div>
 

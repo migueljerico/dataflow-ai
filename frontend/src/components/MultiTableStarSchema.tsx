@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { MultiTableStarSchema, StarSchemaTableNode, RelationshipIntegrityAudit } from '../types';
 import { api } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   schema: MultiTableStarSchema;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDatasets }) => {
+  const { t } = useLanguage();
   const [selectedTable, setSelectedTable] = useState<StarSchemaTableNode | null>(schema.fact_table);
   const [selectedRel, setSelectedRel] = useState<RelationshipIntegrityAudit | null>(null);
   const [copiedDax, setCopiedDax] = useState<string | null>(null);
@@ -122,13 +124,13 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               </div>
               <div>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  Esquema de Estrella Multi-Tabla (Power BI)
+                  {t.starSchema?.title ?? 'Esquema de Estrella Multi-Tabla (Power BI)'}
                   <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
-                    {schema.relationships.length} Relaciones (*:1)
+                    {(t.starSchema?.relationshipsBadge ?? '{n} Relaciones (*:1)').replace('{n}', String(schema.relationships.length))}
                   </span>
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Modelo relacional dimensional inferido automáticamente a partir de los datasets limpios.
+                  {t.starSchema?.subtitle ?? 'Modelo relacional dimensional inferido automáticamente a partir de los datasets limpios.'}
                 </p>
               </div>
             </div>
@@ -138,7 +140,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
               <ShieldCheck size={16} style={{ color: '#10b981' }} />
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#10b981' }}>
-                Integridad Referencial: {schema.referential_integrity_score}%
+                {(t.starSchema?.referentialIntegrity ?? 'Integridad Referencial: {n}%').replace('{n}', String(schema.referential_integrity_score))}
               </span>
             </div>
 
@@ -149,7 +151,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               disabled={isExportingPng}
               style={{ fontSize: '0.85rem', padding: '8px 14px' }}
             >
-              <Download size={14} /> {isExportingPng ? 'Generando PNG...' : 'Descargar Imagen PNG'}
+              <Download size={14} /> {isExportingPng ? (t.starSchema?.generatingPng ?? 'Generando PNG...') : (t.starSchema?.downloadPng ?? 'Descargar Imagen PNG')}
             </button>
 
             <button
@@ -158,7 +160,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               onClick={handleDownloadTmdl}
               style={{ fontSize: '0.85rem', padding: '8px 14px' }}
             >
-              <FileCode size={14} /> Descargar TMDL (Power BI)
+              <FileCode size={14} /> {t.starSchema?.downloadTmdl ?? 'Descargar TMDL (Power BI)'}
             </button>
           </div>
         </div>
@@ -303,14 +305,14 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
                     {fact.table_name}
                   </text>
                   <text x={boxW / 2} y={44} fill="#cbd5e1" fontSize="11" textAnchor="middle">
-                    Tabla de Hechos · {fact.row_count.toLocaleString()} filas
+                    {(t.starSchema?.factNodeCaption ?? 'Tabla de Hechos · {n} filas').replace('{n}', fact.row_count.toLocaleString())}
                   </text>
 
                   <line x1="16" y1="54" x2={boxW - 16} y2="54" stroke="#334155" strokeWidth="1" />
 
                   {/* Medidas Principales */}
                   <text x={boxW / 2} y={72} fill="#94a3b8" fontSize="11" fontWeight="700" textAnchor="middle">
-                    Medidas: {fact.measures.length || 1}
+                    {(t.starSchema?.measuresCount ?? 'Medidas: {n}').replace('{n}', String(fact.measures.length || 1))}
                   </text>
                   {fact.measures.slice(0, 3).map((m, i) => (
                     <text key={m} x={boxW / 2} y={90 + i * 14} fill="#f8fafc" fontSize="10" textAnchor="middle">
@@ -319,7 +321,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
                   ))}
                   {fact.measures.length > 3 && (
                     <text x={boxW / 2} y={90 + 3 * 14} fill="#64748b" fontSize="9" textAnchor="middle">
-                      +{fact.measures.length - 3} más
+                      {(t.starSchema?.moreItems ?? '+{n} más').replace('{n}', String(fact.measures.length - 3))}
                     </text>
                   )}
                 </g>
@@ -355,10 +357,10 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
                     PK: {dim.primary_keys[0] || 'ID'}
                   </text>
                   <text x={boxW / 2} y={58} fill="#cbd5e1" fontSize="10" textAnchor="middle">
-                    {dim.row_count.toLocaleString()} registros
+                    {(t.starSchema?.recordsCount ?? '{n} registros').replace('{n}', dim.row_count.toLocaleString())}
                   </text>
                   <text x={boxW / 2} y={72} fill="#64748b" fontSize="9" textAnchor="middle">
-                    {dim.attributes.length} atributos
+                    {(t.starSchema?.attributesCount ?? '{n} atributos').replace('{n}', String(dim.attributes.length))}
                   </text>
                 </g>
               );
@@ -376,17 +378,17 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
                   {selectedTable.table_name}
                 </h3>
                 <span className={`badge ${selectedTable.role === 'fact' ? 'badge-blue' : 'badge-green'}`} style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>
-                  {selectedTable.role === 'fact' ? 'Hechos' : 'Dimensión'}
+                  {selectedTable.role === 'fact' ? (t.starSchema?.roleFact ?? 'Hechos') : (t.starSchema?.roleDimension ?? 'Dimensión')}
                 </span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', fontSize: '0.82rem' }}>
                 <div style={{ padding: '8px', backgroundColor: 'var(--bg-input)', borderRadius: '6px' }}>
-                  <div style={{ color: 'var(--text-muted)' }}>Filas</div>
+                  <div style={{ color: 'var(--text-muted)' }}>{t.starSchema?.rowsHeader ?? 'Filas'}</div>
                   <div style={{ fontWeight: 700, fontSize: '1rem' }}>{selectedTable.row_count.toLocaleString()}</div>
                 </div>
                 <div style={{ padding: '8px', backgroundColor: 'var(--bg-input)', borderRadius: '6px' }}>
-                  <div style={{ color: 'var(--text-muted)' }}>Columnas</div>
+                  <div style={{ color: 'var(--text-muted)' }}>{t.starSchema?.columnsHeader ?? 'Columnas'}</div>
                   <div style={{ fontWeight: 700, fontSize: '1rem' }}>{selectedTable.column_count}</div>
                 </div>
               </div>
@@ -394,7 +396,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               {selectedTable.primary_keys.length > 0 && (
                 <div style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    Claves Primarias (PK):
+                    {t.starSchema?.primaryKeysLabel ?? 'Claves Primarias (PK):'}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {selectedTable.primary_keys.map(pk => (
@@ -409,7 +411,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               {selectedTable.foreign_keys.length > 0 && (
                 <div style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    Claves Foráneas (FK):
+                    {t.starSchema?.foreignKeysLabel ?? 'Claves Foráneas (FK):'}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {selectedTable.foreign_keys.map(fk => (
@@ -424,7 +426,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               {selectedTable.measures.length > 0 && (
                 <div style={{ marginBottom: '10px' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    Medidas Numéricas:
+                    {t.starSchema?.numericMeasuresLabel ?? 'Medidas Numéricas:'}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {selectedTable.measures.map(m => (
@@ -444,7 +446,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Layers size={16} className={selectedRel.is_referential_clean ? 'text-success' : 'text-warning'} />
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                  Detalle de Relación
+                  {t.starSchema?.relationDetailTitle ?? 'Detalle de Relación'}
                 </h4>
               </div>
 
@@ -455,12 +457,12 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
               </div>
 
               <div style={{ fontSize: '0.82rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div>Coincidencia: <strong>{selectedRel.match_percentage}%</strong></div>
-                <div>Filas con FK: <strong>{selectedRel.total_fk_rows.toLocaleString()}</strong></div>
-                <div>Filas huérfanas: <strong>{selectedRel.orphan_fk_rows}</strong></div>
+                <div>{t.starSchema?.matchLabel ?? 'Coincidencia: '}<strong>{selectedRel.match_percentage}%</strong></div>
+                <div>{t.starSchema?.rowsWithFkLabel ?? 'Filas con FK: '}<strong>{selectedRel.total_fk_rows.toLocaleString()}</strong></div>
+                <div>{t.starSchema?.orphanRowsLabel ?? 'Filas huérfanas: '}<strong>{selectedRel.orphan_fk_rows}</strong></div>
                 {selectedRel.orphan_samples.length > 0 && (
                   <div style={{ marginTop: '6px', padding: '6px', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px' }}>
-                    <div style={{ color: '#d97706', fontSize: '0.75rem', fontWeight: 600 }}>Ejemplos de huérfanos:</div>
+                    <div style={{ color: '#d97706', fontSize: '0.75rem', fontWeight: 600 }}>{t.starSchema?.orphanExamplesLabel ?? 'Ejemplos de huérfanos:'}</div>
                     <div style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
                       {selectedRel.orphan_samples.join(', ')}
                     </div>
@@ -475,7 +477,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <Sparkles size={16} className="text-primary" />
               <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                Medidas DAX Sugeridas
+                {t.starSchema?.suggestedDaxMeasures ?? 'Medidas DAX Sugeridas'}
               </h4>
             </div>
 
@@ -503,7 +505,7 @@ export const MultiTableStarSchemaViewer: React.FC<Props> = ({ schema, onBackToDa
                     className="btn btn-outline"
                     onClick={() => copyText(name, `${name} = ${dax}`)}
                     style={{ padding: '4px 6px', height: 'auto' }}
-                    title="Copiar DAX"
+                    title={t.starSchema?.copyDaxTitle ?? 'Copiar DAX'}
                   >
                     {copiedDax === name ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
                   </button>

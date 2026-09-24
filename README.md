@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-311%20backend%20%7C%2071%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.24.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2075%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.25.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -283,16 +283,16 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 ### 3. Tests Automatizados (Pytest & Vitest)
 
 ```bash
-# Backend (224 tests)
+# Backend (318 tests)
 cd backend
 .\venv\Scripts\pytest -v
 
-# Frontend (55 tests)
+# Frontend (75 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **320 tests automatizados totales (265 backend + 55 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **393 tests automatizados totales (318 backend + 75 frontend) + 3 tests E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -317,7 +317,7 @@ docker compose up --build
 ```text
 dataflow-ai/
 ├── .github/workflows/
-│   └── ci.yml                 # CI: Pytest backend (166 tests) + Build React Vite
+│   └── ci.yml                 # CI: Pytest backend (318 tests) + Build React Vite
 ├── backend/
 │   ├── app/
 │   │   ├── ai_providers/      # Gemini Provider (BYOK), Mock determinista y caché de inferencia
@@ -353,15 +353,15 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.19.4):** Corrección forense de unicidad semántica (Email case-insensitive con protección PII y PKs de entidad respetando FKs), erradicación de fallbacks ficticios de scores (None explícito y flag comparison_available), alineación causal entre Issues y Propuestas (missing_policy y casing_policy), y desduplicación de conteo en consistencia residual (Country/ShipCountry), elevando la cobertura a 18/18 grupos de anomalías (100%) sobre Northwind Dirty, desarrollada con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
-- **Versión v1.19.3:** Corrección y blindaje de formateo Black en `runs.py`, garantizando 100% de éxito en el pipeline de CI (backend linters, pytest, SAST y frontend build), desarrollada con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
-- **Versión v1.19.2:** Descargas prominentes de datasets limpios individuales (CSV, Parquet, Script .py) y unificadas en ZIP masivo, restauración completa de fórmulas DAX contextuales, código Power Query M, fórmulas Excel e insights por tabla mediante selector interactivo en Paso 4, y esquema de estrella al final del flujo, desarrollada con **Google Antigravity**.
-- **Versión v1.19.1:** Restauración rigurosa del flujo secuencial de 4 pasos (limpieza en lote de todas las tablas en una sola ejecución antes del modelo dimensional), generación de Esquema de Estrella al final del Paso 4 sobre datos limpios, medidas DAX y TMDL fieles al casing exacto de las tablas limpiadas en Power BI, y actualización del diagrama visual radial.
-- **Versión v1.19.0:** Soporte multiarchivo, generador visual de esquema de estrella e integridad referencial, y corrección forense de calidad (eliminación de falsos 100%, preservación de enteros y corrección de nulos).
-- **Versión v1.16.0:** Reportes ejecutivos programados en PDF/HTML con webhooks de drift, simulador hipotético de percentiles de drift y gobernanza de aprobación reforzada con diff canónico, desarrollados con **Qwen 3.8 Max** (vía ZCode).
-- **Versión v1.15.0:** Historial cronológico de ejecuciones y comparador de métricas de calidad entre versiones del dataset en la UI; control estadístico de Data Drift por percentiles (P05 a P95, test Kolmogorov-Smirnov sin dependencias pesadas), alertas visuales y recomendaciones proactivas de gobernanza en el dashboard; y actualización de la captura del modelo estrella con la descarga real en PNG, desarrollados con **Gemini 3.8 Flash (High)** (vía Google Antigravity).
-- **Versión v1.14.0:** Panel interactivo de observabilidad de la caché distribuida (L1/L2), exportación PNG en alta resolución (2x Retina) del diagrama interactivo de Esquema Estrella y validación canónica de definiciones TMDL de dimensiones calculadas y relaciones para Power BI Desktop real.
-- **Versión v1.13.0:** Visualizador de modelo estrella (Star Schema), caché de inferencia distribuida Redis/Memorystore, rediseño del README con índice navegable y galería de vistas previas (`docs/capturas/`), desarrollados con **GLM-5.3-Flash** a través de **[ZCode](https://z.ai)**, la app de desarrollo asistido por IA desde la que se gestionó esa release.
+- **Última versión (v1.25.0):** Historial de propuestas con retención configurable (TTL), exportación de blueprints a TMDL y proyecto PBIP, rediseño estético «Power BI ejecutivo» de la maqueta (KPIs en círculo, barras horizontales, donut con % en anillo) e i18n completa de los 13 idiomas (704 claves por bloque, 0 faltantes), desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Versión v1.24.0:** Persistencia Fase 2 de blueprints en `StorageBackend`/GCS y edición HITL completa del Paso 5 (KPIs, visuales, paletas WCAG y revalidación), desarrollada con **MiMo V2.6 Flash Free** (OpenCode).
+- **Versión v1.23.1:** Exportaciones reales del dashboard (PNG 3x, PDF apaisado y HTML autocontenido) y rediseño visible del preview ejecutivo, desarrollada con **Muse Spark 1.3 Free** (OpenCode).
+- **Versión v1.23.0:** Dashboard ejecutivo con layout limpio sin tips DAX y exportación PNG 3x, PDF y HTML, desarrollada con **MiMo V2.5 Free** (OpenCode).
+- **Versión v1.22.0:** Dashboard Intelligence v2 con gobernanza semántica de agregación, intención analítica auditable y control de redundancia visual, desarrollada con **Gemini 3.8 Flash**.
+- **Versión v1.21.1:** Actualización a Vitest 5.0.0 con compatibilidad de TypeScript estricto, desarrollada con **Gemini 3.8 Flash**.
+- **Versión v1.21.0:** Ejemplo visual del dashboard en el Paso 5 exportable a PNG, desarrollada con **muse-spark-1.3**.
+- **Versiones v1.20.0–v1.20.3:** Dashboard Intelligence (de Esquema Estrella a propuesta de dashboard para Power BI con WCAG determinista), CTA del Paso 5 y auto-recuperación de planes caducados, desarrolladas con **Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus**.
+- **Versiones v1.13.0–v1.19.4 (condensadas):** Auditoría forense de calidad (18/18 grupos de anomalías en Northwind Dirty), reportes ejecutivos programados, simulador de drift, observabilidad de caché y visualizador de Esquema Estrella, desarrolladas con **Gemini 3.8 Flash (High)** (vía Google Antigravity), **Qwen 3.8 Max** y **GLM-5.3-Flash** (vía ZCode).
 - **Contribuciones previas y documentación:** Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por **Muse Spark 1.2 Contributor** — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026.
 
 ---

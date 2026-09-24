@@ -4,6 +4,24 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.25.0] — 2026-09-24
+
+### 🗂️ Historial de Blueprints con TTL, Exportación TMDL/PBIP, Maqueta «Power BI Ejecutivo» e i18n Completa en 13 Idiomas
+
+> **Motivación:** Las propuestas de dashboard vivían solo en caché en memoria (se perdían al reiniciar Cloud Run) y no existía forma de llevar el modelo generado a Power BI real; a la vez, la maqueta no tenía acabado ejecutivo y la i18n estaba incompleta: solo es/en sumaban 704 claves y los 11 idiomas restantes arrastraban 539 claves caídas por bloque. Esta release cierra los tres frentes manteniendo la gobernanza *"La IA propone. El usuario decide. Python ejecuta."*.
+
+#### 🛠️ Cambios Realizados
+- **Historial de propuestas con TTL (`GET /api/v1/dashboard`):** Listado de blueprints persistidos ordenado por antigüedad con purga perezosa según la retención configurable `BLUEPRINT_RETENTION_DAYS`; panel de Historial en el frontend (`DashboardHistory.tsx`) que marca la propuesta vigente y restaura cualquiera vía `onBlueprintLoad` sin regenerar.
+- **Exportación nativa a Power BI:** Nuevos endpoints `GET /api/v1/dashboard/{blueprint_id}/export/tmdl` y `GET /api/v1/dashboard/{blueprint_id}/export/pbip` con patrón `Response` + `Content-Disposition` (`.tmdl` suelto y `.pbip` empaquetado con `zip(..., strict=True)`), descargables desde la pestaña Power BI del preview con `<a download>`.
+- **Maqueta «Power BI ejecutivo» (`DashboardMockup.tsx`):** Tarjetas redondeadas, KPIs de círculo + número, barras horizontales, donut con % en el anillo y cabecera con franja temática; 12 tests de maqueta verificados.
+- **i18n completa de los 13 idiomas (`i18n/index.ts`):** Extracción de todos los textos hardcodeados a claves es/en (+339 claves → 704 por bloque, placeholders `{n}` con `.replace(...)`, claves nuevas opcionales) y traducción de las 539 claves caídas en cada uno de los 11 idiomas no es/en (+5.929 líneas, 14 secciones nuevas por bloque). Auditoría automatizada: **704/704 claves en los 13 idiomas, 0 faltantes y 0 sobrantes**.
+
+#### 🧪 Verificación
+- **Backend:** 318/318 tests pasando | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Frontend:** 75/75 tests pasando | TypeScript estricto (`tsc`) y Vite build sin errores.
+- **i18n:** 13/13 idiomas al completo (704 claves): es/en y los 11 restantes sin claves caídas ni sobrantes.
+- **Atribución:** Desarrollada con **MiMo 2.6 Flash** (OpenCode).
+
 ## [1.24.0] — 2026-09-22
 
 ### 💾 Persistencia Fase 2 de Blueprints (StorageBackend/GCS) y Edición HITL del Paso 5

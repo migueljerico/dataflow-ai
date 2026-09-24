@@ -71,15 +71,17 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
   const [exportError, setExportError] = useState<string | null>(null);
 
   const labels = {
-    filters: en ? 'Filters' : 'Filtros',
-    questions: en ? 'Business questions answered' : 'Preguntas de negocio que responde',
-    noData: en ? 'Not enough data — see the Power BI tab' : 'Sin datos suficientes — ver pestaña Power BI',
-    noKpi: en ? 'No KPIs recommended for this model' : 'Sin KPIs recomendados para este modelo',
-    noFilters: en ? 'No slicers recommended' : 'Sin slicers recomendados',
-    governance: en
-      ? 'AI proposes, the user decides, Python executes.'
-      : 'La IA propone, el usuario decide, Python ejecuta.',
-    exportFail: en ? 'Export not supported in this browser.' : 'Exportación no soportada en este navegador.',
+    filters: t.mockup?.filters ?? (en ? 'Filters' : 'Filtros'),
+    questions: t.mockup?.questions ?? (en ? 'Business questions answered' : 'Preguntas de negocio que responde'),
+    noData: t.mockup?.noData ?? (en ? 'Not enough data — see the Power BI tab' : 'Sin datos suficientes — ver pestaña Power BI'),
+    noKpi: t.mockup?.noKpi ?? (en ? 'No KPIs recommended for this model' : 'Sin KPIs recomendados para este modelo'),
+    noFilters: t.mockup?.noFilters ?? (en ? 'No slicers recommended' : 'Sin slicers recomendados'),
+    governance:
+      t.mockup?.governance ??
+      (en
+        ? 'AI proposes, the user decides, Python executes.'
+        : 'La IA propone, el usuario decide, Python ejecuta.'),
+    exportFail: t.mockup?.exportFail ?? (en ? 'Export not supported in this browser.' : 'Exportación no soportada en este navegador.'),
   };
 
   const palette = blueprint.design?.palette;
@@ -214,10 +216,10 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
             disabled={exporting !== null}
             data-testid="export-dashboard-mockup-png-btn"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
-            title={en ? 'Download executive PNG (3x)' : 'Descargar PNG ejecutivo (3x)'}
+            title={t.mockup?.exportPngTitle ?? (en ? 'Download executive PNG (3x)' : 'Descargar PNG ejecutivo (3x)')}
           >
             <Download size={14} />
-            {exporting === 'png' ? (en ? 'Exporting...' : 'Exportando...') : 'PNG'}
+            {exporting === 'png' ? (t.mockup?.exporting ?? (en ? 'Exporting...' : 'Exportando...')) : 'PNG'}
           </button>
           <button
             type="button"
@@ -226,10 +228,10 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
             disabled={exporting !== null}
             data-testid="export-dashboard-mockup-pdf-btn"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
-            title={en ? 'Download executive PDF' : 'Descargar PDF ejecutivo'}
+            title={t.mockup?.exportPdfTitle ?? (en ? 'Download executive PDF' : 'Descargar PDF ejecutivo')}
           >
             <FileText size={14} />
-            {exporting === 'pdf' ? (en ? 'Exporting...' : 'Exportando...') : 'PDF'}
+            {exporting === 'pdf' ? (t.mockup?.exporting ?? (en ? 'Exporting...' : 'Exportando...')) : 'PDF'}
           </button>
           <button
             type="button"
@@ -238,10 +240,10 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
             disabled={exporting !== null}
             data-testid="export-dashboard-mockup-html-btn"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 14px' }}
-            title={en ? 'Download executive HTML' : 'Descargar HTML ejecutivo'}
+            title={t.mockup?.exportHtmlTitle ?? (en ? 'Download executive HTML' : 'Descargar HTML ejecutivo')}
           >
             <Code size={14} />
-            {exporting === 'html' ? (en ? 'Exporting...' : 'Exportando...') : 'HTML'}
+            {exporting === 'html' ? (t.mockup?.exporting ?? (en ? 'Exporting...' : 'Exportando...')) : 'HTML'}
           </button>
         </div>
       </div>
@@ -253,7 +255,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           viewBox={`0 0 ${W} ${H}`}
           style={{ width: '100%', height: 'auto', display: 'block', backgroundColor: '#ffffff', borderRadius: '8px' }}
           role="img"
-          aria-label="Ejemplo visual del dashboard"
+          aria-label={t.mockup?.svgLabel ?? 'Ejemplo visual del dashboard'}
           fontFamily="Arial, Helvetica, sans-serif"
         >
           <rect x="0" y="0" width={W} height={H} fill="#ffffff" />
@@ -352,7 +354,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           {/* Tendencia hero */}
           <rect x="16" y="348" width="1000" height="360" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
           <text x="40" y="380" fill={INK} fontSize="16" fontWeight="700">
-            {truncate(lineVisual?.title ?? (en ? 'Trend' : 'Tendencia'), 58)}
+            {truncate(lineVisual?.title ?? (t.mockup?.trendTitle ?? (en ? 'Trend' : 'Tendencia')), 58)}
           </text>
           <text x="40" y="402" fill={MUTED} fontSize="12">
             {truncate(lineVisual?.measure_name ?? lineVisual?.measure ?? '', 66)}
@@ -373,8 +375,8 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
                 <g key={i}>
                   {lineCoords.length <= 8 && (
                     <text
-                      x={c.x}
-                      y={Math.max(plotY + 12, c.y - 12)}
+                      x={i === 0 ? c.x + 16 : c.x}
+                      y={c.y - 12}
                       fill={MUTED}
                       fontSize="10"
                       fontWeight="700"
@@ -401,7 +403,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           {/* Composición donut */}
           <rect x="1032" y="348" width="552" height="360" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
           <text x="1056" y="380" fill={INK} fontSize="16" fontWeight="700">
-            {truncate(donutVisual?.title ?? (en ? 'Composition' : 'Composición'), 32)}
+            {truncate(donutVisual?.title ?? (t.mockup?.compositionTitle ?? (en ? 'Composition' : 'Composición')), 32)}
           </text>
           <text x="1056" y="402" fill={MUTED} fontSize="12">
             {truncate(donutVisual?.measure_name ?? donutVisual?.measure ?? '', 38)}
@@ -443,7 +445,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
                       strokeWidth="3"
                       paintOrder="stroke"
                     >
-                      {`${s.pct.toFixed(1)}%`}
+                      {`${s.pct.toFixed(1).replace('.', en ? '.' : ',')}%`}
                     </text>
                   );
                 })}
@@ -474,7 +476,7 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           {/* Desglose: barras horizontales con etiqueta a la izquierda y valor al final */}
           <rect x="16" y="720" width="768" height="330" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
           <text x="40" y="752" fill={INK} fontSize="16" fontWeight="700">
-            {truncate(barVisual?.title ?? (en ? 'Breakdown' : 'Desglose'), 42)}
+            {truncate(barVisual?.title ?? (t.mockup?.breakdownTitle ?? (en ? 'Breakdown' : 'Desglose')), 42)}
           </text>
           <text x="40" y="774" fill={MUTED} fontSize="12">
             {truncate(barVisual?.measure_name ?? barVisual?.measure ?? '', 48)}
@@ -505,29 +507,29 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
           {/* Ranking con barras proporcionales */}
           <rect x="800" y="720" width="784" height="330" rx="12" fill="#ffffff" stroke={CARD_STROKE} strokeWidth="1" />
           <text x="824" y="752" fill={INK} fontSize="16" fontWeight="700">
-            {truncate(tableVisual?.title ?? (en ? 'Ranking' : 'Ranking'), 46)}
+            {truncate(tableVisual?.title ?? (t.mockup?.rankingTitle ?? (en ? 'Ranking' : 'Ranking')), 46)}
           </text>
           <text x="824" y="774" fill={MUTED} fontSize="12">
             {truncate(tableVisual?.measure_name ?? tableVisual?.measure ?? '', 52)}
           </text>
           {tableRows.length > 0 ? (
             tableRows.map((p, i) => {
-              const ry = 800 + i * 46;
-              const rw = Math.max(8, ((560 * p.value) / rankMax));
+              const rowY = 796 + i * 48;
+              const rw = Math.max(8, (380 * p.value) / rankMax);
               const medal = i === 0 ? '#fef3c7' : i === 1 ? '#f1f5f9' : i === 2 ? '#ffedd5' : '#eff6ff';
               const medalInk = i === 0 ? '#92400e' : i === 1 ? '#475569' : i === 2 ? '#9a3412' : primary;
               return (
                 <g key={i}>
-                  <rect x={824} y={ry} width={560} height="14" rx="7" fill="#f1f5f9" />
-                  <rect x={824} y={ry} width={rw} height="14" rx="7" fill={categorical[i % categorical.length]} opacity="0.85" />
-                  <circle cx="842" cy={ry + 30} r="11" fill={medal} />
-                  <text x="842" y={ry + 34} fill={medalInk} fontSize="11" fontWeight="700" textAnchor="middle">
+                  <circle cx="838" cy={rowY + 13} r="11" fill={medal} />
+                  <text x="838" y={rowY + 17} fill={medalInk} fontSize="11" fontWeight="700" textAnchor="middle">
                     {i + 1}
                   </text>
-                  <text x="860" y={ry + 34} fill={INK} fontSize="12" fontWeight="600">
-                    {truncate(p.label, 30)}
+                  <text x="858" y={rowY + 17} fill={INK} fontSize="12" fontWeight="600">
+                    {truncate(p.label, 22)}
                   </text>
-                  <text x="1548" y={ry + 34} fill={INK} fontSize="12" fontWeight="700" textAnchor="end">
+                  <rect x="1060" y={rowY + 5} width="380" height="16" rx="8" fill="#f1f5f9" />
+                  <rect x="1060" y={rowY + 5} width={rw} height="16" rx="8" fill={categorical[i % categorical.length]} />
+                  <text x="1548" y={rowY + 17} fill={INK} fontSize="12" fontWeight="700" textAnchor="end">
                     {shortNumber(p.value)}
                   </text>
                 </g>
@@ -576,9 +578,9 @@ export const DashboardMockup: React.FC<Props> = ({ blueprint }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
         <ImageIcon size={14} />
         <span>
-          {en
+          {t.mockup?.exportHint ?? (en
             ? 'PNG, PDF and HTML export this same executive layout at 3x resolution, without build tips.'
-            : 'PNG, PDF y HTML exportan este mismo layout ejecutivo a resolución 3x, sin consejos de construcción.'}
+            : 'PNG, PDF y HTML exportan este mismo layout ejecutivo a resolución 3x, sin consejos de construcción.')}
         </span>
       </div>
     </div>

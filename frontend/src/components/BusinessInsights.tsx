@@ -200,7 +200,7 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
             viewBox={`0 0 ${W} ${H}`}
             style={{ width: '100%', height: 'auto', display: 'block' }}
             role="img"
-            aria-label="Diagrama de modelo estrella"
+            aria-label={t.powerBiExcel?.starDiagramAria ?? 'Diagrama de modelo estrella'}
           >
             {/* Relaciones (debajo de las cajas) */}
             {positions.map(({ dim, x, y }) => (
@@ -249,7 +249,7 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
               ))}
               {schema.measures.length > 2 && (
                 <text x={cx} y={cy - factH / 2 + 94 + 2 * 16} fill={STAR_TEXT_MUTED} fontSize={10} textAnchor="middle">
-                  +{schema.measures.length - 2} más
+                  +{(t.powerBiExcel?.starMoreMeasures ?? '{n} más').replace('{n}', String(schema.measures.length - 2))}
                 </text>
               )}
             </g>
@@ -283,7 +283,7 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
                   </text>
                   <text x={x} y={y - dimH / 2 + 58} fill={STAR_TEXT_MAIN} fontSize={10} textAnchor="middle">
                     {dim.kind === 'calendar'
-                      ? style.label
+                      ? (t.powerBiExcel?.starKindCalendar ?? 'Calendario')
                       : `${dim.distinct_count.toLocaleString()} ${t.powerBiExcel?.starDistinctValues || 'valores distintos'}`}
                   </text>
                 </g>
@@ -297,11 +297,11 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.14)', display: 'inline-block' }} />
-              {t.powerBiExcel?.starDimensions || 'Dimensiones'} (atributo)
+              {t.powerBiExcel?.starDimensions || 'Dimensiones'} {t.powerBiExcel?.starLegendAttrSuffix ?? '(atributo)'}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #10b981', backgroundColor: 'rgba(16, 185, 129, 0.14)', display: 'inline-block' }} />
-              Calendario
+              {t.powerBiExcel?.starKindCalendar ?? 'Calendario'}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <strong style={{ color: '#f59e0b' }}>*</strong> → <strong style={{ color: '#10b981' }}>1</strong> many-to-one
@@ -328,7 +328,7 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
                 <strong style={{ color: (STAR_DIM_STYLES[selectedDim.kind] || STAR_DIM_STYLES.attribute).border, fontSize: '0.9rem' }}>
                   {selectedDim.name}
                 </strong>
-                <span className="badge badge-blue">{(STAR_DIM_STYLES[selectedDim.kind] || STAR_DIM_STYLES.attribute).label}</span>
+                <span className="badge badge-blue">{selectedDim.kind === 'calendar' ? (t.powerBiExcel?.starKindCalendar ?? 'Calendario') : (t.powerBiExcel?.starKindAttribute ?? 'Atributo')}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.775rem' }}>
                 <div>
@@ -428,7 +428,7 @@ const StarSchemaVisual: React.FC<{ schema: StarSchemaDiagram }> = ({ schema }) =
           </pre>
           {schema.tmdl_relationships && (
             <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>
-              Las relaciones <strong>many-to-one</strong> ya vienen incluidas en el archivo <code>model.tmdl</code> del proyecto PBIP exportable de esta misma tarjeta: al abrirlo en Power BI Desktop, el modelo estrella se reconstruye solo.
+              {t.powerBiExcel?.starTmdlRelPrefix ?? 'Las relaciones'} <strong>many-to-one</strong> {t.powerBiExcel?.starTmdlRelMid ?? 'ya vienen incluidas en el archivo'} <code>model.tmdl</code> {t.powerBiExcel?.starTmdlRelSuffix ?? 'del proyecto PBIP exportable de esta misma tarjeta: al abrirlo en Power BI Desktop, el modelo estrella se reconstruye solo.'}
             </p>
           )}
         </div>
@@ -500,7 +500,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
           }
         }
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudieron calcular los Business Analytics.');
+        if (!cancelled) setError(err instanceof Error ? err.message : (t.insights?.analyticsLoadError ?? 'No se pudieron calcular los Business Analytics.'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -549,7 +549,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
   if (error || !report) {
     return (
       <div style={{ padding: '16px', color: 'var(--accent-rose)' }}>
-        {error || 'Información analítica no disponible.'}
+        {error || (t.insights?.infoUnavailable ?? 'Información analítica no disponible.')}
       </div>
     );
   }
@@ -854,13 +854,13 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <span className="badge badge-blue">
-                    Columna: {clusterViz.cluster_column}
+                    {t.analytics?.clusterBadgeColumn ?? 'Columna:'} {clusterViz.cluster_column}
                   </span>
                   <span className="badge badge-emerald">
-                    {clusterViz.clusters.length} Clusters
+                    {(t.analytics?.clustersCountBadge ?? '{n} Clusters').replace('{n}', String(clusterViz.clusters.length))}
                   </span>
                   <span className="badge badge-amber">
-                    {clusterViz.total_points} Filas
+                    {(t.analytics?.rowsCountBadge ?? '{n} Filas').replace('{n}', String(clusterViz.total_points))}
                   </span>
                 </div>
               </div>
@@ -952,7 +952,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                   style={{ padding: '4px 10px', fontSize: '0.75rem' }}
                   onClick={() => setSelectedClusterFilter(null)}
                 >
-                  Todos ({clusterViz.points.length})
+                  {(t.analytics?.filterAllOption ?? 'Todos ({n})').replace('{n}', String(clusterViz.points.length))}
                 </button>
                 {clusterViz.clusters.map((c, i) => {
                   const color = CLUSTER_COLORS[i % CLUSTER_COLORS.length];
@@ -1034,7 +1034,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                       viewBox={`0 0 ${width} ${height}`}
                       style={{ width: '100%', height: 'auto', display: 'block' }}
                       role="img"
-                      aria-label="Scatter Plot 2D de clusters"
+                      aria-label={t.analytics?.clusterScatterAria ?? 'Scatter Plot 2D de clusters'}
                     >
                       {/* Cuadrícula de fondo */}
                       <line
@@ -1138,7 +1138,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                                 y: py,
                                 valX: p.x,
                                 valY: p.y,
-                                label: p.label || `Fila #${p.row_index + 1}`,
+                                label: p.label || (t.insights?.rowFallback ?? 'Fila #{n}').replace('{n}', String(p.row_index + 1)),
                                 clusterId: p.cluster_id,
                               });
                             }}
@@ -1183,7 +1183,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                       >
                         <div style={{ fontWeight: 700, marginBottom: '2px' }}>{hoveredClusterPoint.label}</div>
                         <div style={{ color: CLUSTER_COLORS[hoveredClusterPoint.clusterId % CLUSTER_COLORS.length], fontWeight: 600 }}>
-                          Cluster {hoveredClusterPoint.clusterId}
+                          {(t.analytics?.tooltipCluster ?? 'Cluster {n}').replace('{n}', String(hoveredClusterPoint.clusterId))}
                         </div>
                         <div>
                           {clusterViz.x_column}: <strong>{hoveredClusterPoint.valX}</strong>
@@ -1213,12 +1213,12 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                   <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                        <th style={{ padding: '8px 10px' }}>Cluster</th>
-                        <th style={{ padding: '8px 10px' }}>Registros</th>
-                        <th style={{ padding: '8px 10px' }}>Porcentaje</th>
+                        <th style={{ padding: '8px 10px' }}>{t.analytics?.thCluster ?? 'Cluster'}</th>
+                        <th style={{ padding: '8px 10px' }}>{t.analytics?.thRecords ?? 'Registros'}</th>
+                        <th style={{ padding: '8px 10px' }}>{t.analytics?.thPercentage ?? 'Porcentaje'}</th>
                         {clusterViz.available_numeric_columns.map((col) => (
                           <th key={col} style={{ padding: '8px 10px' }}>
-                            Media ({col})
+                            {(t.analytics?.thMean ?? 'Media ({n})').replace('{n}', String(col))}
                           </th>
                         ))}
                       </tr>
@@ -1290,10 +1290,10 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <span className="badge badge-rose">
-                    {outlierViz.total_outliers_detected} Outliers Detectados
+                    {(t.analytics?.outliersDetectedBadge ?? '{n} Outliers Detectados').replace('{n}', String(outlierViz.total_outliers_detected))}
                   </span>
                   <span className="badge badge-blue">
-                    Método: {outlierViz.detection_method}
+                    {t.analytics?.methodBadge ?? 'Método:'} {outlierViz.detection_method}
                   </span>
                 </div>
               </div>
@@ -1396,7 +1396,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                     const xMax = scale(b.max);
 
                     return (
-                      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label={`Boxplot de ${b.column}`}>
+                      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label={(t.analytics?.boxplotAria ?? 'Boxplot de {n}').replace('{n}', String(b.column))}>
                         {/* Eje de referencia */}
                         <line x1={margin.left} y1={centerY + boxH / 2 + 30} x2={width - margin.right} y2={centerY + boxH / 2 + 30} stroke="var(--border-color)" strokeWidth="1.5" />
 
@@ -1503,7 +1503,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
 
                     return (
                       <div>
-                        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label={`Scatter de outliers para ${b.column}`}>
+                        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label={(t.analytics?.outlierScatterAria ?? 'Scatter de outliers para {n}').replace('{n}', String(b.column))}>
                           {/* Líneas de Límites IQR */}
                           <line x1={margin.left} y1={yUpper} x2={width - margin.right} y2={yUpper} stroke="var(--accent-rose)" strokeDasharray="5 4" strokeWidth="1.5" />
                           <text x={width - margin.right + 4} y={yUpper + 3} fill="var(--accent-rose)" fontSize="9" textAnchor="start">
@@ -1534,7 +1534,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                                     x: px,
                                     y: py,
                                     valY: p.y_value,
-                                    label: p.label || `Fila #${p.row_index + 1}`,
+                                    label: p.label || (t.insights?.rowFallback ?? 'Fila #{n}').replace('{n}', String(p.row_index + 1)),
                                     isOutlier: p.is_outlier,
                                   })
                                 }
@@ -1563,8 +1563,8 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                           >
                             <div>{hoveredOutlierPoint.label}</div>
                             <div>
-                              Valor: <strong>{hoveredOutlierPoint.valY}</strong>{' '}
-                              {hoveredOutlierPoint.isOutlier && <span style={{ color: 'var(--accent-rose)' }}>[OUTLIER]</span>}
+                              {t.analytics?.tooltipValue ?? 'Valor:'} <strong>{hoveredOutlierPoint.valY}</strong>{' '}
+                              {hoveredOutlierPoint.isOutlier && <span style={{ color: 'var(--accent-rose)' }}>{t.analytics?.outlierFlag ?? '[OUTLIER]'}</span>}
                             </div>
                           </div>
                         )}
@@ -1695,7 +1695,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                           viewBox={`0 0 ${width} ${height}`}
                           style={{ width: '100%', height: 'auto', display: 'block' }}
                           role="img"
-                          aria-label={`Comparador scatter diff para ${b.column}`}
+                          aria-label={(t.analytics?.diffScatterAria ?? 'Comparador scatter diff para {n}').replace('{n}', String(b.column))}
                         >
                           {/* Líneas de Límites IQR */}
                           <line x1={margin.left} y1={yUpper} x2={width - margin.right} y2={yUpper} stroke="var(--accent-rose, #f43f5e)" strokeDasharray="5 4" strokeWidth="1.5" />
@@ -1752,7 +1752,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                                       x: px,
                                       y: pyClean,
                                       valY: p.y_value,
-                                      label: p.label || `Fila #${p.row_index + 1}`,
+                                      label: p.label || (t.insights?.rowFallback ?? 'Fila #{n}').replace('{n}', String(p.row_index + 1)),
                                       isOutlier: p.is_outlier,
                                       rawY: p.raw_y_value,
                                       wasModified: p.was_modified,
@@ -1791,7 +1791,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                             )}
                             <div style={{ marginTop: '2px' }}>
                               {t.analytics?.cleanVal || 'Limpio'}: <strong style={{ color: 'var(--accent-emerald, #10b981)' }}>{hoveredOutlierPoint.valY}</strong>{' '}
-                              {hoveredOutlierPoint.isOutlier && <span style={{ color: 'var(--accent-rose, #f43f5e)' }}>[OUTLIER]</span>}
+                              {hoveredOutlierPoint.isOutlier && <span style={{ color: 'var(--accent-rose, #f43f5e)' }}>{t.analytics?.outlierFlag ?? '[OUTLIER]'}</span>}
                             </div>
                             {hoveredOutlierPoint.wasModified && (
                               <div style={{ color: 'var(--accent-amber, #f59e0b)', fontSize: '0.7rem', marginTop: '4px' }}>
@@ -1809,11 +1809,11 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
                               <thead>
                                 <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                                  <th style={{ padding: '6px 8px' }}>Registro</th>
+                                  <th style={{ padding: '6px 8px' }}>{t.analytics?.thRecord ?? 'Registro'}</th>
                                   <th style={{ padding: '6px 8px' }}>{t.analytics?.rawVal || 'Crudo'}</th>
                                   <th style={{ padding: '6px 8px' }}>{t.analytics?.cleanVal || 'Limpio'}</th>
-                                  <th style={{ padding: '6px 8px' }}>Variación</th>
-                                  <th style={{ padding: '6px 8px' }}>Estado</th>
+                                  <th style={{ padding: '6px 8px' }}>{t.analytics?.thVariation ?? 'Variación'}</th>
+                                  <th style={{ padding: '6px 8px' }}>{t.analytics?.thStatus ?? 'Estado'}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1838,7 +1838,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                                             fontWeight: 600,
                                           }}
                                         >
-                                          {p.diff_status === 'resolved_outlier' ? 'Resuelto' : 'Acotado'}
+                                          {p.diff_status === 'resolved_outlier' ? (t.analytics?.statusResolved ?? 'Resuelto') : (t.analytics?.statusCapped ?? 'Acotado')}
                                         </span>
                                       </td>
                                     </tr>
@@ -1932,9 +1932,9 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                 }}
               >
                 <div>
-                  <strong>Tabla de Modelo:</strong> <code style={{ color: 'var(--primary)' }}>'{guide.table_name || 'DataFlow_Model'}'</code> · <strong>Total Registros:</strong> {(guide.row_count ?? 0).toLocaleString()} filas · <strong>Columnas tipadas:</strong> {columns.length}
+                  <strong>{t.powerBiExcel?.tableModelLabel ?? 'Tabla de Modelo:'}</strong> <code style={{ color: 'var(--primary)' }}>'{guide.table_name || 'DataFlow_Model'}'</code> · <strong>{t.powerBiExcel?.totalRecordsLabel ?? 'Total Registros:'}</strong> {(t.powerBiExcel?.rowsCountLabel ?? '{n} filas').replace('{n}', String((guide.row_count ?? 0).toLocaleString()))} · <strong>{t.powerBiExcel?.typedColumnsLabel ?? 'Columnas tipadas:'}</strong> {columns.length}
                 </div>
-                <span className="badge badge-blue">Generación Adaptativa v1.9.0</span>
+                <span className="badge badge-blue">{t.powerBiExcel?.adaptiveGenBadge ?? 'Generación Adaptativa v1.9.0'}</span>
               </div>
             )}
 
@@ -1961,7 +1961,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                 {/* Barra de Acciones de Exportación Directa */}
                 <div>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                    Exportación directa de modelo semántico:
+                    {t.powerBiExcel?.semanticExportLabel ?? 'Exportación directa de modelo semántico:'}
                   </label>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <a
@@ -1969,7 +1969,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                       download={`proyecto_powerbi_${runId}.zip`}
                       className="btn btn-primary"
                       style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}
-                      title="Descargar paquete completo de proyecto Power BI Developer Mode (.pbip) en archivo ZIP"
+                      title={t.powerBiExcel?.pbipTooltip ?? 'Descargar paquete completo de proyecto Power BI Developer Mode (.pbip) en archivo ZIP'}
                     >
                       <FileDown size={14} /> {t.powerBiExcel?.btnExportPbip || 'Proyecto PBIP (.zip)'}
                     </a>
@@ -1978,7 +1978,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                       download={`modelo_powerbi_${runId}.tmdl`}
                       className="btn btn-outline"
                       style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}
-                      title="Descargar definición del modelo semántico en formato TMDL"
+                      title={t.powerBiExcel?.tmdlTooltip ?? 'Descargar definición del modelo semántico en formato TMDL'}
                     >
                       <FileDown size={14} /> {t.powerBiExcel?.btnExportTmdl || 'Modelo TMDL (.tmdl)'}
                     </a>
@@ -1987,7 +1987,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                       download={`medidas_powerbi_${runId}.dax`}
                       className="btn btn-outline"
                       style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}
-                      title="Descargar script de medidas DAX calculadas (.dax)"
+                      title={t.powerBiExcel?.daxTooltip ?? 'Descargar script de medidas DAX calculadas (.dax)'}
                     >
                       <FileDown size={14} /> {t.powerBiExcel?.btnExportDax || 'Medidas DAX (.dax)'}
                     </a>
@@ -2049,7 +2049,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                         }}
                       >
                         {copiedSnippet === 'dax' ? <Check size={12} style={{ color: 'var(--accent-emerald)' }} /> : <Copy size={12} />}
-                        {copiedSnippet === 'dax' ? (t.powerBiExcel?.copied || '¡Copiado!') : 'Copiar todas las medidas'}
+                        {copiedSnippet === 'dax' ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copyAllMeasures ?? 'Copiar todas las medidas')}
                       </button>
                     </div>
 
@@ -2092,7 +2092,7 @@ export const BusinessInsights: React.FC<Props> = ({ runId }) => {
                                     setTimeout(() => setCopiedSnippet(null), 1500);
                                   }}
                                 >
-                                  {copiedSnippet === `dax-${idx}` ? '¡Copiado!' : 'Copiar'}
+                                  {copiedSnippet === `dax-${idx}` ? (t.powerBiExcel?.copied || '¡Copiado!') : (t.powerBiExcel?.copySnippet || 'Copiar')}
                                 </button>
                               </div>
                               <p style={{ margin: '0 0 4px 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -2210,7 +2210,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                        Definición TMDL (Power BI / Fabric):
+                        {t.powerBiExcel?.tmdlDefinitionLabel ?? 'Definición TMDL (Power BI / Fabric):'}
                       </span>
                       <button
                         className="btn btn-outline"
@@ -2271,7 +2271,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                   <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Award size={16} /> {t.powerBiExcel?.tabExcel || 'Microsoft Excel'}
                   </h5>
-                  <span className="badge badge-emerald">Fórmulas Dinámicas Adaptativas</span>
+                  <span className="badge badge-emerald">{t.powerBiExcel?.excelDynamicBadge ?? 'Fórmulas Dinámicas Adaptativas'}</span>
                 </div>
 
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
@@ -2282,7 +2282,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                 {excelFormulas.length > 0 && (
                   <div>
                     <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                      Tipo de Análisis / Categoría en Excel:
+                      {t.powerBiExcel?.excelCategoryLabel ?? 'Tipo de Análisis / Categoría en Excel:'}
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
                       {[
@@ -2316,11 +2316,11 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                       return (
                         <div>
                           <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                            Seleccionar fórmula o variable objetivo:
+                            {t.powerBiExcel?.selectFormulaLabel ?? 'Seleccionar fórmula o variable objetivo:'}
                           </label>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                             {displayList.map((item, idx) => {
-                              const label = item.title || item.column || `Fórmula #${idx + 1}`;
+                              const label = item.title || item.column || (t.powerBiExcel?.formulaFallback ?? 'Fórmula #{n}').replace('{n}', String(idx + 1));
                               return (
                                 <button
                                   key={idx}
@@ -2351,9 +2351,9 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                     : (language === 'es'
                         ? `=SI(ESNUMERO(A2); SI(Y(A2>=MEDIANA($A$2:$A$1000)-1,5*DESVEST($A$2:$A$1000); A2<=MEDIANA($A$2:$A$1000)+1,5*DESVEST($A$2:$A$1000)); "Válido"; "Outlier"); "Texto")`
                         : `=IF(ISNUMBER(A2), IF(AND(A2>=MEDIAN($A$2:$A$1000)-1.5*STDEV($A$2:$A$1000), A2<=MEDIAN($A$2:$A$1000)+1.5*STDEV($A$2:$A$1000)), "Valid", "Outlier"), "Text")`);
-                  const desc = currentItem?.description || 'Fórmula de cálculo para hoja de cálculo.';
+                  const desc = currentItem?.description || (t.powerBiExcel?.formulaDescFallback ?? 'Fórmula de cálculo para hoja de cálculo.');
                   const targetCell = currentItem?.target_cell || `${currentItem?.excel_column_letter || 'A'}2`;
-                  const title = currentItem?.title || 'Fórmula Excel';
+                  const title = currentItem?.title || (t.powerBiExcel?.formulaTitleFallback ?? 'Fórmula Excel');
 
                   return (
                     <div>
@@ -2363,7 +2363,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                             {title}:
                           </span>
                           <span className="badge badge-emerald" style={{ fontSize: '0.675rem', padding: '1px 6px' }}>
-                            Pegar en: {targetCell}
+                            {t.powerBiExcel?.pasteInLabel ?? 'Pegar en:'} {targetCell}
                           </span>
                         </div>
                         <button
@@ -2407,15 +2407,15 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                 {columns.length > 0 && (
                   <div style={{ marginTop: '4px' }}>
                     <span style={{ fontSize: '0.775rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                      Mapeo de Columnas (Excel / Power BI):
+                      {t.powerBiExcel?.columnMappingLabel ?? 'Mapeo de Columnas (Excel / Power BI):'}
                     </span>
                     <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
                       <table style={{ width: '100%', fontSize: '0.725rem', borderCollapse: 'collapse' }}>
                         <thead>
                           <tr style={{ backgroundColor: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                            <th style={{ padding: '4px 8px' }}>Columna</th>
+                            <th style={{ padding: '4px 8px' }}>{t.powerBiExcel?.mappingColHeader ?? 'Columna'}</th>
                             <th style={{ padding: '4px 8px' }}>Excel</th>
-                            <th style={{ padding: '4px 8px' }}>Tipo Power BI</th>
+                            <th style={{ padding: '4px 8px' }}>{t.powerBiExcel?.powerBiTypeHeader ?? 'Tipo Power BI'}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2425,7 +2425,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                             return (
                               <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                 <td style={{ padding: '4px 8px', fontWeight: 600 }}>{col.name}</td>
-                                <td style={{ padding: '4px 8px', color: 'var(--primary)' }}>Col {colLetter}</td>
+                                <td style={{ padding: '4px 8px', color: 'var(--primary)' }}>{(t.powerBiExcel?.colLetterLabel ?? 'Col {n}').replace('{n}', String(colLetter))}</td>
                                 <td style={{ padding: '4px 8px', color: 'var(--text-muted)' }}>{pqType}</td>
                               </tr>
                             );
@@ -2446,7 +2446,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                     color: 'var(--text-muted)',
                   }}
                 >
-                  <strong>Nota regional:</strong> {t.powerBiExcel?.decimalNote || 'Ajuste los separadores de coma (,) o punto y coma (;) según la configuración regional de su sistema operativo.'}
+                  <strong>{t.powerBiExcel?.regionalNoteLabel ?? 'Nota regional:'}</strong> {t.powerBiExcel?.decimalNote || 'Ajuste los separadores de coma (,) o punto y coma (;) según la configuración regional de su sistema operativo.'}
                 </div>
               </div>
             </div>
@@ -2468,7 +2468,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                   <h5 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
                     <Network size={16} /> {t.powerBiExcel?.tabStarSchema || 'Esquema Estrella'} — {guide.star_schema.fact_table}
                   </h5>
-                  <span className="badge badge-amber">Vista Previa del Modelo Semántico</span>
+                  <span className="badge badge-amber">{t.powerBiExcel?.semanticPreviewBadge ?? 'Vista Previa del Modelo Semántico'}</span>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
                   {t.powerBiExcel?.starClickHint || 'Haz clic en una dimensión para ver su detalle'} · {guide.star_schema.dimension_count}{' '}
@@ -2497,7 +2497,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                 color: 'var(--text-muted)',
               }}
             >
-              No se detectaron variables numéricas para calcular análisis de Data Drift.
+              {t.driftAnalytics?.noNumericDrift ?? 'No se detectaron variables numéricas para calcular análisis de Data Drift.'}
             </div>
           ) : (
             <div>
@@ -2549,7 +2549,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                       <div>
                         <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>{statusText}</div>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                          Evaluación de {drift.columns.length} variables numéricas con percentiles (P05 a P95) y test Kolmogorov-Smirnov.
+                          {(t.driftAnalytics?.evaluationMsg ?? 'Evaluación de {n} variables numéricas con percentiles (P05 a P95) y test Kolmogorov-Smirnov.').replace('{n}', String(drift.columns.length))}
                         </p>
                       </div>
                     </div>
@@ -2558,10 +2558,10 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                         {drift.stable_columns_count} {t.driftAnalytics?.stableCols || 'Estables'}
                       </span>
                       {drift.moderate_columns_count > 0 && (
-                        <span className="badge badge-amber">{drift.moderate_columns_count} Moderadas</span>
+                        <span className="badge badge-amber">{(t.driftAnalytics?.moderateCols ?? '{n} Moderadas').replace('{n}', String(drift.moderate_columns_count))}</span>
                       )}
                       {drift.critical_columns_count > 0 && (
-                        <span className="badge badge-rose">{drift.critical_columns_count} Críticas</span>
+                        <span className="badge badge-rose">{(t.driftAnalytics?.criticalCols ?? '{n} Críticas').replace('{n}', String(drift.critical_columns_count))}</span>
                       )}
                       <span className="badge badge-blue">
                         {drift.total_alerts} {t.driftAnalytics?.totalAlerts || 'Alertas Totales'}
@@ -2608,7 +2608,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                                 className={`badge ${isHigh ? 'badge-rose' : isMed ? 'badge-amber' : 'badge-emerald'}`}
                                 style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}
                               >
-                                Prioridad {rec.priority}
+                                {t.driftAnalytics?.priorityLabel ?? 'Prioridad'} {rec.priority}
                               </span>
                               {rec.column && (
                                 <code style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>
@@ -2628,7 +2628,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                                 {rec.suggested_step}
                               </code>
                             ) : (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Gobernanza de Calidad</span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{t.driftAnalytics?.qualityGovernance ?? 'Gobernanza de Calidad'}</span>
                             )}
                             <button
                               className="btn btn-outline"
@@ -2720,12 +2720,12 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                           {activeDriftColReport.ks_statistic !== undefined ? activeDriftColReport.ks_statistic : 'N/A'}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          Distancia de distribución
+                          {t.driftAnalytics?.ksDistanceDesc ?? 'Distancia de distribución'}
                         </div>
                       </div>
 
                       <div style={{ backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Δ Mediana (P50)</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.driftAnalytics?.deltaMedianLabel ?? 'Δ Mediana (P50)'}</div>
                         <div
                           style={{
                             fontSize: '1.3rem',
@@ -2742,12 +2742,12 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                           {activeDriftColReport.shift ? `${activeDriftColReport.shift.p50_shift_pct > 0 ? '+' : ''}${activeDriftColReport.shift.p50_shift_pct}%` : '0%'}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          Desvío tendencia central
+                          {t.driftAnalytics?.centralTendencyDesc ?? 'Desvío tendencia central'}
                         </div>
                       </div>
 
                       <div style={{ backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Anomalías (IQR/P99)</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.driftAnalytics?.anomaliesIqrLabel ?? 'Anomalías (IQR/P99)'}</div>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '2px' }}>
                           {activeDriftColReport.anomaly_count}{' '}
                           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -2764,7 +2764,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                           }`}
                           style={{ marginTop: '4px', fontSize: '0.65rem' }}
                         >
-                          {activeDriftColReport.anomaly_percentage >= 3 ? 'Outliers detectados' : 'Normal'}
+                          {activeDriftColReport.anomaly_percentage >= 3 ? (t.driftAnalytics?.anomaliesDetected ?? 'Outliers detectados') : (t.driftAnalytics?.anomaliesNormal ?? 'Normal')}
                         </span>
                       </div>
                     </div>
@@ -2780,38 +2780,38 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                       }}
                     >
                       <h5 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '14px', color: 'var(--text-main)' }}>
-                        Comparador Detallado de Percentiles (Datos Crudos vs. Limpios)
+                        {t.driftAnalytics?.percentileCompareTitle ?? 'Comparador Detallado de Percentiles (Datos Crudos vs. Limpios)'}
                       </h5>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {[
                           {
-                            label: 'P05 (Cola Inferior)',
+                            label: t.driftAnalytics?.p05Label ?? 'P05 (Cola Inferior)',
                             rawVal: activeDriftColReport.raw_percentiles?.p05,
                             cleanVal: activeDriftColReport.clean_percentiles.p05,
                             shiftVal: activeDriftColReport.shift?.p05_shift_pct,
                           },
                           {
-                            label: 'P25 (Primer Cuartil Q1)',
+                            label: t.driftAnalytics?.p25Label ?? 'P25 (Primer Cuartil Q1)',
                             rawVal: activeDriftColReport.raw_percentiles?.p25,
                             cleanVal: activeDriftColReport.clean_percentiles.p25,
                             shiftVal: activeDriftColReport.shift?.p25_shift_pct,
                           },
                           {
-                            label: 'P50 (Mediana Central)',
+                            label: t.driftAnalytics?.p50Label ?? 'P50 (Mediana Central)',
                             rawVal: activeDriftColReport.raw_percentiles?.p50,
                             cleanVal: activeDriftColReport.clean_percentiles.p50,
                             shiftVal: activeDriftColReport.shift?.p50_shift_pct,
                             isCenter: true,
                           },
                           {
-                            label: 'P75 (Tercer Cuartil Q3)',
+                            label: t.driftAnalytics?.p75Label ?? 'P75 (Tercer Cuartil Q3)',
                             rawVal: activeDriftColReport.raw_percentiles?.p75,
                             cleanVal: activeDriftColReport.clean_percentiles.p75,
                             shiftVal: activeDriftColReport.shift?.p75_shift_pct,
                           },
                           {
-                            label: 'P95 (Cola Superior)',
+                            label: t.driftAnalytics?.p95Label ?? 'P95 (Cola Superior)',
                             rawVal: activeDriftColReport.raw_percentiles?.p95,
                             cleanVal: activeDriftColReport.clean_percentiles.p95,
                             shiftVal: activeDriftColReport.shift?.p95_shift_pct,
@@ -2839,11 +2839,11 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                                 {row.label}
                               </div>
                               <div>
-                                <span style={{ color: 'var(--text-muted)' }}>Crudo: </span>
+                                <span style={{ color: 'var(--text-muted)' }}>{t.driftAnalytics?.rawPrefix ?? 'Crudo:'}{' '}</span>
                                 <span style={{ fontWeight: 600 }}>{row.rawVal !== undefined ? row.rawVal : 'N/D'}</span>
                               </div>
                               <div>
-                                <span style={{ color: 'var(--text-muted)' }}>Limpio: </span>
+                                <span style={{ color: 'var(--text-muted)' }}>{t.driftAnalytics?.cleanPrefix ?? 'Limpio:'}{' '}</span>
                                 <span className="text-emerald" style={{ fontWeight: 700 }}>{row.cleanVal}</span>
                               </div>
                               <div style={{ textAlign: 'right' }}>
@@ -2879,7 +2879,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                         <th>{t.driftAnalytics?.colMaxShift || 'Δ Máx'}</th>
                         <th>{t.driftAnalytics?.colKs || 'KS Stat'}</th>
                         <th>{t.driftAnalytics?.colAnomalies || 'Anomalías'}</th>
-                        <th>Alertas</th>
+                        <th>{t.driftAnalytics?.alertsHeader ?? 'Alertas'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2932,7 +2932,7 @@ DIVIDE([Registros_Validos], [Total_Registros], 1.0) * 100`}
                                 }`}
                                 style={{ fontSize: '0.65rem' }}
                               >
-                                {col.alerts.length} alertas
+                                {(t.driftAnalytics?.alertsCountBadge ?? '{n} alertas').replace('{n}', String(col.alerts.length))}
                               </span>
                             ) : (
                               <span style={{ color: 'var(--text-dim)' }}>0</span>
