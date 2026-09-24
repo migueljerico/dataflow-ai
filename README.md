@@ -11,7 +11,7 @@
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2075%20frontend%20%7C%203%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.25.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.25.1-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -114,6 +114,12 @@ Recorrido completo por el flujo de trabajo de DataFlow AI, desde la ingesta del 
 *Visualizador interactivo del modelo estrella generado tras la limpieza ETL: diagrama SVG con la tabla de hechos al centro (`Order_Details`), dimensiones de atributo y calendario en órbita (`Customers`, `Orders`, `Products`, `Categories`, `Employees`, `Shippers`, `Dim_Date`), relaciones con cardinalidad `1:*` y auditoría de integridad referencial (100% OK); el modelo se exporta en formato TMDL para Power BI Desktop con medidas DAX de negocio preparadas.*
 
 ![Vista Previa — Esquema Estrella del Modelo Semántico](./docs/capturas/captura_dataflow_ai_esquema_estrella_v2.png)
+
+### 8️⃣ Dashboard Ejecutivo del Paso 5 (Business Analytics)
+
+*Maqueta del dashboard generado en el Paso 5 con estética «Power BI ejecutivo»: cabecera ejecutiva con título y prioridad del blueprint, 4 slicers interactivos (Ciudad, Categoría y Fecha), tarjetas de KPI (Ventas totales, Nº de pedidos, Ticket medio y Margen bruto), evolución mensual de ventas, distribución por categoría en donut, ventas por zona con barras horizontales, Top 5 de productos y las 3 preguntas de negocio que responde, selladas con el pie de gobernanza «La IA propone, el usuario decide, Python ejecuta».*
+
+![Vista Previa — Dashboard Ejecutivo del Paso 5](./docs/capturas/captura_dataflow_ai_dashboard_ejecutivo.png)
 
 ---
 
@@ -353,7 +359,8 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.25.0):** Historial de propuestas con retención configurable (TTL), exportación de blueprints a TMDL y proyecto PBIP, rediseño estético «Power BI ejecutivo» de la maqueta (KPIs en círculo, barras horizontales, donut con % en anillo) e i18n completa de los 13 idiomas (704 claves por bloque, 0 faltantes), desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Última versión (v1.25.1):** Nueva vista previa 8 en el README con el dashboard ejecutivo del Paso 5 (slicers, KPIs y gráficos «Power BI ejecutivo»), desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Versión v1.25.0:** Historial de propuestas con retención configurable (TTL), exportación de blueprints a TMDL y proyecto PBIP, rediseño estético «Power BI ejecutivo» de la maqueta (KPIs en círculo, barras horizontales, donut con % en anillo) e i18n completa de los 13 idiomas (704 claves por bloque, 0 faltantes), desarrollada con **MiMo 2.6 Flash** (OpenCode).
 - **Versión v1.24.0:** Persistencia Fase 2 de blueprints en `StorageBackend`/GCS y edición HITL completa del Paso 5 (KPIs, visuales, paletas WCAG y revalidación), desarrollada con **MiMo V2.6 Flash Free** (OpenCode).
 - **Versión v1.23.1:** Exportaciones reales del dashboard (PNG 3x, PDF apaisado y HTML autocontenido) y rediseño visible del preview ejecutivo, desarrollada con **Muse Spark 1.3 Free** (OpenCode).
 - **Versión v1.23.0:** Dashboard ejecutivo con layout limpio sin tips DAX y exportación PNG 3x, PDF y HTML, desarrollada con **MiMo V2.5 Free** (OpenCode).

@@ -4,6 +4,21 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.25.1] — 2026-09-24
+
+### 📸 Nueva Vista Previa 8 en el README: Dashboard Ejecutivo del Paso 5
+
+> **Motivación:** El README mostraba 7 vistas previas pero ninguna recogía el aspecto final del dashboard ejecutivo que genera la app en el Paso 5 tras el rediseño «Power BI ejecutivo» de v1.25.0.
+
+#### 🛠️ Cambios Realizados
+- **Captura nueva:** `docs/capturas/captura_dataflow_ai_dashboard_ejecutivo.png` con el dashboard «Análisis de Venta y Estrategia Comercial» (slicers, KPIs, evolución mensual, donut por categoría, ventas por zona, Top 5 productos y pie de gobernanza).
+- **README:** Nuevo punto **8️⃣ Dashboard Ejecutivo del Paso 5 (Business Analytics)** dentro de *Vista Previa de la Aplicación*, con descripción al estilo de los puntos 1–7.
+
+#### 🧪 Verificación
+- **Backend:** 318/318 tests pasando | Ruff/Black/Bandit limpios.
+- **Frontend:** 75/75 tests pasando | `tsc` y Vite build sin errores.
+- **Atribución:** Desarrollada con **MiMo 2.6 Flash** (OpenCode).
+
 ## [1.25.0] — 2026-09-24
 
 ### 🗂️ Historial de Blueprints con TTL, Exportación TMDL/PBIP, Maqueta «Power BI Ejecutivo» e i18n Completa en 13 Idiomas
