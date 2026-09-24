@@ -119,7 +119,7 @@ Recorrido completo por el flujo de trabajo de DataFlow AI, desde la ingesta del 
 
 *Maqueta del dashboard generado en el Paso 5 con estética «Power BI ejecutivo»: cabecera ejecutiva con título y prioridad del blueprint, 4 slicers interactivos (Ciudad, Categoría y Fecha), tarjetas de KPI (Ventas totales, Nº de pedidos, Ticket medio y Margen bruto), evolución mensual de ventas, distribución por categoría en donut, ventas por zona con barras horizontales, Top 5 de productos y las 3 preguntas de negocio que responde, selladas con el pie de gobernanza «La IA propone, el usuario decide, Python ejecuta».*
 
-![Vista Previa — Dashboard Ejecutivo del Paso 5](./docs/capturas/captura_dataflow_ai_dashboard_ejecutivo.png)
+![Vista Previa — Dashboard Ejecutivo del Paso 5](./docs/capturas/captura_dataflow_ai_dashboard.png)
 
 ---
 
