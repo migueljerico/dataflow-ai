@@ -1,8 +1,8 @@
 import React from 'react';
-import { ListChecks, BookOpen, Palette, Calculator, Square, TrendingUp, Info } from 'lucide-react';
-import { DashboardBlueprint } from '../types';
+import { ListChecks, BookOpen, Palette, Calculator, Square, TrendingUp, Info, BarChart3, Filter, CheckCircle2 } from 'lucide-react';
+import { DashboardBlueprint, VisualType, VisualRecommendation } from '../types';
 import { useLanguage } from '../context/LanguageContext';
-import type { PowerBiGuideStep } from '../i18n';
+import type { PowerBiGuideStep, PowerBiVisualRecipe } from '../i18n';
 
 interface Props {
   blueprint: DashboardBlueprint;
@@ -33,6 +33,15 @@ const DEFAULT_GUIDE = {
   srcShapesLabel: 'Cuadros de texto y formas en informes',
   srcFormatLabel: 'Panel Formato: pestaña General',
   srcKpiLabel: 'Visuales KPI',
+  srcOverviewLabel: 'Información general de visualizaciones',
+  srcSlicersLabel: 'Introducción a las segmentaciones',
+  srcShareLabel: 'Compartir y colaborar en informes y paneles',
+  visualsLabel: 'Tus visuales del Blueprint (pestaña Visuales)',
+  visualFieldsLabel: 'Campos',
+  kpisLabel: 'Tus KPIs del Blueprint',
+  filtersLabel: 'Tus filtros del Blueprint (pestaña Resumen)',
+  filterValuesLabel: 'Valores recomendados',
+  questionsLabel: 'Preguntas de negocio que debe responder',
   step1: {
     title: 'Carga el modelo en Power BI',
     intro: 'Abre Power BI Desktop y trae el modelo que DataFlow AI ha preparado para ti antes de diseñar.',
@@ -89,6 +98,148 @@ const DEFAULT_GUIDE = {
     ],
     note: 'Si el KPI no muestra el eje de tendencia, comprueba que la columna de Valor sea continua y no contenga valores NULL.',
   },
+  step6: {
+    title: 'Crea los visuales de la pestaña Visuales',
+    intro: 'Visuales propone un tipo concreto para cada pregunta de negocio. Para cada tipo presente en tu Blueprint tienes abajo su receta: nombre real del icono, ruta en la interfaz, campos que hay que arrastrar y su artículo oficial de Microsoft Learn.',
+    route: 'Panel Visualizaciones → icono del tipo de visual',
+    items: [
+      'Pulsa el icono del tipo de visual indicado en la receta (panel Visualizaciones) y arrastra desde el panel Datos los campos del visual a los pozos de campo: dimensión en el eje de categorías, medida en Valores y campo de leyenda si la receta lo indica.',
+      'Crea un visual por cada título de la pestaña Visuales: así el informe cubre exactamente las mismas preguntas que la pestaña Resumen.',
+      'Ordena antes de formatear: Más opciones (...) → Ordenar → Ordenar por valor → Orden descendente; si el visual es un ranking, aplica un filtro de nivel superior (Top N) desde el panel Filtros.',
+      'Aplica la paleta del Blueprint en Formato visual → General (Título y propiedades) y en Colores de datos para mantener el contraste WCAG validado en la pestaña Diseño.',
+    ],
+    note: 'No renombres campos ni medidas del Blueprint: los visuales se construyen con los mismos nombres para que todo el Dashboard sea coherente.',
+  },
+  step7: {
+    title: 'Añade las segmentaciones (slicers) de tus filtros',
+    intro: 'Los filtros del Blueprint se materializan como segmentaciones visibles en el lienzo y como filtros de página o de objeto visual en el panel Filtros.',
+    route: 'Panel Visualizaciones → icono Segmentación de datos (Slicer)',
+    items: [
+      'Crea una segmentación por cada filtro de la lista inferior: selecciona el icono Segmentación de datos (Slicer) del panel Visualizaciones y arrastra el campo indicado (tabla y columna del Blueprint).',
+      'Elige el estilo en Formato visual → Visual: lista vertical, lista desplegable o selección de fechas según el tipo de campo.',
+      'Aplica los valores recomendados del Blueprint como valores iniciales y activa Selección única cuando el filtro no admita varios valores.',
+      'Los filtros que no deben verse en el lienzo van al panel Filtros (filtros de página y de objeto visual): están ocultos hasta que el autor los abre, mientras que las segmentaciones siempre son visibles e interactivas.',
+    ],
+    note: 'Segmentaciones y panel Filtros se complementan: segmentaciones para los filtros frecuentes que verá el usuario y panel Filtros para el filtrado complejo del autor.',
+  },
+  step8: {
+    title: 'Verifica las preguntas de negocio y comparte el informe',
+    intro: 'Antes de publicar, comprueba que cada pregunta de negocio del Blueprint tiene su visual y su medida en el informe.',
+    route: 'Inicio → Publicar',
+    items: [
+      'Recorre la lista inferior de preguntas de negocio (pestaña Resumen) y confirma que cada una tiene un visual de la pestaña Visuales que la responde con la medida indicada.',
+      'Revisa las comprobaciones de validación del Blueprint antes de compartir: si hay avisos, explicalos en el informe o corrige los datos en el origen.',
+      'Publica el informe: Inicio → Publicar y elige tu espacio de trabajo en el servicio Power BI; después comparte el enlace con permisos de lectura.',
+      'Si cambian los datos, vuelve a generar el Blueprint en DataFlow AI en lugar de editar el modelo a mano: la IA propone, tú apruebas y Power BI ejecuta.',
+    ],
+    note: 'Guarda junto al informe publicado el .pbip descargado de la pestaña Power BI: es la fuente determinista del modelo y de las medidas.',
+  },
+  visualTypes: {
+    bar: {
+      name: 'Gráfico de columnas (barras verticales)',
+      route: 'Panel Visualizaciones → icono Gráfico de columnas agrupadas',
+      items: [
+        'Eje X (categorías) = la dimensión del visual; Valores = la medida. Cada columna es una categoría y su altura, el valor.',
+        'Ordena por valor: Más opciones (...) → Ordenar → Ordenar por valor → Orden descendente para leer la comparación de un vistazo.',
+        'Si los nombres de categoría son largos, cambia al icono Gráfico de barras agrupadas (barras horizontales): Microsoft recomienda las barras cuando las etiquetas de categoría son largas.',
+      ],
+      srcLabel: 'Gráficos de columnas en Power BI',
+    },
+    horizontal_bar: {
+      name: 'Gráfico de barras horizontales (ranking)',
+      route: 'Panel Visualizaciones → icono Gráfico de barras agrupadas',
+      items: [
+        'Eje Y = la dimensión del ranking; Valores = la medida. Las barras horizontales dejan leer con calma etiquetas largas.',
+        'Ordena por valor descendente (Más opciones (...) → Ordenar → Ordenar por valor) y limita las categorías con un filtro de nivel superior (Top N) del panel Filtros.',
+        'Añade etiquetas de datos: Formato visual → Etiquetas de datos → activar, para leer cada valor sin seguir la escala del eje.',
+      ],
+      srcLabel: 'Gráficos de columnas en Power BI',
+    },
+    line: {
+      name: 'Gráfico de líneas',
+      route: 'Panel Visualizaciones → icono Gráfico de líneas',
+      items: [
+        'Eje X = la dimensión temporal (columna de fecha del Blueprint); Valores = la medida de la tendencia.',
+        'Ordena la fecha de forma ascendente antes de leer la tendencia (Más opciones (...) → Ordenar → Orden ascendente).',
+        'Las líneas enfatizan la forma general de los valores a lo largo del tiempo: úsalas para evolución y estacionalidad, no para comparar magnitudes puntuales.',
+      ],
+      srcLabel: 'Gráficos de líneas en Power BI',
+    },
+    area: {
+      name: 'Gráfico de áreas',
+      route: 'Panel Visualizaciones → icono Gráfico de áreas',
+      items: [
+        'El gráfico de áreas parte del gráfico de líneas y rellena el área entre la línea y el eje: comunica volumen además de tendencia.',
+        'Campos igual que en líneas: eje X temporal y Valores con la medida; usa áreas apiladas solo si las series no se solapan.',
+      ],
+      srcLabel: 'Gráficos de áreas básicos en Power BI',
+    },
+    stacked_bar: {
+      name: 'Gráfico apilado (columnas o barras)',
+      route: 'Panel Visualizaciones → icono Gráfico de columnas apiladas',
+      items: [
+        'Eje de categorías = dimensión, Valores = medida y Leyenda = campo de serie para descomponer cada barra en sus partes.',
+        'Elige Gráfico de columnas apiladas (vertical) o Gráfico de barras apiladas (horizontal) según la longitud de las etiquetas; existe también la variante 100 % apilada para comparar proporciones.',
+      ],
+      srcLabel: 'Gráficos de columnas en Power BI',
+    },
+    pie: {
+      name: 'Gráfico circular',
+      route: 'Panel Visualizaciones → icono Gráfico circular',
+      items: [
+        'Leyenda = la dimensión; Valores = la medida. Cada sector es la proporción de una categoría sobre el total.',
+        'Muestra los porcentajes en las etiquetas: Formato visual → Etiquetas de datos → detalles de la etiqueta → porcentaje.',
+      ],
+      srcLabel: 'Gráficos circulares y de anillos',
+    },
+    donut: {
+      name: 'Gráfico de anillos',
+      route: 'Panel Visualizaciones → icono Gráfico de anillos',
+      items: [
+        'Mismos pozos que el circular: Leyenda = dimensión y Valores = medida; el agujero central deja espacio para el total.',
+        'Mantén pocas categorías: con muchas series los sectores son difíciles de comparar; en ese caso usa un gráfico de barras.',
+      ],
+      srcLabel: 'Gráficos circulares y de anillos',
+    },
+    scatter: {
+      name: 'Diagrama de dispersión (dispersión y burbujas)',
+      route: 'Panel Visualizaciones → icono Gráfico de dispersión',
+      items: [
+        'Arrastra los campos a los pozos de campo: eje X = primera columna numérica, eje Y = segunda y Leyenda = la dimensión que colorea los puntos.',
+        'Con Detalle y Tamaño conviertes el gráfico en burbujas: el tamaño de la burbuja pasa a ser una tercera medida.',
+        'Añade una línea de tendencia desde el panel Análisis para leer la correlación entre ambos ejes.',
+      ],
+      srcLabel: 'Gráficos de dispersión y burbujas',
+    },
+    histogram: {
+      name: 'Histograma (discretización + columnas)',
+      route: 'Panel Datos → clic derecho en la columna → Nuevo grupo',
+      items: [
+        'Power BI no incluye un visual de histograma: se construye con discretización (binning). En el panel Datos, haz clic derecho en la columna numérica y elige Nuevo grupo.',
+        'En el cuadro de diálogo Grupos, establece el tamaño del intervalo y pulsa Aceptar: aparece un campo nuevo en el panel Datos con «(discretizaciones)» añadido.',
+        'Crea un Gráfico de columnas agrupadas con la columna de intervalos en el eje X y el recuento (o la medida) en Valores, y ordena los intervalos de menor a mayor.',
+      ],
+      srcLabel: 'Agrupación y discretización en Power BI Desktop',
+    },
+    table: {
+      name: 'Tabla',
+      route: 'Panel Visualizaciones → icono Tabla',
+      items: [
+        'Arrastra las dimensiones y las medidas a la sección de campos: cada campo se convierte en una columna de la tabla.',
+        'Da formato numérico desde el menú desplegable del campo (formato de número) y resalta condiciones con formato condicional (barra de datos o iconos).',
+      ],
+      srcLabel: 'Visualizaciones de tabla en Power BI',
+    },
+    kpi_card: {
+      name: 'Indicador (KPI)',
+      route: 'Panel Visualizaciones → icono KPI',
+      items: [
+        'Sigue el Paso 5 de esta guía: Valor = la medida del Blueprint, Eje de tendencia = columna de fecha y Destino = la meta.',
+        'Usa el mismo título que aparece en la pestaña Resumen para que el KPI del informe se identifique con el del Blueprint.',
+      ],
+      srcLabel: 'Visuales KPI',
+    },
+  },
 };
 
 const cardStyle: React.CSSProperties = {
@@ -111,14 +262,56 @@ const routeStyle: React.CSSProperties = {
   wordBreak: 'break-word',
 };
 
-const STEP_ICONS = [Calculator, Calculator, Square, Palette, TrendingUp];
+const STEP_ICONS = [Calculator, Calculator, Square, Palette, TrendingUp, BarChart3, Filter, CheckCircle2];
+
+const blockStyle: React.CSSProperties = {
+  marginTop: '10px',
+  padding: '10px 12px',
+  backgroundColor: 'var(--bg-input)',
+  borderRadius: '8px',
+};
+
+const blockLabelStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 700,
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+};
+
+const chipStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--text-main)',
+  backgroundColor: 'var(--bg-card)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '6px',
+  padding: '3px 8px',
+};
+
+/** Artículo verificado de Microsoft Learn para cada tipo de visual del Blueprint. */
+const VISUAL_DOC: Record<VisualType, string> = {
+  bar: 'visuals/power-bi-visualization-column-charts',
+  horizontal_bar: 'visuals/power-bi-visualization-column-charts',
+  stacked_bar: 'visuals/power-bi-visualization-column-charts',
+  line: 'visuals/power-bi-line-chart',
+  area: 'visuals/power-bi-visualization-basic-area-chart',
+  pie: 'visuals/power-bi-visualization-pie-donut-chart',
+  donut: 'visuals/power-bi-visualization-pie-donut-chart',
+  scatter: 'visuals/power-bi-visualization-scatter',
+  histogram: 'create-reports/desktop-grouping-and-binning',
+  table: 'visuals/power-bi-visualization-tables',
+  kpi_card: 'visuals/power-bi-visualization-kpi',
+};
 
 const stepNumbered = (label: string, value: string): string => label.replace('{n}', value);
 
 /**
  * Guía paso a paso (Paso 5) para construir el Dashboard en Power BI Desktop.
  * Todo el contenido procede de la documentación oficial de Microsoft Learn y
- * se personaliza con datos reales del Blueprint (medidas DAX y paleta).
+ * se personaliza con datos reales del Blueprint (medidas DAX, KPIs, paleta,
+ * visuales por tipo, filtros y preguntas de negocio), de modo que la guía
+ * explica exactamente las mismas propuestas del resto de pestañas.
  */
 export const PowerBiBuildGuide: React.FC<Props> = ({ blueprint }) => {
   const { t, language } = useLanguage();
@@ -126,15 +319,39 @@ export const PowerBiBuildGuide: React.FC<Props> = ({ blueprint }) => {
   const locale = language === 'en' ? 'en-us' : 'es-es';
   const doc = (path: string): string => `https://learn.microsoft.com/${locale}/power-bi/${path}`;
 
-  const steps: PowerBiGuideStep[] = [g.step1, g.step2, g.step3, g.step4, g.step5];
+  const steps: PowerBiGuideStep[] = [g.step1, g.step2, g.step3, g.step4, g.step5, g.step6, g.step7, g.step8];
   const measures = (blueprint.dax_measures ?? []).slice(0, 6);
   const palette = blueprint.design?.palette;
+  const kpis = (blueprint.kpis ?? []).filter((kpi) => !kpi.hidden).slice(0, 6);
+  const filters = (blueprint.filters ?? []).filter((filter) => !filter.hidden).slice(0, 6);
+  const questions = (blueprint.business_questions ?? []).slice(0, 6);
+  const recipes: Partial<Record<VisualType, PowerBiVisualRecipe>> = g.visualTypes ?? {};
+  /** Tipos de visual propuestos agrupados en el mismo orden en que aparecen. */
+  const visualGroups: Array<{ type: VisualType; items: VisualRecommendation[] }> = [];
+  for (const visual of blueprint.visuals ?? []) {
+    if (visual.hidden) continue;
+    const group = visualGroups.find((entry) => entry.type === visual.visual_type);
+    if (group) group.items.push(visual);
+    else visualGroups.push({ type: visual.visual_type, items: [visual] });
+  }
+
   const sources: GuideSource[] = [
     { href: doc('transform-model/desktop-measures'), label: g.srcMeasuresLabel },
     { href: doc('create-reports/power-bi-reports-add-text-and-shapes'), label: g.srcShapesLabel },
     { href: doc('visuals/power-bi-visualization-format-pane-overview'), label: g.srcFormatLabel },
     { href: doc('visuals/power-bi-visualization-kpi'), label: g.srcKpiLabel },
+    { href: doc('visuals/power-bi-visualizations-overview'), label: g.srcOverviewLabel },
+    { href: doc('visuals/power-bi-visualization-slicers'), label: g.srcSlicersLabel },
+    { href: doc('collaborate-share/service-share-dashboards'), label: g.srcShareLabel },
   ];
+  // Fuentes dinámicas: solo los artículos de los tipos de visual presentes en el Blueprint.
+  const seenSources = new Set(sources.map((source) => source.href));
+  for (const group of visualGroups) {
+    const href = doc(VISUAL_DOC[group.type]);
+    if (seenSources.has(href)) continue;
+    seenSources.add(href);
+    sources.push({ href, label: recipes[group.type]?.srcLabel ?? g.srcOverviewLabel });
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} data-testid="powerbi-guide">
@@ -180,12 +397,16 @@ export const PowerBiBuildGuide: React.FC<Props> = ({ blueprint }) => {
         </div>
       </div>
 
-      {/* Pasos 1-5 */}
+      {/* Pasos 1-8 */}
       {steps.map((step, index) => {
         const Icon = STEP_ICONS[index] ?? ListChecks;
         const stepNo = index + 1;
         const isDaxStep = stepNo === 2;
         const isPaletteStep = stepNo === 4;
+        const isKpiStep = stepNo === 5;
+        const isVisualsStep = stepNo === 6;
+        const isFiltersStep = stepNo === 7;
+        const isQuestionsStep = stepNo === 8;
         return (
           <div key={step.title} className="card" style={cardStyle} data-testid={`powerbi-guide-step-${stepNo}`}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -284,6 +505,117 @@ export const PowerBiBuildGuide: React.FC<Props> = ({ blueprint }) => {
                           />
                           <span style={{ fontSize: '12px', color: 'var(--text-main)' }}>{swatch.label}</span>
                           <code style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{swatch.color}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Personalización con los KPIs reales del Blueprint (pestaña Resumen) */}
+                {isKpiStep && kpis.length > 0 && (
+                  <div style={blockStyle}>
+                    <div style={blockLabelStyle}>{g.kpisLabel}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }} data-testid="powerbi-guide-kpis">
+                      {kpis.map((kpi) => (
+                        <code key={kpi.kpi_id} style={chipStyle}>
+                          {kpi.title} · {kpi.dax_measure_name}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Receta por cada tipo de visual propuesto en la pestaña Visuales */}
+                {isVisualsStep && visualGroups.length > 0 && (
+                  <div style={blockStyle}>
+                    <div style={blockLabelStyle}>{g.visualsLabel}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }} data-testid="powerbi-guide-visuals">
+                      {visualGroups.map((group) => {
+                        const recipe = recipes[group.type];
+                        return (
+                          <div
+                            key={group.type}
+                            style={{ padding: '10px 12px', backgroundColor: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                            data-testid={`powerbi-guide-visual-recipe-${group.type}`}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{recipe?.name ?? group.type}</span>
+                              {recipe && (
+                                <code style={routeStyle} data-testid={`powerbi-guide-visual-recipe-${group.type}-route`}>
+                                  {recipe.route}
+                                </code>
+                              )}
+                            </div>
+                            <ol style={{ margin: '8px 0 0 0', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {(recipe?.items ?? []).map((item, i) => (
+                                <li key={i} style={{ fontSize: '12.5px', color: 'var(--text-main)', lineHeight: 1.5 }}>
+                                  {item}
+                                </li>
+                              ))}
+                            </ol>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
+                              {group.items.map((visual) => (
+                                <div key={visual.visual_id} style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                                  <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{visual.title}</span>
+                                  {(visual.fields ?? []).length > 0 && (
+                                    <span>
+                                      {' '}
+                                      · {g.visualFieldsLabel}: {(visual.fields ?? []).join(', ')}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {recipe && (
+                              <a
+                                href={doc(VISUAL_DOC[group.type])}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: 'inline-block', marginTop: '8px', fontSize: '12px', color: 'var(--primary)', textDecoration: 'none' }}
+                                data-testid={`powerbi-guide-visual-recipe-${group.type}-src`}
+                              >
+                                {recipe.srcLabel} ↗
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Filtros del Blueprint convertidos en segmentaciones (pestaña Resumen) */}
+                {isFiltersStep && filters.length > 0 && (
+                  <div style={blockStyle}>
+                    <div style={blockLabelStyle}>{g.filtersLabel}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }} data-testid="powerbi-guide-filters">
+                      {filters.map((filter) => (
+                        <div key={filter.filter_id} style={{ padding: '8px 10px', backgroundColor: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{filter.label}</div>
+                          <code style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
+                            {filter.table_ref}.{filter.column}
+                          </code>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            {g.filterValuesLabel}: {filter.recommended_values.slice(0, 3).join(', ')}
+                            {filter.recommended_values.length > 3 && ` +${filter.recommended_values.length - 3}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Preguntas de negocio que el informe debe responder (pestaña Resumen) */}
+                {isQuestionsStep && questions.length > 0 && (
+                  <div style={blockStyle}>
+                    <div style={blockLabelStyle}>{g.questionsLabel}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }} data-testid="powerbi-guide-questions">
+                      {questions.map((question) => (
+                        <div
+                          key={question.question_id}
+                          style={{ fontSize: '12.5px', color: 'var(--text-main)', lineHeight: 1.45, padding: '6px 8px', backgroundColor: 'var(--bg-card)', borderRadius: '6px' }}
+                        >
+                          {question.text}
                         </div>
                       ))}
                     </div>

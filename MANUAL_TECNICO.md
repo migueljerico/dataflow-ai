@@ -1,6 +1,6 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.26.0  
+**Versión:** 1.27.0  
 **Fecha de actualización:** 26 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
@@ -330,6 +330,7 @@ migueljerico/dataflow-ai/
 | `ExecutionReport.tsx` | Comparativa antes/después de la ejecución, logs de auditoría, botones de descarga y reinicio. |
 | `ScheduledReportsPanel.tsx` | Exportación ejecutiva PDF/HTML y gestión de exportaciones programadas con webhook (formato, intervalo, trigger `always`/`critical_drift`), ejecución forzada y descarga del último reporte. |
 | `BusinessInsights.tsx` | Visualización de KPIs ejecutivos de negocio calculados por el backend. |
+| `PowerBiBuildGuide.tsx` | Pestaña «Guía paso a paso» del Paso 5: 8 pasos con rutas reales de la UI de Power BI (carga del modelo, medidas DAX, título, formato, KPI, visuales, segmentaciones y publicación), receta por cada tipo de visual de la pestaña Visuales, listados de KPIs, filtros y preguntas de negocio del Blueprint, y fuentes dinámicas de Microsoft Learn localizadas (`es-es`/`en-us`). |
 | `ApiKeyModal.tsx` | Modal para configurar/eliminar la API Key de Google Gemini almacenada en localStorage. |
 
 ### 6.2 Otros Archivos Frontend

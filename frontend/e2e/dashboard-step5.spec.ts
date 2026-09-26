@@ -108,7 +108,7 @@ test.describe('Paso 5 — Edición HITL, historial, exports, guía Power BI e i1
     await page.locator('button', { hasText: /^Guía paso a paso$/ }).click();
     const guide = page.locator('[data-testid="powerbi-guide"]');
     await expect(guide).toBeVisible();
-    for (let step = 1; step <= 5; step += 1) {
+    for (let step = 1; step <= 8; step += 1) {
       await expect(guide.locator(`[data-testid="powerbi-guide-step-${step}"]`)).toBeVisible();
     }
     // Rutas reales de la interfaz (verificadas contra Microsoft Learn)
@@ -116,9 +116,25 @@ test.describe('Paso 5 — Edición HITL, historial, exports, guía Power BI e i1
     await expect(guide.locator('[data-testid="powerbi-guide-step-3-route"]')).toContainText('Insertar → Elementos → Formas');
     await expect(guide.locator('[data-testid="powerbi-guide-step-4"]')).toContainText('esquinas redondeadas');
     await expect(guide.locator('[data-testid="powerbi-guide-step-5"]')).toContainText('Eje de tendencia');
+    await expect(guide.locator('[data-testid="powerbi-guide-step-6-route"]')).toContainText('Panel Visualizaciones → icono del tipo de visual');
+    await expect(guide.locator('[data-testid="powerbi-guide-step-7-route"]')).toContainText('Segmentación de datos (Slicer)');
+    await expect(guide.locator('[data-testid="powerbi-guide-step-8-route"]')).toContainText('Inicio → Publicar');
+    // Coherencia con la pestaña Visuales: hay una receta por cada tipo propuesto
+    const recipeCount = await guide.locator('[data-testid^="powerbi-guide-visual-recipe-"]').count();
+    expect(recipeCount).toBeGreaterThan(0);
+    // Los filtros y las preguntas de negocio del Blueprint se listan en la guía
+    const filterCount = await guide.locator('[data-testid="powerbi-guide-filters"] > div').count();
+    expect(filterCount).toBeGreaterThan(0);
+    const questionCount = await guide.locator('[data-testid="powerbi-guide-questions"] > div').count();
+    expect(questionCount).toBeGreaterThan(0);
     // Fuentes oficiales localizadas (es-es)
     const sourceHref = await guide.locator('[data-testid="powerbi-guide-sources"] a').first().getAttribute('href');
     expect(sourceHref).toContain('/es-es/power-bi/transform-model/desktop-measures');
+    const sourceHrefs = await guide.locator('[data-testid="powerbi-guide-sources"] a').evaluateAll((links) =>
+      links.map((link) => link.getAttribute('href')),
+    );
+    expect(sourceHrefs.length).toBeGreaterThan(7);
+    expect(sourceHrefs.some((href) => href?.endsWith('power-bi-visualization-column-charts') || href?.endsWith('power-bi-line-chart'))).toBe(true);
 
     // ── Descargas de la maqueta ejecutiva: PNG, PDF y HTML ───────────────────
     await page.locator('button', { hasText: /^Ejemplo$/ }).click();
@@ -165,6 +181,10 @@ test.describe('Paso 5 — Edición HITL, historial, exports, guía Power BI e i1
     await expect(guide).toBeVisible();
     await expect(guide.locator('[data-testid="powerbi-guide-title"]')).toContainText('build your Dashboard in Power BI');
     await expect(guide.locator('[data-testid="powerbi-guide-step-4"]')).toContainText('Rounded corners');
+    await expect(guide.locator('[data-testid="powerbi-guide-step-6-route"]')).toContainText('Visualizations pane → visual type icon');
+    await expect(guide.locator('[data-testid="powerbi-guide-step-7-route"]')).toContainText('Slicer icon');
+    const recipeCountEn = await guide.locator('[data-testid^="powerbi-guide-visual-recipe-"]').count();
+    expect(recipeCountEn).toBe(recipeCount);
     const sourceHrefEn = await guide.locator('[data-testid="powerbi-guide-sources"] a').first().getAttribute('href');
     expect(sourceHrefEn).toContain('/en-us/power-bi/transform-model/desktop-measures');
 

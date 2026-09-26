@@ -4,6 +4,29 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.27.0] — 2026-09-26
+
+### 📖 Guía Paso a Paso Ampliada (8 Pasos) y Documentación de la Guía en el README
+
+> **Motivación:** La «Guía paso a paso» (pestaña del Paso 5) solo tenía 5 pasos genéricos y no explicaba cómo crear los visuales que propone la pestaña «Visuales»; además, el README no dejaba constancia de que la app genera esa guía ni mostraba la coherencia de la aplicación con su fin (archivo sin tratar → limpieza → Dashboard que responde preguntas de negocio).
+
+#### 🛠️ Cambios Realizados
+- **Guía ampliada de 5 a 8 pasos** (`PowerBiBuildGuide.tsx`): 
+  - **Paso 6 — Visuales:** receta dinámica por cada tipo de visual presente en `blueprint.visuals` (11 tipos: `bar`, `horizontal_bar`, `line`, `area`, `stacked_bar`, `pie`, `donut`, `scatter`, `histogram`, `table`, `kpi_card`) con el nombre real del icono, la ruta en la interfaz (p. ej. `Panel Visualizaciones → icono Gráfico de columnas agrupadas`), 2-3 instrucciones de campos (pozos Eje/Valores/Leyenda, ordenación, etiquetas de datos), los **títulos y campos exactos** de tus visuales y enlace a su artículo de Microsoft Learn.
+  - **Paso 7 — Filtros:** segmentaciones (slicers) y panel Filtros con tus `filters` del Blueprint (tabla.columna, propósito y valores recomendados).
+  - **Paso 8 — Verificación:** tus `business_questions` para tildar una a una antes de publicar y compartir (`Inicio → Publicar`).
+  - **Paso 5:** lista ahora tus KPIs del Blueprint (título + medida DAX).
+- **i18n es/en completo** de los pasos 6-8, las etiquetas nuevas (`visualsLabel`, `filtersLabel`, `questionsLabel`, `kpisLabel`, …) y `visualTypes` (recetas por `VisualType`); `DEFAULT_GUIDE` conserva el castellano como fallback de los 13 idiomas. Nueva interfaz exportada `PowerBiVisualRecipe`.
+- **Fuentes oficiales dinámicas:** 4 base (medidas, formas, formato, KPI) + información general de visualizaciones, segmentaciones y uso compartido, **más un artículo por cada tipo de visual presente** (deduplicados: `bar`/`horizontal_bar`/`stacked_bar` → `column-charts`, `pie`/`donut` → `pie-donut-chart`, `histogram` → `desktop-grouping-and-binning`, etc.), servidos con la variante localizada `es-es`/`en-us`. Todas las rutas verificadas con HTTP 200 en ambos locales; terminología de UI confirmada («Nuevo grupo», «cuadro de diálogo Grupos → tamaño del intervalo», «(discretizaciones) añadido», «Segmentación de datos», «panel Datos»).
+- **Tests:** `PowerBiBuildGuide.test.tsx` ampliado a **8 pruebas** (8 pasos, recetas por tipo, bloques dinámicos omitidos cuando el Blueprint no tiene contenido, fuentes base 7 + dinámicas 11 sin duplicados, ES y EN); E2E `dashboard-step5.spec.ts` ampliado al bucle de **8 pasos** con rutas ES/EN, recetas, filtros y preguntas.
+- **README (redacción revisada):** nueva sección **«Ejemplo de Extremo a Extremo»** (archivo crudo → auditoría → plan ETL HITL → ejecución determinista → Blueprint/Dashboard, con la coherencia de las 6 pestañas del Paso 5), nueva sección **«Guía Paso a Paso en Power BI»** con la tabla de los 8 pasos, índice, diagrama de flujo, funcionalidades, captura 8️⃣, contadores (318 backend / 84 frontend / 406 total) y árbol del repositorio actualizados.
+
+#### ✅ Notas de la Release
+- Cobertura de la suite: **318 backend + 84 frontend (Vitest) + 4 E2E (Playwright)**, ruff/black/bandit limpios y `npm run build` sin errores de TypeScript.
+- La guía sigue el principio de gobernanza: la IA propone la receta, el usuario decide, Python ejecuta los datos.
+
+---
+
 ## [1.26.0] — 2026-09-26
 
 ### 🎓 Guía Paso a Paso para Power BI, E2E Ampliado del Paso 5 y Suite Playwright en CI

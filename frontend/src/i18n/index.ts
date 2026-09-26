@@ -1,3 +1,5 @@
+import type { VisualType } from '../types';
+
 export type Language =
   | 'es'
   | 'en'
@@ -43,6 +45,17 @@ export interface PowerBiGuideStep {
   route?: string;
   items: string[];
   note?: string;
+}
+
+/** Receta de un tipo de visual de la pestaña Visuales dentro de la guía. */
+export interface PowerBiVisualRecipe {
+  /** Nombre del tipo de visual en la interfaz localizada de Power BI. */
+  name: string;
+  /** Ruta exacta en la interfaz de Power BI para crear este tipo de visual. */
+  route: string;
+  items: string[];
+  /** Etiqueta del enlace al artículo de Microsoft Learn para este tipo. */
+  srcLabel: string;
 }
 
 export interface Translations {
@@ -826,11 +839,25 @@ export interface Translations {
     srcShapesLabel?: string;
     srcFormatLabel?: string;
     srcKpiLabel?: string;
+    srcOverviewLabel?: string;
+    srcSlicersLabel?: string;
+    srcShareLabel?: string;
+    visualsLabel?: string;
+    visualFieldsLabel?: string;
+    kpisLabel?: string;
+    filtersLabel?: string;
+    filterValuesLabel?: string;
+    questionsLabel?: string;
     step1?: PowerBiGuideStep;
     step2?: PowerBiGuideStep;
     step3?: PowerBiGuideStep;
     step4?: PowerBiGuideStep;
     step5?: PowerBiGuideStep;
+    step6?: PowerBiGuideStep;
+    step7?: PowerBiGuideStep;
+    step8?: PowerBiGuideStep;
+    /** Recetas por tipo de visual presentes en `blueprint.visuals`. */
+    visualTypes?: Partial<Record<VisualType, PowerBiVisualRecipe>>;
   };
   toast?: {
     title?: string;
@@ -1624,6 +1651,15 @@ export const translations: Record<Language, Translations> = {
       srcShapesLabel: 'Cuadros de texto y formas en informes',
       srcFormatLabel: 'Panel Formato: pestaña General',
       srcKpiLabel: 'Visuales KPI',
+      srcOverviewLabel: 'Información general de visualizaciones',
+      srcSlicersLabel: 'Introducción a las segmentaciones',
+      srcShareLabel: 'Compartir y colaborar en informes y paneles',
+      visualsLabel: 'Tus visuales del Blueprint (pestaña Visuales)',
+      visualFieldsLabel: 'Campos',
+      kpisLabel: 'Tus KPIs del Blueprint',
+      filtersLabel: 'Tus filtros del Blueprint (pestaña Resumen)',
+      filterValuesLabel: 'Valores recomendados',
+      questionsLabel: 'Preguntas de negocio que debe responder',
       step1: {
         title: 'Carga el modelo en Power BI',
         intro: 'Abre Power BI Desktop y trae el modelo que DataFlow AI ha preparado para ti antes de diseñar.',
@@ -1679,6 +1715,148 @@ export const translations: Record<Language, Translations> = {
           'Formato: icono del pincel (Dar formato al objeto visual) → Valor de llamada (unidades y decimales), Iconos (✓ verde / ! rojo), Eje de tendencia (Dirección → Más alto es mejor) y Etiqueta de destino.',
         ],
         note: 'Si el KPI no muestra el eje de tendencia, comprueba que la columna de Valor sea continua y no contenga valores NULL.',
+      },
+      step6: {
+        title: 'Crea los visuales de la pestaña Visuales',
+        intro: 'Visuales propone un tipo concreto para cada pregunta de negocio. Para cada tipo presente en tu Blueprint tienes abajo su receta: nombre real del icono, ruta en la interfaz, campos que hay que arrastrar y su artículo oficial de Microsoft Learn.',
+        route: 'Panel Visualizaciones → icono del tipo de visual',
+        items: [
+          'Pulsa el icono del tipo de visual indicado en la receta (panel Visualizaciones) y arrastra desde el panel Datos los campos del visual a los pozos de campo: dimensión en el eje de categorías, medida en Valores y campo de leyenda si la receta lo indica.',
+          'Crea un visual por cada título de la pestaña Visuales: así el informe cubre exactamente las mismas preguntas que la pestaña Resumen.',
+          'Ordena antes de formatear: Más opciones (...) → Ordenar → Ordenar por valor → Orden descendente; si el visual es un ranking, aplica un filtro de nivel superior (Top N) desde el panel Filtros.',
+          'Aplica la paleta del Blueprint en Formato visual → General (Título y propiedades) y en Colores de datos para mantener el contraste WCAG validado en la pestaña Diseño.',
+        ],
+        note: 'No renombres campos ni medidas del Blueprint: los visuales se construyen con los mismos nombres para que todo el Dashboard sea coherente.',
+      },
+      step7: {
+        title: 'Añade las segmentaciones (slicers) de tus filtros',
+        intro: 'Los filtros del Blueprint se materializan como segmentaciones visibles en el lienzo y como filtros de página o de objeto visual en el panel Filtros.',
+        route: 'Panel Visualizaciones → icono Segmentación de datos (Slicer)',
+        items: [
+          'Crea una segmentación por cada filtro de la lista inferior: selecciona el icono Segmentación de datos (Slicer) del panel Visualizaciones y arrastra el campo indicado (tabla y columna del Blueprint).',
+          'Elige el estilo en Formato visual → Visual: lista vertical, lista desplegable o selección de fechas según el tipo de campo.',
+          'Aplica los valores recomendados del Blueprint como valores iniciales y activa Selección única cuando el filtro no admita varios valores.',
+          'Los filtros que no deben verse en el lienzo van al panel Filtros (filtros de página y de objeto visual): están ocultos hasta que el autor los abre, mientras que las segmentaciones siempre son visibles e interactivas.',
+        ],
+        note: 'Segmentaciones y panel Filtros se complementan: segmentaciones para los filtros frecuentes que verá el usuario y panel Filtros para el filtrado complejo del autor.',
+      },
+      step8: {
+        title: 'Verifica las preguntas de negocio y comparte el informe',
+        intro: 'Antes de publicar, comprueba que cada pregunta de negocio del Blueprint tiene su visual y su medida en el informe.',
+        route: 'Inicio → Publicar',
+        items: [
+          'Recorre la lista inferior de preguntas de negocio (pestaña Resumen) y confirma que cada una tiene un visual de la pestaña Visuales que la responde con la medida indicada.',
+          'Revisa las comprobaciones de validación del Blueprint antes de compartir: si hay avisos, explicalos en el informe o corrige los datos en el origen.',
+          'Publica el informe: Inicio → Publicar y elige tu espacio de trabajo en el servicio Power BI; después comparte el enlace con permisos de lectura.',
+          'Si cambian los datos, vuelve a generar el Blueprint en DataFlow AI en lugar de editar el modelo a mano: la IA propone, tú apruebas y Power BI ejecuta.',
+        ],
+        note: 'Guarda junto al informe publicado el .pbip descargado de la pestaña Power BI: es la fuente determinista del modelo y de las medidas.',
+      },
+      visualTypes: {
+        bar: {
+          name: 'Gráfico de columnas (barras verticales)',
+          route: 'Panel Visualizaciones → icono Gráfico de columnas agrupadas',
+          items: [
+            'Eje X (categorías) = la dimensión del visual; Valores = la medida. Cada columna es una categoría y su altura, el valor.',
+            'Ordena por valor: Más opciones (...) → Ordenar → Ordenar por valor → Orden descendente para leer la comparación de un vistazo.',
+            'Si los nombres de categoría son largos, cambia al icono Gráfico de barras agrupadas (barras horizontales): Microsoft recomienda las barras cuando las etiquetas de categoría son largas.',
+          ],
+          srcLabel: 'Gráficos de columnas en Power BI',
+        },
+        horizontal_bar: {
+          name: 'Gráfico de barras horizontales (ranking)',
+          route: 'Panel Visualizaciones → icono Gráfico de barras agrupadas',
+          items: [
+            'Eje Y = la dimensión del ranking; Valores = la medida. Las barras horizontales dejan leer con calma etiquetas largas.',
+            'Ordena por valor descendente (Más opciones (...) → Ordenar → Ordenar por valor) y limita las categorías con un filtro de nivel superior (Top N) del panel Filtros.',
+            'Añade etiquetas de datos: Formato visual → Etiquetas de datos → activar, para leer cada valor sin seguir la escala del eje.',
+          ],
+          srcLabel: 'Gráficos de columnas en Power BI',
+        },
+        line: {
+          name: 'Gráfico de líneas',
+          route: 'Panel Visualizaciones → icono Gráfico de líneas',
+          items: [
+            'Eje X = la dimensión temporal (columna de fecha del Blueprint); Valores = la medida de la tendencia.',
+            'Ordena la fecha de forma ascendente antes de leer la tendencia (Más opciones (...) → Ordenar → Orden ascendente).',
+            'Las líneas enfatizan la forma general de los valores a lo largo del tiempo: úsalas para evolución y estacionalidad, no para comparar magnitudes puntuales.',
+          ],
+          srcLabel: 'Gráficos de líneas en Power BI',
+        },
+        area: {
+          name: 'Gráfico de áreas',
+          route: 'Panel Visualizaciones → icono Gráfico de áreas',
+          items: [
+            'El gráfico de áreas parte del gráfico de líneas y rellena el área entre la línea y el eje: comunica volumen además de tendencia.',
+            'Campos igual que en líneas: eje X temporal y Valores con la medida; usa áreas apiladas solo si las series no se solapan.',
+          ],
+          srcLabel: 'Gráficos de áreas básicos en Power BI',
+        },
+        stacked_bar: {
+          name: 'Gráfico apilado (columnas o barras)',
+          route: 'Panel Visualizaciones → icono Gráfico de columnas apiladas',
+          items: [
+            'Eje de categorías = dimensión, Valores = medida y Leyenda = campo de serie para descomponer cada barra en sus partes.',
+            'Elige Gráfico de columnas apiladas (vertical) o Gráfico de barras apiladas (horizontal) según la longitud de las etiquetas; existe también la variante 100 % apilada para comparar proporciones.',
+          ],
+          srcLabel: 'Gráficos de columnas en Power BI',
+        },
+        pie: {
+          name: 'Gráfico circular',
+          route: 'Panel Visualizaciones → icono Gráfico circular',
+          items: [
+            'Leyenda = la dimensión; Valores = la medida. Cada sector es la proporción de una categoría sobre el total.',
+            'Muestra los porcentajes en las etiquetas: Formato visual → Etiquetas de datos → detalles de la etiqueta → porcentaje.',
+          ],
+          srcLabel: 'Gráficos circulares y de anillos',
+        },
+        donut: {
+          name: 'Gráfico de anillos',
+          route: 'Panel Visualizaciones → icono Gráfico de anillos',
+          items: [
+            'Mismos pozos que el circular: Leyenda = dimensión y Valores = medida; el agujero central deja espacio para el total.',
+            'Mantén pocas categorías: con muchas series los sectores son difíciles de comparar; en ese caso usa un gráfico de barras.',
+          ],
+          srcLabel: 'Gráficos circulares y de anillos',
+        },
+        scatter: {
+          name: 'Diagrama de dispersión (dispersión y burbujas)',
+          route: 'Panel Visualizaciones → icono Gráfico de dispersión',
+          items: [
+            'Arrastra los campos a los pozos de campo: eje X = primera columna numérica, eje Y = segunda y Leyenda = la dimensión que colorea los puntos.',
+            'Con Detalle y Tamaño conviertes el gráfico en burbujas: el tamaño de la burbuja pasa a ser una tercera medida.',
+            'Añade una línea de tendencia desde el panel Análisis para leer la correlación entre ambos ejes.',
+          ],
+          srcLabel: 'Gráficos de dispersión y burbujas',
+        },
+        histogram: {
+          name: 'Histograma (discretización + columnas)',
+          route: 'Panel Datos → clic derecho en la columna → Nuevo grupo',
+          items: [
+            'Power BI no incluye un visual de histograma: se construye con discretización (binning). En el panel Datos, haz clic derecho en la columna numérica y elige Nuevo grupo.',
+            'En el cuadro de diálogo Grupos, establece el tamaño del intervalo y pulsa Aceptar: aparece un campo nuevo en el panel Datos con «(discretizaciones)» añadido.',
+            'Crea un Gráfico de columnas agrupadas con la columna de intervalos en el eje X y el recuento (o la medida) en Valores, y ordena los intervalos de menor a mayor.',
+          ],
+          srcLabel: 'Agrupación y discretización en Power BI Desktop',
+        },
+        table: {
+          name: 'Tabla',
+          route: 'Panel Visualizaciones → icono Tabla',
+          items: [
+            'Arrastra las dimensiones y las medidas a la sección de campos: cada campo se convierte en una columna de la tabla.',
+            'Da formato numérico desde el menú desplegable del campo (formato de número) y resalta condiciones con formato condicional (barra de datos o iconos).',
+          ],
+          srcLabel: 'Visualizaciones de tabla en Power BI',
+        },
+        kpi_card: {
+          name: 'Indicador (KPI)',
+          route: 'Panel Visualizaciones → icono KPI',
+          items: [
+            'Sigue el Paso 5 de esta guía: Valor = la medida del Blueprint, Eje de tendencia = columna de fecha y Destino = la meta.',
+            'Usa el mismo título que aparece en la pestaña Resumen para que el KPI del informe se identifique con el del Blueprint.',
+          ],
+          srcLabel: 'Visuales KPI',
+        },
       },
     },
     toast: {
@@ -2472,6 +2650,15 @@ export const translations: Record<Language, Translations> = {
       srcShapesLabel: 'Text boxes and shapes in reports',
       srcFormatLabel: 'Format pane: General tab',
       srcKpiLabel: 'KPI visuals',
+      srcOverviewLabel: 'Visualizations overview',
+      srcSlicersLabel: 'Overview of slicers',
+      srcShareLabel: 'Share and collaborate on reports and dashboards',
+      visualsLabel: 'Your Blueprint visuals (Visuales tab)',
+      visualFieldsLabel: 'Fields',
+      kpisLabel: 'Your Blueprint KPIs',
+      filtersLabel: 'Your Blueprint filters (Resumen tab)',
+      filterValuesLabel: 'Recommended values',
+      questionsLabel: 'Business questions the dashboard must answer',
       step1: {
         title: 'Load the model into Power BI',
         intro: 'Open Power BI Desktop and bring in the model DataFlow AI prepared for you before you start designing.',
@@ -2527,6 +2714,148 @@ export const translations: Record<Language, Translations> = {
           'Formatting: the paint brush icon (Format visual) → Callout value (units and decimals), Icons (green ✓ / red !), Trend axis (Direction → High is good) and Target label.',
         ],
         note: 'If the KPI shows no trend axis, check that the Value column is continuous and contains no NULL values.',
+      },
+      step6: {
+        title: 'Create the visuals from the Visuales tab',
+        intro: 'Visuales proposes one concrete visual type per business question. For every type present in your Blueprint you get a recipe below: the real icon name, the path in the interface, the fields to drag, and its official Microsoft Learn article.',
+        route: 'Visualizations pane → visual type icon',
+        items: [
+          'Press the recipe icon (Visualizations pane) and drag the visual fields from the Data pane into the field wells: dimension on the category axis, measure on Values, and legend field when the recipe calls for one.',
+          'Create one visual per title in the Visuales tab: that way the report answers exactly the same questions as the Resumen tab.',
+          'Sort before formatting: More options (...) → Sort → Sort by value → Sort descending; if the visual is a ranking, apply a Top N filter from the Filters pane.',
+          'Apply the Blueprint palette in Format visual → General (Title and properties) and in Data colors to keep the WCAG contrast validated in the Diseño tab.',
+        ],
+        note: 'Do not rename Blueprint fields or measures: the visuals use the same names so the whole Dashboard stays coherent.',
+      },
+      step7: {
+        title: 'Add the slicers for your filters',
+        intro: 'Blueprint filters become slicers visible on the canvas plus page or visual level filters in the Filters pane.',
+        route: 'Visualizations pane → Slicer icon',
+        items: [
+          'Create one slicer per filter in the list below: select the Slicer icon in the Visualizations pane and drag the indicated field (Blueprint table and column).',
+          'Pick the style in Format visual → Visual: vertical list, dropdown, or date selection depending on the field type.',
+          'Apply the Blueprint recommended values as the initial selection and turn on Single select when the filter allows only one value.',
+          'Filters that must not be visible on the canvas go to the Filters pane (page and visual level filters): they stay hidden until the author opens the pane, while slicers are always visible and interactive.',
+        ],
+        note: 'Slicers and the Filters pane complement each other: slicers for the frequent end-user filters, the Filters pane for complex author filtering.',
+      },
+      step8: {
+        title: 'Verify the business questions and share the report',
+        intro: 'Before publishing, check that every Blueprint business question has its visual and its measure in the report.',
+        route: 'Home → Publish',
+        items: [
+          'Walk through the business question list below (Resumen tab) and confirm each one has a visual from the Visuales tab answering it with the indicated measure.',
+          'Review the Blueprint validation checks before sharing: if there are warnings, explain them in the report or fix the data at the source.',
+          'Publish the report: Home → Publish and pick your workspace in the Power BI service; then share the link with read permissions.',
+          'If the data changes, regenerate the Blueprint in DataFlow AI instead of editing the model by hand: AI proposes, you approve, Power BI executes.',
+        ],
+        note: 'Keep the .pbip downloaded from the Power BI tab next to the published report: it is the deterministic source of the model and the measures.',
+      },
+      visualTypes: {
+        bar: {
+          name: 'Column chart (vertical bars)',
+          route: 'Visualizations pane → Clustered column chart icon',
+          items: [
+            'X axis (categories) = the visual dimension; Values = the measure. Each column is a category and its height, the value.',
+            'Sort by value: More options (...) → Sort → Sort by value → Sort descending to read the comparison at a glance.',
+            'If category names are long, switch to the Clustered bar chart icon (horizontal bars): Microsoft recommends bars when category labels are long.',
+          ],
+          srcLabel: 'Column charts in Power BI',
+        },
+        horizontal_bar: {
+          name: 'Horizontal bar chart (ranking)',
+          route: 'Visualizations pane → Clustered bar chart icon',
+          items: [
+            'Y axis = the ranking dimension; Values = the measure. Horizontal bars give you time to read long labels.',
+            'Sort by value descending (More options (...) → Sort → Sort by value) and cap the categories with a Top N filter from the Filters pane.',
+            'Add data labels: Format visual → Data labels → on, to read every value without following the axis scale.',
+          ],
+          srcLabel: 'Column charts in Power BI',
+        },
+        line: {
+          name: 'Line chart',
+          route: 'Visualizations pane → Line chart icon',
+          items: [
+            'X axis = the time dimension (Blueprint date column); Values = the trend measure.',
+            'Sort the date ascending before reading the trend (More options (...) → Sort → Sort ascending).',
+            'Lines emphasize the overall shape of values over time: use them for evolution and seasonality, not for point-in-time magnitudes.',
+          ],
+          srcLabel: 'Line charts in Power BI',
+        },
+        area: {
+          name: 'Area chart',
+          route: 'Visualizations pane → Area chart icon',
+          items: [
+            'The area chart builds on the line chart and fills the area between the line and the axis: it conveys volume as well as trend.',
+            'Same fields as lines: time X axis and Values with the measure; use stacked areas only when series do not overlap.',
+          ],
+          srcLabel: 'Basic area charts in Power BI',
+        },
+        stacked_bar: {
+          name: 'Stacked chart (columns or bars)',
+          route: 'Visualizations pane → Stacked column chart icon',
+          items: [
+            'Category axis = dimension, Values = measure and Legend = series field to break each bar into its parts.',
+            'Choose Stacked column chart (vertical) or Stacked bar chart (horizontal) depending on label length; the 100% stacked variant compares proportions.',
+          ],
+          srcLabel: 'Column charts in Power BI',
+        },
+        pie: {
+          name: 'Pie chart',
+          route: 'Visualizations pane → Pie chart icon',
+          items: [
+            'Legend = the dimension; Values = the measure. Each sector is one category share of the total.',
+            'Show percentages in the labels: Format visual → Data labels → label details → percentage.',
+          ],
+          srcLabel: 'Pie and donut charts in Power BI',
+        },
+        donut: {
+          name: 'Doughnut chart',
+          route: 'Visualizations pane → Doughnut chart icon',
+          items: [
+            'Same wells as the pie: Legend = dimension and Values = measure; the center hole leaves room for the total.',
+            'Keep few categories: with many series the sectors are hard to compare; use a bar chart instead.',
+          ],
+          srcLabel: 'Pie and donut charts in Power BI',
+        },
+        scatter: {
+          name: 'Scatter chart (scatter and bubbles)',
+          route: 'Visualizations pane → Scatter chart icon',
+          items: [
+            'Drag the fields into the field wells: X axis = first numeric column, Y axis = second one, and Legend = the dimension that colors the points.',
+            'With Details and Size the chart becomes a bubble chart: the bubble size turns into a third measure.',
+            'Add a trend line from the Analytics pane to read the correlation between both axes.',
+          ],
+          srcLabel: 'Scatter and bubble charts in Power BI',
+        },
+        histogram: {
+          name: 'Histogram (binning + columns)',
+          route: 'Data pane → right-click the column → New group',
+          items: [
+            'Power BI has no histogram visual: build it with binning. In the Data pane, right-click the numeric column and choose New group.',
+            'In the Groups dialog box, set the bin size and select OK: a new field appears in the Data pane with "(bins)" appended.',
+            'Create a Clustered column chart with the binned field on the X axis and the count (or your measure) on Values, then sort the bins ascending.',
+          ],
+          srcLabel: 'Grouping and binning in Power BI Desktop',
+        },
+        table: {
+          name: 'Table',
+          route: 'Visualizations pane → Table icon',
+          items: [
+            'Drag dimensions and measures into the fields section: every field becomes a table column.',
+            'Apply number formatting from the field dropdown (number format) and highlight conditions with conditional formatting (data bars or icons).',
+          ],
+          srcLabel: 'Table visualizations in Power BI',
+        },
+        kpi_card: {
+          name: 'Key performance indicator (KPI)',
+          route: 'Visualizations pane → KPI icon',
+          items: [
+            'Follow Step 5 of this guide: Value = the Blueprint measure, Trend axis = date column and Target = the goal.',
+            'Use the same title shown in the Resumen tab so the report KPI matches the Blueprint one.',
+          ],
+          srcLabel: 'KPI visuals',
+        },
       },
     },
     toast: {

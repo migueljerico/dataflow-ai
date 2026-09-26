@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2080%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.26.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2084%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.27.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -28,14 +28,16 @@
 
 1. [Acceso y Despliegue](#-acceso-y-despliegue)
 2. [Vista Previa de la Aplicación](#-vista-previa-de-la-aplicación)
-3. [Descripción del Proyecto](#-descripción-del-proyecto)
-4. [Funcionalidades Principales](#-funcionalidades-principales)
-5. [Evidencia de Seguridad Verificada](#%EF%B8%8F-evidencia-de-seguridad-verificada-penetration-testing-en-producción)
-6. [Modelo de Data Quality Score](#-modelo-de-data-quality-score)
-7. [Catálogo de Transformaciones ETL](#%EF%B8%8F-catálogo-de-transformaciones-etl)
-8. [Datasets Demostrativos Incluidos](#-datasets-demostrativos-incluidos)
-9. [Instalación y Puesta en Marcha](#%EF%B8%8F-instalación-y-puesta-en-marcha)
-10. [Estructura del Repositorio](#-estructura-del-repositorio)
+3. [Ejemplo de Extremo a Extremo](#-ejemplo-de-extremo-a-extremo)
+4. [Guía Paso a Paso en Power BI](#-guía-paso-a-paso-en-power-bi)
+5. [Descripción del Proyecto](#-descripción-del-proyecto)
+6. [Funcionalidades Principales](#-funcionalidades-principales)
+7. [Evidencia de Seguridad Verificada](#%EF%B8%8F-evidencia-de-seguridad-verificada-penetration-testing-en-producción)
+8. [Modelo de Data Quality Score](#-modelo-de-data-quality-score)
+9. [Catálogo de Transformaciones ETL](#%EF%B8%8F-catálogo-de-transformaciones-etl)
+10. [Datasets Demostrativos Incluidos](#-datasets-demostrativos-incluidos)
+11. [Instalación y Puesta en Marcha](#%EF%B8%8F-instalación-y-puesta-en-marcha)
+12. [Estructura del Repositorio](#-estructura-del-repositorio)
 
 ---
 
@@ -117,9 +119,59 @@ Recorrido completo por el flujo de trabajo de DataFlow AI, desde la ingesta del 
 
 ### 8️⃣ Dashboard Ejecutivo del Paso 5 (Business Analytics)
 
-*Maqueta del dashboard generado en el Paso 5 con estética «Power BI ejecutivo»: cabecera ejecutiva con título y prioridad del blueprint, 4 slicers interactivos (Ciudad, Categoría y Fecha), tarjetas de KPI (Ventas totales, Nº de pedidos, Ticket medio y Margen bruto), evolución mensual de ventas, distribución por categoría en donut, ventas por zona con barras horizontales, Top 5 de productos y las 3 preguntas de negocio que responde, selladas con el pie de gobernanza «La IA propone, el usuario decide, Python ejecuta».*
+*Maqueta del dashboard generado en el Paso 5 con estética «Power BI ejecutivo» y sus 6 pestañas (Ejemplo, Resumen, Visuales, Diseño, Guía paso a paso y Power BI): cabecera ejecutiva con título y prioridad del blueprint, 4 slicers interactivos (Ciudad, Categoría y Fecha), tarjetas de KPI (Ventas totales, Nº de pedidos, Ticket medio y Margen bruto), evolución mensual de ventas, distribución por categoría en donut, ventas por zona con barras horizontales, Top 5 de productos y las 3 preguntas de negocio que responde, selladas con el pie de gobernanza «La IA propone, el usuario decide, Python ejecuta».*
 
 ![Vista Previa — Dashboard Ejecutivo del Paso 5](./docs/capturas/captura_dataflow_ai_dashboard.png)
+
+---
+
+## 🧭 Ejemplo de Extremo a Extremo
+
+**De un archivo sin tratar a un Dashboard que responde preguntas de negocio.** Este es el recorrido completo que hace DataFlow AI con un dataset real; el ejemplo usa [`data_samples/sales_sample_corrupted.csv`](./data_samples/sales_sample_corrupted.csv), el mismo lote que ejecuta la suite E2E del Paso 5:
+
+| # | Fase (Paso del stepper) | Entrada → Salida | Coherencia comprobable |
+| :-: | :--- | :--- | :--- |
+| 1️⃣ | **Ingesta** | CSV crudo con precios como texto (`1.200,50 €`, `$350.00`), fechas mixtas, espacios sobrantes y filas duplicadas → dataset registrado | El archivo original nunca se toca: se valida y se versiona con hash MD5 |
+| 2️⃣ | **Auditoría** | Columnas y filas del fichero → Data Quality Score 0-100 con anomalías, muestras de evidencia y tips semánticos | Las anomalías detectadas reaparecen en `data_quality` del Blueprint y como avisos de cada visual |
+| 3️⃣ | **Plan ETL (HITL)** | Propuesta determinista (o del copiloto IA) de `trim_text`, `convert_numeric`, `convert_datetime`, `remove_duplicates` → aprobación humana paso a paso | Ninguna transformación se ejecuta sin tu aprobación explícita |
+| 4️⃣ | **Ejecución** | Motor Pandas determinista → dataset limpio + script `.py` reproducible + CSV/Parquet con log de validación | Trazabilidad total: hashes de entrada/salida y transformaciones registradas en `TransformationRegistry` |
+| 5️⃣ | **Blueprint + Dashboard** | Esquema estrella, medidas DAX, KPIs, visuales, filtros, paleta WCAG y preguntas de negocio → maqueta ejecutable del Paso 5 | Las pestañas de la maqueta cuentan la misma historia y la **Guía paso a paso** la reproduce en Power BI |
+
+### Las pestañas del Paso 5 cuentan la misma historia
+
+- **Ejemplo:** la maqueta con estética «Power BI ejecutivo» (cabecera, slicers, tarjetas de KPI y gráficos) que ves en la captura anterior.
+- **Resumen:** las **preguntas de negocio** que el Dashboard responde, los **KPIs** con su medida DAX de origen y los **filtros** propuestos con sus valores recomendados.
+- **Visuales:** un visual por pregunta con su tipo (`bar`, `horizontal_bar`, `line`, `donut`, `scatter`, `histogram`, `table`…), sus campos exactos, su confianza y su motivo.
+- **Diseño:** la paleta cromática con verificación de contraste WCAG (AA/AAA) y la accesibilidad del layout.
+- **Guía paso a paso:** las instrucciones —localizadas en español e inglés— para reproducir en Power BI Desktop **exactamente** lo anterior: mismas medidas, mismos tipos de visual, mismos filtros y mismas preguntas.
+- **Power BI:** las medidas DAX, el modelo TMDL y el proyecto `.pbip` listos para importar.
+
+> ✅ **Conclusión del ejemplo:** la aplicación mantiene la coherencia de extremo a extremo: un fichero sucio de ventas se limpia con reglas aprobadas por una persona, se convierte en un modelo estrella con medidas de negocio, se propone un Dashboard que responde preguntas concretas (p. ej. *«¿Cuáles son las ventas por región?»* o *«¿Qué productos lideran el ranking?»*) y se acompaña de la guía exacta para construirlo en Power BI. Nada se inventa en el camino: todo sale de tus datos y de documentación oficial verificable.
+
+---
+
+## 📖 Guía Paso a Paso en Power BI
+
+La pestaña **«Guía paso a paso»** de la maqueta del Paso 5 genera un **manual de construcción del Dashboard en Power BI Desktop** a partir de tu Blueprint: 8 pasos numerados con rutas reales de la interfaz de Microsoft, contenido personalizado con tus propios datos y enlaces a la documentación oficial.
+
+| Paso | Qué explica | Personalización con tu Blueprint |
+| :--: | :--- | :--- |
+| 1 | Carga del modelo en Power BI (CSV limpio o proyecto `.pbip`) | — |
+| 2 | Creación de fórmulas DAX: dónde y en qué tabla | Tus medidas DAX con sus nombres reales y su tabla principal |
+| 3 | Rectángulo y cuadro de texto del título | Layout y textos del Blueprint |
+| 4 | Fondo sólido, transparencia al 0 % y esquinas redondeadas | Los colores exactos de tu paleta |
+| 5 | Visual KPI (Valor, Eje de tendencia, Destino) | Tus KPIs del Blueprint con su medida DAX |
+| 6 | **Receta por cada tipo de visual** que propone la pestaña Visuales: columnas, barras horizontales, líneas, áreas, apilados, circular, anillos, dispersión, histograma (vía discretización), tabla e indicadores | Un bloque por cada tipo presente, con el nombre real del icono, la ruta en el panel Visualizaciones, los pozos de campo y **los títulos y campos exactos de tus visuales** |
+| 7 | Segmentaciones de datos (slicers) y panel Filtros | Tus filtros con tabla, columna, propósito y valores recomendados |
+| 8 | Verificación de las preguntas de negocio y publicación/compartición del informe | Tus preguntas de negocio del Blueprint, para tildarlas una a una |
+
+**Características:**
+
+- 🌍 **i18n completa (es/en)** con *fallback* automático al castellano en el resto de idiomas.
+- 🛣️ **Rutas reales de la interfaz localizadas** (p. ej. `Panel Visualizaciones → icono Gráfico de columnas agrupadas` / `Visualizations pane → Clustered column chart icon`), sin inventar menús.
+- 📚 **Fuentes oficiales dinámicas:** 4 fuentes base (medidas, formas, formato y KPI) + información general de visualizaciones, segmentaciones y uso compartido, **más un artículo de `learn.microsoft.com` por cada tipo de visual presente en tu Blueprint** (sin duplicados), servidos con la variante localizada (`es-es`/`en-us`).
+- ♻️ **Coherencia total con el resto de pestañas:** los mismos nombres de medidas, visuales, filtros, KPIs y preguntas que muestra la maqueta.
+- ✅ **Testeada:** 8 pruebas unitarias en Vitest (`PowerBiBuildGuide.test.tsx`) y verificación E2E en Playwright (`dashboard-step5.spec.ts`) que recorre los 8 pasos y contrasta las fuentes `es-es`/`en-us`.
 
 ---
 
@@ -154,6 +206,7 @@ flowchart TD
     D --> E["👤 5. Revisión Humana<br/>Control Human-in-the-Loop"]
     E --> F["⚙️ 6. Motor Determinista<br/>Transformación en Python/Pandas"]
     F --> G["✅ 7. Salida para Power BI<br/>Dataset Limpio + KPIs + Script .py"]
+    G --> H["📖 8. Blueprint + Dashboard<br/>Maqueta + Guía Paso a Paso en Power BI"]
 ```
 
 ---
@@ -170,6 +223,7 @@ flowchart TD
 - ⚡ **Observabilidad y Métricas de Inferencia IA:** Diagnóstico en tiempo real de latencia (`ms`/`s`), balance de tokens (`prompt` / `completion` / `total`), cálculo de coste estimado en USD y modelo activo (`gemini-2.5-flash`) en la propuesta de planes asistidos por IA, con caché semántica LRU/TTL que reduce la latencia a < 1 ms en esquemas repetidos.
 - 🎯 **Comparador Interactivo de Outliers (Scatter Diff):** Diagnóstico visual antes/después entre dataset crudo y limpio en la pestaña de Outliers, con trazado de acotación/clamp, balance global de resolución de anomalías por IQR y tabla interactiva de variación.
 - 📊 **Exportación de Modelos Semánticos Power BI:** Descarga directa de definiciones TMDL (`.tmdl`), scripts DAX (`.dax`) y proyectos Power BI Developer Mode (`.pbip` en ZIP), además de la guía clásica de medidas DAX y Power Query M.
+- 📖 **Guía Paso a Paso en Power BI:** Manual de construcción del Dashboard generado desde el Blueprint con 8 pasos, recetas por cada tipo de visual propuesto (columnas, barras, líneas, dispersión, histograma…), segmentaciones de los filtros, verificación de las preguntas de negocio y fuentes enlazadas a `learn.microsoft.com` localizadas en español e inglés.
 - 📗 **Fórmulas Dinámicas Adaptativas para Excel:** Generación multi-categoría (Auditoría Outliers IQR, KPIs & Estadísticas, Participación % y Condicionales) compatible con la configuración regional en español e inglés.
 - 🌐 **Caché de Inferencia Distribuida (Redis / Cloud Memorystore):** Arquitectura de dos niveles (L1 memoria LRU + L2 Redis compartida) que multiplica la tasa de aciertos entre instancias de Cloud Run, con degradación elegante a memoria local si Redis no está disponible.
 - ⭐ **Visualizador de Modelo Estrella (Star Schema):** Diagrama interactivo que previsualiza la estructura semántica antes de cargar el archivo en Power BI: tabla de hechos central, dimensiones de atributo y calendario en órbita, relaciones muchos-a-uno inspeccionables y DAX de tablas calculadas listo para pegar.
@@ -293,12 +347,12 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 cd backend
 .\venv\Scripts\pytest -v
 
-# Frontend (80 tests)
+# Frontend (84 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **398 tests automatizados totales (318 backend + 80 frontend) + 4 suites E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **406 tests automatizados totales (318 backend + 84 frontend) + 4 suites E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, guía paso a paso de Power BI con recetas por tipo de visual enlazadas a Microsoft Learn, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -333,12 +387,12 @@ dataflow-ai/
 │   │   ├── services/          # Profiler, Quality, ETL determinista, Open Data (CKAN), Analytics, TMDL/PBIP y caché de inferencia
 │   │   ├── transformations/   # Catálogo TransformationRegistry
 │   │   └── main.py            # FastAPI app, middleware CORS y servido SPA
-│   ├── tests/                 # Suite de 166 pruebas automatizadas
+│   ├── tests/                 # Suite de 318 pruebas automatizadas
 │   ├── Dockerfile             # Imagen de backend
 │   └── requirements.txt       # Dependencias Python
 ├── frontend/
 │   ├── src/
-│   │   ├── components/        # UI: FileUpload (Local/URL/OpenData), Profiling, PlanReview, Execution, Insights
+│   │   ├── components/        # UI: FileUpload (Local/URL/OpenData), Profiling, PlanReview, Execution, Insights y Guía Power BI
 │   │   ├── services/          # Cliente API HTTP
 │   │   ├── utils/             # Seguridad y Vault local (CWE-312)
 │   │   ├── index.css          # Sistema de diseño responsivo mobile-first
@@ -359,7 +413,8 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.26.0):** Suite Playwright en GitHub Actions (job `e2e-playwright`), E2E del Paso 5 ampliado (edición HITL, carga desde historial, exports PNG/PDF/HTML) y nueva pestaña «Guía paso a paso» para construir el dashboard en Power BI a partir de documentación oficial de Microsoft, desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Última versión (v1.27.0):** La pestaña «Guía paso a paso» pasa de 5 a **8 pasos**: receta por cada tipo de visual propuesto por la pestaña Visuales (columnas, barras horizontales, líneas, áreas, apilados, circular, anillos, dispersión, histograma, tabla e indicador), KPIs, filtros/slicers y preguntas de negocio del Blueprint con sus valores, más fuentes dinámicas de Microsoft Learn; README con documentación de la guía y ejemplo de extremo a extremo (archivo sin tratar → limpieza → Dashboard que responde preguntas de negocio), desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Versión v1.26.0:** Suite Playwright en GitHub Actions (job `e2e-playwright`), E2E del Paso 5 ampliado (edición HITL, carga desde historial, exports PNG/PDF/HTML) y nueva pestaña «Guía paso a paso» para construir el dashboard en Power BI a partir de documentación oficial de Microsoft, desarrollada con **MiMo 2.6 Flash** (OpenCode).
 - **Versión v1.25.2:** Nueva suite E2E del Paso 5 en Playwright (historial con retención, descargas TMDL/PBIP y cambio de idioma sobre la maqueta) y reparación de los 3 specs obsoletos, desarrollada con **MiMo 2.6 Flash** (OpenCode).
 - **Versión v1.25.0:** Historial de propuestas con retención configurable (TTL), exportación de blueprints a TMDL y proyecto PBIP, rediseño estético «Power BI ejecutivo» de la maqueta (KPIs en círculo, barras horizontales, donut con % en anillo) e i18n completa de los 13 idiomas (704 claves por bloque, 0 faltantes), desarrollada con **MiMo 2.6 Flash** (OpenCode).
 - **Versión v1.24.0:** Persistencia Fase 2 de blueprints en `StorageBackend`/GCS y edición HITL completa del Paso 5 (KPIs, visuales, paletas WCAG y revalidación), desarrollada con **MiMo V2.6 Flash Free** (OpenCode).
