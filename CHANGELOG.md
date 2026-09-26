@@ -4,6 +4,24 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.25.2] — 2026-09-26
+
+### 🧪 E2E del Paso 5 (Historial, Export TMDL/PBIP e i18n de la Maqueta) y Reparación de la Suite Playwright
+
+> **Motivación:** El handoff de v1.25.1 priorizaba cerrar la brecha de cobertura end-to-end del Paso 5 y verificar el despliegue en producción; a la vez, los 3 specs preexistentes de Playwright arrastraban aserciones obsoletas tras la i18n de 13 idiomas y el rediseño del informe de ejecución.
+
+#### 🛠️ Cambios Realizados
+- **Nuevo E2E `frontend/e2e/dashboard-step5.spec.ts`:** recorre el lote de 2 datasets demo (perfilado → plan por reglas deterministas → ejecución → esquema estrella → Blueprint) hasta el Paso 5 y valida el panel de Historial con retención (`Retención: 30 días` y marca «Actual» sobre la propuesta vigente), la descarga TMDL (`200`, `text/plain`, cabecera `model Model` y medidas DAX) y PBIP (`200`, `application/zip`, magic `PK`) y el cambio de idioma sobre la maqueta (es → en → es con `lang` del documento).
+- **Reparación de 3 specs obsoletos:** `language-switching.spec.ts` localiza el disparador por `aria-haspopup="listbox"` (su `aria-label` se traduce con el idioma activo), `export-flows.spec.ts` aserta la etiqueta real `Quality Score Real` del informe y `analytics-tabs.spec.ts` resuelve el modo estricto de `Power Query M` y verifica la tarjeta Excel actual (`Fórmulas Dinámicas Adaptativas`).
+- **Cobertura E2E:** 3 → 4 suites Playwright, todas en verde.
+
+#### 🧪 Verificación
+- **Backend:** 318/318 tests pasando | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Frontend:** 75/75 tests pasando | TypeScript estricto (`tsc`) y Vite build sin errores.
+- **E2E:** 4/4 suites Playwright pasando.
+- **Producción (v1.25.1 en Cloud Run):** `GET /health` → `1.25.1`; `GET /api/v1/dashboard` → `retention_days=30` con histórico persistido; TMDL (2.606 B · 95 líneas · 4 medidas) y PBIP (2.996 B · ZIP `PK`) descargados desde `dataflow-ai-748914382449.us-central1.run.app`. CI/CD en `613f4ad`: 4 status checks + CodeQL + disparador de Cloud Build, todos en éxito.
+- **Atribución:** Desarrollada con **MiMo 2.6 Flash** (OpenCode).
+
 ## [1.25.1] — 2026-09-24
 
 ### 📸 Nueva Vista Previa 8 en el README: Dashboard Ejecutivo del Paso 5

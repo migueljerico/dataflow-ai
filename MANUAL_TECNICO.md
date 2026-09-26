@@ -1,6 +1,6 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.25.1  
+**Versión:** 1.25.2  
 **Fecha de actualización:** 22 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  
@@ -589,7 +589,7 @@ Ubicación: `backend/tests/`
 | `test_executive_reports.py` | 19 | Reportes PDF/HTML por run, CRUD de exportaciones programadas, scheduler de ejecuciones vencidas, triggers de webhook (always/critical_drift) y validación Anti-SSRF en el alta (IP privada, metadatos GCP, esquema no HTTP). |
 | `test_drift_simulation.py` | 7 | Simulación hipotética de drift: validación por paso contra el Registry, tolerancia a pasos inválidos, límite de 50 pasos y garantía de que no modifica el dataset ni crea ejecuciones. |
 
-**Total:** 318 tests backend (Pytest) + 75 tests frontend (Vitest) + 3 suites E2E (Playwright) — 100% pasando en verde.
+**Total:** 318 tests backend (Pytest) + 75 tests frontend (Vitest) + 4 suites E2E (Playwright) — 100% pasando en verde.
 
 ---
 

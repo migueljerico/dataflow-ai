@@ -30,7 +30,7 @@ test.describe('End-to-End Dataset Processing & Multi-Format Export Flows', () =>
 
     // Validar visualización de estadísticas
     await expect(page.getByText(/run id:/i)).toBeVisible();
-    await expect(page.getByText(/quality score estimado/i)).toBeVisible();
+    await expect(page.getByText(/quality score real/i)).toBeVisible();
 
     // 6. Verificar enlaces de descarga de los 4 artefactos
     const downloadCsvLink = page.getByRole('link', { name: /descargar dataset limpio/i });
