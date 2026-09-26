@@ -12,11 +12,13 @@ import {
   Download,
   History,
   Image,
+  ListChecks,
   Pencil,
 } from 'lucide-react';
 import { DashboardBlueprint, DashboardBlueprintList } from '../types';
 import { DashboardMockup } from './DashboardMockup';
 import { DashboardEditor } from './DashboardEditor';
+import { PowerBiBuildGuide } from './PowerBiBuildGuide';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 
@@ -32,7 +34,7 @@ interface Props {
 export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchema, onBlueprintUpdated, onBlueprintLoad }) => {
   const { t } = useLanguage();
   const [copiedDax, setCopiedDax] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'example' | 'visuals' | 'design' | 'powerbi'>('example');
+  const [activeTab, setActiveTab] = useState<'overview' | 'example' | 'visuals' | 'design' | 'guide' | 'powerbi'>('example');
   const [draft, setDraft] = useState<DashboardBlueprint | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -249,6 +251,7 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
             { id: 'overview', label: t.dashboardPreview?.tabOverview ?? 'Resumen', icon: LayoutDashboard },
             { id: 'visuals', label: t.dashboardPreview?.tabVisuals ?? 'Visuales', icon: BarChart3 },
             { id: 'design', label: t.dashboardPreview?.tabDesign ?? 'Diseño', icon: Palette },
+            { id: 'guide', label: t.dashboardPreview?.tabGuide ?? 'Guía paso a paso', icon: ListChecks },
             { id: 'powerbi', label: t.dashboardPreview?.tabPowerbi ?? 'Power BI', icon: FileCode },
           ].map((tab) => (
             <button
@@ -443,6 +446,9 @@ export const DashboardPreview: React.FC<Props> = ({ blueprint, onBackToStarSchem
           </div>
         </div>
       )}
+
+      {/* Panel 3.5: Guía paso a paso para construir el Dashboard en Power BI */}
+      {!editing && activeTab === 'guide' && <PowerBiBuildGuide blueprint={blueprint} />}
 
       {/* Panel 4: Power BI */}
       {!editing && activeTab === 'powerbi' && (

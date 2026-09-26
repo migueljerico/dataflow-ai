@@ -126,7 +126,21 @@ export const exportDashboardPng = async (svg: SVGSVGElement | null, blueprintId:
   if (!svg) return false;
   const dataUrl = await svgToPngDataUrl(svg, 3);
   if (!dataUrl) return false;
-  downloadDataUrl(dataUrl, `dashboard_${safeBlueprintId(blueprintId)}.png`);
+  const filename = `dashboard_${safeBlueprintId(blueprintId)}.png`;
+  try {
+    // Los data: URLs grandes pueden ser cancelados por el navegador al
+    // descargarlos, así que se convierten en Blob antes de lanzar la descarga.
+    if (typeof fetch === 'function') {
+      const blob = await (await fetch(dataUrl)).blob();
+      if (blob && blob.size > 0) {
+        downloadBlob(blob, filename);
+        return true;
+      }
+    }
+  } catch {
+    /* fallback a data: URL */
+  }
+  downloadDataUrl(dataUrl, filename);
   return true;
 };
 

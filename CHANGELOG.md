@@ -4,6 +4,26 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.26.0] — 2026-09-26
+
+### 🎓 Guía Paso a Paso para Power BI, E2E Ampliado del Paso 5 y Suite Playwright en CI
+
+> **Motivación:** El handoff de v1.25.2 priorizaba llevar la suite Playwright a GitHub Actions y ampliar el E2E del Paso 5 (edición HITL, carga desde historial y exports); además, el Blueprint debía acompañarse de una guía para construir el dashboard en Power BI basándose **solo en documentación oficial de Microsoft**, sin alucinaciones.
+
+#### 🛠️ Cambios Realizados
+- **Nueva pestaña «Guía paso a paso»** en la maqueta del Paso 5 (`PowerBiBuildGuide.tsx`): 5 pasos con rutas reales de la UI de Power BI (Insertar → Elementos → Formas; panel Formato Visual/General con Tamaño/Posición en px, Fondo con transparencia y Borde visual; Modeling → New measure con icono de calculadora y tabla home; KPI con Valor/Eje de tendencia/Destino y orden previo a convertir), chips de medidas del Blueprint, swatches de la paleta del proyecto y 4 fuentes oficiales de `learn.microsoft.com` localizadas (`es-es`/`en-us` según idioma).
+- **i18n:** sección opcional `powerBiGuide` completa en español e inglés con fallback a `DEFAULT_GUIDE` en el resto de idiomas (patrón ya usado en `DashboardEditor`), más `dashboardPreview.tabGuide`.
+- **CI/CD:** nuevo job `e2e-playwright` en `.github/workflows/ci.yml` (Python + Node, `pip install`, `npm ci`, Chromium con dependencias, `DF_PYTHON=python3`) y `playwright.config.ts` cross-platform (npm/npm.cmd según SO); artifact `frontend/test-results` en fallos.
+- **E2E `dashboard-step5.spec.ts` ampliado:** edición HITL desde el footer (`edit-save-btn`), persistencia vía `GET /api/v1/dashboard`, carga de propuestas desde el historial, guía paso a paso en ES/EN y descargas PNG (magic `‰PNG`), PDF (`%PDF-`), HTML (`<svg>`), TMDL y PBIP.
+- **Export PNG fiable:** `exportDashboardPng` migra de `data:` URL a Blob vía `fetch` (Chromium cancelaba los data URLs grandes).
+- **Docs:** README (badges, contadores 318/80/398, árbol `ci.yml`, atribución) y `MANUAL_TECNICO.md` (v1.26.0).
+
+#### 🧪 Verificación
+- **Backend:** 318/318 tests pasando | Ruff limpio (0 errores) | Black limpio (0 diffs) | Bandit limpio (0 vulnerabilidades).
+- **Frontend:** 80/80 tests pasando | TypeScript estricto (`tsc`) y Vite build sin errores.
+- **E2E:** 4/4 suites Playwright pasando (~32 s).
+- **Atribución:** Desarrollada con **MiMo 2.6 Flash** (OpenCode).
+
 ## [1.25.2] — 2026-09-26
 
 ### 🧪 E2E del Paso 5 (Historial, Export TMDL/PBIP e i18n de la Maqueta) y Reparación de la Suite Playwright

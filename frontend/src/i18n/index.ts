@@ -35,6 +35,16 @@ export const LANGUAGES: LanguageOption[] = [
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
 ];
 
+/** Paso de la guía paso a paso de construcción del Dashboard en Power BI. */
+export interface PowerBiGuideStep {
+  title: string;
+  intro: string;
+  /** Ruta de la interfaz de Power BI (identificador técnico, no se traduce). */
+  route?: string;
+  items: string[];
+  note?: string;
+}
+
 export interface Translations {
   brand: {
     title: string;
@@ -757,6 +767,7 @@ export interface Translations {
     tabOverview?: string;
     tabVisuals?: string;
     tabDesign?: string;
+    tabGuide?: string;
     tabPowerbi?: string;
     kpiRecommended?: string;
     businessQuestions?: string;
@@ -797,6 +808,29 @@ export interface Translations {
     breakdownTitle?: string;
     rankingTitle?: string;
     exportHint?: string;
+  };
+  powerBiGuide?: {
+    title?: string;
+    subtitle?: string;
+    governance?: string;
+    sourceNote?: string;
+    sourcesLabel?: string;
+    stepTag?: string;
+    routeLabel?: string;
+    noteLabel?: string;
+    measuresLabel?: string;
+    paletteLabel?: string;
+    primaryColorLabel?: string;
+    backgroundColorLabel?: string;
+    srcMeasuresLabel?: string;
+    srcShapesLabel?: string;
+    srcFormatLabel?: string;
+    srcKpiLabel?: string;
+    step1?: PowerBiGuideStep;
+    step2?: PowerBiGuideStep;
+    step3?: PowerBiGuideStep;
+    step4?: PowerBiGuideStep;
+    step5?: PowerBiGuideStep;
   };
   toast?: {
     title?: string;
@@ -1529,6 +1563,7 @@ export const translations: Record<Language, Translations> = {
       tabOverview: 'Resumen',
       tabVisuals: 'Visuales',
       tabDesign: 'Diseño',
+      tabGuide: 'Guía paso a paso',
       tabPowerbi: 'Power BI',
       kpiRecommended: 'KPIs Recomendados',
       businessQuestions: 'Preguntas de Negocio',
@@ -1569,6 +1604,82 @@ export const translations: Record<Language, Translations> = {
       breakdownTitle: 'Desglose',
       rankingTitle: 'Ranking',
       exportHint: 'PNG, PDF y HTML exportan este mismo layout ejecutivo a resolución 3x, sin consejos de construcción.',
+    },
+    powerBiGuide: {
+      title: 'Guía paso a paso: construye tu Dashboard en Power BI',
+      subtitle:
+        'Sigue estos pasos en Power BI Desktop o en el servicio Power BI para reproducir el diseño propuesto en el Blueprint, con los nombres reales de la interfaz de Microsoft.',
+      governance: 'La IA propone, el usuario decide, Python ejecuta: aquí solo tienes instrucciones deterministas y verificables.',
+      sourceNote:
+        'Cada paso está verificado contra la documentación oficial de Microsoft Learn (consulta las fuentes al pie de la guía).',
+      sourcesLabel: 'Fuentes oficiales',
+      stepTag: 'Paso {n}',
+      routeLabel: 'Ruta en Power BI',
+      noteLabel: 'Importante',
+      measuresLabel: 'Tus medidas DAX del Blueprint',
+      paletteLabel: 'Colores de tu paleta',
+      primaryColorLabel: 'Color del título',
+      backgroundColorLabel: 'Color de fondo',
+      srcMeasuresLabel: 'Medidas en Power BI Desktop',
+      srcShapesLabel: 'Cuadros de texto y formas en informes',
+      srcFormatLabel: 'Panel Formato: pestaña General',
+      srcKpiLabel: 'Visuales KPI',
+      step1: {
+        title: 'Carga el modelo en Power BI',
+        intro: 'Abre Power BI Desktop y trae el modelo que DataFlow AI ha preparado para ti antes de diseñar.',
+        items: [
+          'Opción A: Inicio → Obtener datos → Texto/CSV y selecciona el dataset limpio descargado en el Paso 4.',
+          'Opción B: descarga el proyecto .pbip desde la pestaña Power BI de esta vista previa y ábrelo en Power BI Desktop.',
+          'Comprueba en el panel Datos que las tablas del esquema estrella (hechos y dimensiones) aparecen con sus relaciones.',
+        ],
+      },
+      step2: {
+        title: 'Crea las fórmulas DAX: dónde y en qué tabla',
+        intro: 'Las medidas son cálculos DAX que se guardan en el modelo y se usan en cualquier visualización.',
+        route: 'Modeling → New measure',
+        items: [
+          'Con una tabla seleccionada en el panel Datos, pulsa Modeling → New measure (Nueva medida) y escribe la fórmula en la barra de fórmulas que se abre arriba.',
+          'Las medidas aparecen en el panel Datos con un icono de calculadora; arrástralas a cualquier visualización como cualquier otro campo.',
+          'Cada medida tiene una tabla principal (home table) que define en qué tabla de la lista Datos aparece; puedes cambiarla eligiendo otra tabla del modelo.',
+          'Para organizarlas, crea una tabla especial solo de medidas: Entrar datos → tabla con una sola columna → traslada allí las medidas → oculta la columna (la tabla queda arriba en el panel Datos).',
+        ],
+        note: 'Pega aquí las medidas del Blueprint (pestaña Power BI): respeta sus nombres para que los visuales coincidan con la guía.',
+      },
+      step3: {
+        title: 'Añade el rectángulo del título',
+        intro: 'Un rectángulo con el título encabeza el layout del Blueprint (cabecera ejecutiva + franja de acento).',
+        route: 'Insertar → Elementos → Formas',
+        items: [
+          'En la pestaña Insertar, sección Elementos, selecciona Formas y elige la forma de rectángulo en el menú desplegable.',
+          'Escribe el título en un Cuadro de texto (Inicio → Insertar → Cuadro de texto) y colócalo sobre el rectángulo.',
+          'Para colocarlo: arrastra el área gris de la parte superior; para redimensionarlo, arrastra los tiradores de tamaño.',
+          'Para tamaño y posición exactos: con el objeto visual seleccionado, Formato visual → General → Propiedades → Tamaño (alto y ancho en píxeles) y Posición (horizontal y vertical en píxeles desde la esquina superior izquierda).',
+        ],
+      },
+      step4: {
+        title: 'Fondo de un color y bordes redondeados',
+        intro: 'El panel Formato visual tiene dos pestañas: Visual (opciones del tipo de objeto visual) y General (comunes a casi todos los visuales).',
+        route: 'Formato visual → General → Efectos',
+        items: [
+          'Fondo de un color: General → Efectos → Fondo → Color (usa el color de fondo de tu paleta) y pon la Transparencia al 0 %.',
+          'Bordes redondeados: General → Efectos → Borde visual → actívalo y ajusta Color, radio de esquinas redondeadas y Ancho.',
+          'El relleno propio de la forma se configura en la pestaña Visual del panel Formato visual, donde están las opciones específicas de cada tipo de objeto visual.',
+          'Si quieres el título dentro del propio visual, también puedes usar General → Título (texto, fuente, color de texto y color de fondo).',
+        ],
+        note: 'Usa los colores de tu paleta para mantener el contraste WCAG validado en el Blueprint.',
+      },
+      step5: {
+        title: 'Añade un KPI: dónde y de qué tipo',
+        intro: 'El visual KPI comunica el progreso hacia un objetivo cuantificable: mide el avance y la distancia hasta la meta.',
+        route: 'Panel Visualizaciones → icono KPI',
+        items: [
+          'Tipo de visual: KPI (icono KPI del panel Visualizaciones). Requiere una medida base que devuelva un valor, un valor objetivo y un umbral o meta.',
+          'Campos: Valor = tu medida base (el indicador), Eje de tendencia = una columna de fecha (la tendencia) y Destino = la medida o valor objetivo.',
+          'Ordena antes de convertir: Más opciones (...) → Ordenar eje → columna de fecha y Ordenar por eje → Orden ascendente; una vez convertido en KPI ya no hay opción de ordenación.',
+          'Formato: icono del pincel (Dar formato al objeto visual) → Valor de llamada (unidades y decimales), Iconos (✓ verde / ! rojo), Eje de tendencia (Dirección → Más alto es mejor) y Etiqueta de destino.',
+        ],
+        note: 'Si el KPI no muestra el eje de tendencia, comprueba que la columna de Valor sea continua y no contenga valores NULL.',
+      },
     },
     toast: {
       title: 'Notificaciones',
@@ -2300,6 +2411,7 @@ export const translations: Record<Language, Translations> = {
       tabOverview: 'Overview',
       tabVisuals: 'Visuals',
       tabDesign: 'Design',
+      tabGuide: 'Step-by-step guide',
       tabPowerbi: 'Power BI',
       kpiRecommended: 'Recommended KPIs',
       businessQuestions: 'Business Questions',
@@ -2340,6 +2452,82 @@ export const translations: Record<Language, Translations> = {
       breakdownTitle: 'Breakdown',
       rankingTitle: 'Ranking',
       exportHint: 'PNG, PDF and HTML export this same executive layout at 3x resolution, without build tips.',
+    },
+    powerBiGuide: {
+      title: 'Step-by-step guide: build your Dashboard in Power BI',
+      subtitle:
+        'Follow these steps in Power BI Desktop or the Power BI service to reproduce the design proposed in the Blueprint, using the real names of the Microsoft interface.',
+      governance: 'AI proposes, the user decides, Python executes: this guide only gives deterministic, verifiable instructions.',
+      sourceNote:
+        'Every step is verified against the official Microsoft Learn documentation (see the sources at the end of the guide).',
+      sourcesLabel: 'Official sources',
+      stepTag: 'Step {n}',
+      routeLabel: 'Path in Power BI',
+      noteLabel: 'Important',
+      measuresLabel: 'Your Blueprint DAX measures',
+      paletteLabel: 'Your palette colors',
+      primaryColorLabel: 'Title color',
+      backgroundColorLabel: 'Background color',
+      srcMeasuresLabel: 'Measures in Power BI Desktop',
+      srcShapesLabel: 'Text boxes and shapes in reports',
+      srcFormatLabel: 'Format pane: General tab',
+      srcKpiLabel: 'KPI visuals',
+      step1: {
+        title: 'Load the model into Power BI',
+        intro: 'Open Power BI Desktop and bring in the model DataFlow AI prepared for you before you start designing.',
+        items: [
+          'Option A: Home → Get data → Text/CSV and pick the clean dataset downloaded in Step 4.',
+          'Option B: download the .pbip project from the Power BI tab of this preview and open it in Power BI Desktop.',
+          'Check the Data pane that the star schema tables (fact and dimensions) appear with their relationships.',
+        ],
+      },
+      step2: {
+        title: 'Create the DAX formulas: where and in which table',
+        intro: 'Measures are DAX calculations stored in the model and reused in any visualization.',
+        route: 'Modeling → New measure',
+        items: [
+          'With a table selected in the Data pane, press Modeling → New measure and type the formula in the formula bar that opens at the top.',
+          'Measures appear in the Data pane with a calculator icon; drag them into any visualization like any other field.',
+          'Every measure has a home table that defines where it shows up in the Data pane list; you can change it by choosing another table in the model.',
+          'To organize them, create a special measures-only table: Enter data → a table with a single column → move the measures there → hide the column (the table stays at the top of the Data pane).',
+        ],
+        note: 'Paste the Blueprint measures here (Power BI tab): keep their names so the visuals match this guide.',
+      },
+      step3: {
+        title: 'Add the title rectangle',
+        intro: 'A rectangle with the title heads the Blueprint layout (executive header + accent strip).',
+        route: 'Insert → Elements → Shapes',
+        items: [
+          'On the Insert tab, in the Elements section, select Shapes and pick the rectangle shape from the dropdown menu.',
+          'Type the title in a Text box (Home → Insert → Text box) and place it on top of the rectangle.',
+          'To position it, drag the grey area at the top; to resize it, drag the sizing handles.',
+          'For exact size and position: with the visual selected, Format visual → General → Properties → Size (height and width in pixels) and Position (horizontal and vertical in pixels from the top-left corner of the canvas).',
+        ],
+      },
+      step4: {
+        title: 'Solid background color and rounded corners',
+        intro: 'The Format visual pane has two tabs: Visual (options for the specific visual type) and General (options shared by almost every visual).',
+        route: 'Format visual → General → Effects',
+        items: [
+          'Solid background: General → Effects → Background → Color (use your palette background color) and set Transparency to 0%.',
+          'Rounded corners: General → Effects → Visual border → turn it on and adjust Color, Rounded corners radius and Width.',
+          'The shape fill itself is configured on the Visual tab of the Format visual pane, where the options specific to each visual type live.',
+          'If you prefer the title inside the visual, you can also use General → Title (text, font, text color and background color).',
+        ],
+        note: 'Use your palette colors to keep the WCAG contrast validated in the Blueprint.',
+      },
+      step5: {
+        title: 'Add a KPI: where and of what type',
+        intro: 'The KPI visual communicates progress toward a quantifiable goal: it shows advancement and distance to target.',
+        route: 'Visualizations pane → KPI icon',
+        items: [
+          'Visual type: KPI (the KPI icon in the Visualizations pane). It requires a base measure that returns a value, a target value, and a threshold or goal.',
+          'Fields: Value = your base measure (the indicator), Trend axis = a date column (the trend), and Target = the measure or target value.',
+          'Sort before converting: More options (...) → Sort axis → date column and Sort by → Sort ascending; once converted to a KPI there is no sort option anymore.',
+          'Formatting: the paint brush icon (Format visual) → Callout value (units and decimals), Icons (green ✓ / red !), Trend axis (Direction → High is good) and Target label.',
+        ],
+        note: 'If the KPI shows no trend axis, check that the Value column is continuous and contains no NULL values.',
+      },
     },
     toast: {
       title: 'Notifications',

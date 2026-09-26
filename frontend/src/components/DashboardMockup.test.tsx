@@ -213,6 +213,19 @@ describe('DashboardPreview — pestaña Ejemplo con maqueta ejecutiva', () => {
     expect(screen.getByTestId('dashboard-mockup')).toBeInTheDocument();
   });
 
+  it('muestra la pestaña Guía paso a paso con la guía de construcción en Power BI', () => {
+    renderPreview();
+    fireEvent.click(screen.getByRole('button', { name: /Guía paso a paso/i }));
+    expect(screen.getByTestId('powerbi-guide')).toBeInTheDocument();
+    expect(screen.getByTestId('powerbi-guide-title')).toHaveTextContent('construye tu Dashboard en Power BI');
+    expect(screen.getByTestId('powerbi-guide-step-5')).toHaveTextContent('KPI');
+    expect(screen.getByTestId('powerbi-guide-measures')).toHaveTextContent('Total_Importe');
+    expect(screen.queryByTestId('dashboard-mockup')).not.toBeInTheDocument();
+    // La pestaña Power BI sigue siendo accesible y con su export TMDL/PBIP
+    fireEvent.click(screen.getByRole('button', { name: /^Power BI$/ }));
+    expect(screen.getByTestId('export-model-card')).toBeInTheDocument();
+  });
+
   it('los botones de descarga no rompen la app aunque el navegador no soporte canvas (try/catch)', async () => {
     renderPreview();
     fireEvent.click(screen.getByTestId('export-dashboard-mockup-png-btn'));

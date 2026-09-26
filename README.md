@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2075%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.25.2-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2080%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.26.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -293,12 +293,12 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 cd backend
 .\venv\Scripts\pytest -v
 
-# Frontend (75 tests)
+# Frontend (80 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **393 tests automatizados totales (318 backend + 75 frontend) + 4 tests E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **398 tests automatizados totales (318 backend + 80 frontend) + 4 suites E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -323,7 +323,7 @@ docker compose up --build
 ```text
 dataflow-ai/
 ├── .github/workflows/
-│   └── ci.yml                 # CI: Pytest backend (318 tests) + Build React Vite
+│   └── ci.yml                 # CI: Pytest backend (318 tests) + Build React Vite + E2E Playwright
 ├── backend/
 │   ├── app/
 │   │   ├── ai_providers/      # Gemini Provider (BYOK), Mock determinista y caché de inferencia
@@ -359,7 +359,8 @@ dataflow-ai/
 ## 🤝 Atribución
 
 - **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.25.2):** Nueva suite E2E del Paso 5 en Playwright (historial con retención, descargas TMDL/PBIP y cambio de idioma sobre la maqueta) y reparación de los 3 specs obsoletos, desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Última versión (v1.26.0):** Suite Playwright en GitHub Actions (job `e2e-playwright`), E2E del Paso 5 ampliado (edición HITL, carga desde historial, exports PNG/PDF/HTML) y nueva pestaña «Guía paso a paso» para construir el dashboard en Power BI a partir de documentación oficial de Microsoft, desarrollada con **MiMo 2.6 Flash** (OpenCode).
+- **Versión v1.25.2:** Nueva suite E2E del Paso 5 en Playwright (historial con retención, descargas TMDL/PBIP y cambio de idioma sobre la maqueta) y reparación de los 3 specs obsoletos, desarrollada con **MiMo 2.6 Flash** (OpenCode).
 - **Versión v1.25.0:** Historial de propuestas con retención configurable (TTL), exportación de blueprints a TMDL y proyecto PBIP, rediseño estético «Power BI ejecutivo» de la maqueta (KPIs en círculo, barras horizontales, donut con % en anillo) e i18n completa de los 13 idiomas (704 claves por bloque, 0 faltantes), desarrollada con **MiMo 2.6 Flash** (OpenCode).
 - **Versión v1.24.0:** Persistencia Fase 2 de blueprints en `StorageBackend`/GCS y edición HITL completa del Paso 5 (KPIs, visuales, paletas WCAG y revalidación), desarrollada con **MiMo V2.6 Flash Free** (OpenCode).
 - **Versión v1.23.1:** Exportaciones reales del dashboard (PNG 3x, PDF apaisado y HTML autocontenido) y rediseño visible del preview ejecutivo, desarrollada con **Muse Spark 1.3 Free** (OpenCode).
