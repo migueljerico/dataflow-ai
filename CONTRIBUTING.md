@@ -10,7 +10,7 @@ cd ../frontend && npm ci && npx tsc --noEmit && npm run build
 
 ## Ramas
 
-- `main` protegida: requiere `Backend Tests`, `Frontend Build & Typecheck`, `Secret Scan (Gitleaks)`, `Docker Build Check` en verde.
+- `main` protegida: requiere `Backend Tests`, `Frontend Build & Typecheck`, `E2E Tests (Playwright)`, `Secret Scan (Gitleaks)`, `Docker Build Check` en verde.
 - Rama feature: `feat/<slug>` o `fix/<slug>` → PR a `main` con Conventional Commits.
 
 ## CI

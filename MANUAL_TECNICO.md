@@ -1,6 +1,6 @@
 # MANUAL TÉCNICO — DataFlow AI
 
-**Versión:** 1.27.0  
+**Versión:** 1.28.0  
 **Fecha de actualización:** 26 de septiembre de 2026  
 **Autor:** migueljerico  
 **Licencia:** MIT  

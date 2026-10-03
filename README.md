@@ -11,7 +11,7 @@
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2084%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.27.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.28.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -172,6 +172,21 @@ La pestaña **«Guía paso a paso»** de la maqueta del Paso 5 genera un **manua
 - 📚 **Fuentes oficiales dinámicas:** 4 fuentes base (medidas, formas, formato y KPI) + información general de visualizaciones, segmentaciones y uso compartido, **más un artículo de `learn.microsoft.com` por cada tipo de visual presente en tu Blueprint** (sin duplicados), servidos con la variante localizada (`es-es`/`en-us`).
 - ♻️ **Coherencia total con el resto de pestañas:** los mismos nombres de medidas, visuales, filtros, KPIs y preguntas que muestra la maqueta.
 - ✅ **Testeada:** 8 pruebas unitarias en Vitest (`PowerBiBuildGuide.test.tsx`) y verificación E2E en Playwright (`dashboard-step5.spec.ts`) que recorre los 8 pasos y contrasta las fuentes `es-es`/`en-us`.
+
+### 📸 Capturas de referencia de la UI de Microsoft por paso
+
+Cada paso de la guía se acompaña de **capturas reales de la interfaz de Power BI** (paneles **Visualizations** y **Format**, pozos de campo, panel **Filtros** y publicación) guardadas en [`docs/capturas/`](./docs/capturas/). Son imágenes de la documentación oficial de Microsoft Learn, con su atribución y el artículo exacto de origen en [`FUENTES_MICROSOFT.md`](./docs/capturas/FUENTES_MICROSOFT.md):
+
+| Paso | Captura de la UI de Microsoft |
+| :--: | :--- |
+| 1 | <img src="./docs/capturas/microsoft_paso1_vista_informe_powerbi_desktop.png" width="330" alt="Vista de informe de Power BI Desktop con el modelo cargado"> |
+| 2 | <img src="./docs/capturas/microsoft_paso2_medidas_dax_tabla_hogar.png" width="330" alt="Medida DAX con su tabla hogar en Power BI"> · <img src="./docs/capturas/microsoft_paso2_panel_datos_medidas.png" width="90" alt="Panel de datos con medidas"> |
+| 3 | <img src="./docs/capturas/microsoft_paso3_insertar_cuadro_texto.png" width="330" alt="Opción Insertar cuadro de texto en Power BI Desktop"> |
+| 4 | <img src="./docs/capturas/microsoft_paso4_panel_formato_visual.png" width="150" alt="Panel Formato (icono de pincel) de Power BI"> |
+| 5 | <img src="./docs/capturas/microsoft_paso5_kpi_icono_panel_visualizaciones.png" width="260" alt="Icono KPI en el panel Visualizaciones"> · <img src="./docs/capturas/microsoft_paso5_kpi_valor_tendencia_destino.png" width="130" alt="Pozos Valor, Eje de tendencia y Destino del KPI"> |
+| 6 | <img src="./docs/capturas/microsoft_paso6_panel_visualizaciones_iconos.png" width="110" alt="Panel Visualizaciones con los iconos de cada tipo de visual"> · <img src="./docs/capturas/microsoft_paso6_cambiar_tipo_visual.png" width="300" alt="Cambio de tipo de visual en el panel Visualizaciones"> |
+| 7 | <img src="./docs/capturas/microsoft_paso7_panel_filtros_visualizaciones_datos.png" width="330" alt="Paneles Filtros, Visualizaciones y Datos"> · <img src="./docs/capturas/microsoft_paso7_slicers_segmentacion.png" width="200" alt="Segmentación de datos (slicer)"> |
+| 8 | <img src="./docs/capturas/microsoft_paso8_publicar_desde_powerbi_desktop.png" width="330" alt="Botón Publicar en Power BI Desktop"> · <img src="./docs/capturas/microsoft_paso8_publicacion_exitosa.png" width="180" alt="Diálogo de publicación exitosa"> |
 
 ---
 
@@ -412,20 +427,24 @@ dataflow-ai/
 
 ## 🤝 Atribución
 
-- **Creación y desarrollo:** Creado por [@migueljerico](https://github.com/migueljerico).
-- **Última versión (v1.27.0):** La pestaña «Guía paso a paso» pasa de 5 a **8 pasos**: receta por cada tipo de visual propuesto por la pestaña Visuales (columnas, barras horizontales, líneas, áreas, apilados, circular, anillos, dispersión, histograma, tabla e indicador), KPIs, filtros/slicers y preguntas de negocio del Blueprint con sus valores, más fuentes dinámicas de Microsoft Learn; README con documentación de la guía y ejemplo de extremo a extremo (archivo sin tratar → limpieza → Dashboard que responde preguntas de negocio), desarrollada con **MiMo 2.6 Flash** (OpenCode).
-- **Versión v1.26.0:** Suite Playwright en GitHub Actions (job `e2e-playwright`), E2E del Paso 5 ampliado (edición HITL, carga desde historial, exports PNG/PDF/HTML) y nueva pestaña «Guía paso a paso» para construir el dashboard en Power BI a partir de documentación oficial de Microsoft, desarrollada con **MiMo 2.6 Flash** (OpenCode).
-- **Versión v1.25.2:** Nueva suite E2E del Paso 5 en Playwright (historial con retención, descargas TMDL/PBIP y cambio de idioma sobre la maqueta) y reparación de los 3 specs obsoletos, desarrollada con **MiMo 2.6 Flash** (OpenCode).
-- **Versión v1.25.0:** Historial de propuestas con retención configurable (TTL), exportación de blueprints a TMDL y proyecto PBIP, rediseño estético «Power BI ejecutivo» de la maqueta (KPIs en círculo, barras horizontales, donut con % en anillo) e i18n completa de los 13 idiomas (704 claves por bloque, 0 faltantes), desarrollada con **MiMo 2.6 Flash** (OpenCode).
-- **Versión v1.24.0:** Persistencia Fase 2 de blueprints en `StorageBackend`/GCS y edición HITL completa del Paso 5 (KPIs, visuales, paletas WCAG y revalidación), desarrollada con **MiMo V2.6 Flash Free** (OpenCode).
-- **Versión v1.23.1:** Exportaciones reales del dashboard (PNG 3x, PDF apaisado y HTML autocontenido) y rediseño visible del preview ejecutivo, desarrollada con **Muse Spark 1.3 Free** (OpenCode).
-- **Versión v1.23.0:** Dashboard ejecutivo con layout limpio sin tips DAX y exportación PNG 3x, PDF y HTML, desarrollada con **MiMo V2.5 Free** (OpenCode).
-- **Versión v1.22.0:** Dashboard Intelligence v2 con gobernanza semántica de agregación, intención analítica auditable y control de redundancia visual, desarrollada con **Gemini 3.8 Flash**.
-- **Versión v1.21.1:** Actualización a Vitest 5.0.0 con compatibilidad de TypeScript estricto, desarrollada con **Gemini 3.8 Flash**.
-- **Versión v1.21.0:** Ejemplo visual del dashboard en el Paso 5 exportable a PNG, desarrollada con **muse-spark-1.3**.
-- **Versiones v1.20.0–v1.20.3:** Dashboard Intelligence (de Esquema Estrella a propuesta de dashboard para Power BI con WCAG determinista), CTA del Paso 5 y auto-recuperación de planes caducados, desarrolladas con **Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus**.
-- **Versiones v1.13.0–v1.19.4 (condensadas):** Auditoría forense de calidad (18/18 grupos de anomalías en Northwind Dirty), reportes ejecutivos programados, simulador de drift, observabilidad de caché y visualizador de Esquema Estrella, desarrolladas con **Gemini 3.8 Flash (High)** (vía Google Antigravity), **Qwen 3.8 Max** y **GLM-5.3-Flash** (vía ZCode).
-- **Contribuciones previas y documentación:** Documentado por QwenCloud (deepseek-v4-pro-0813) y mejorado por **Muse Spark 1.2 Contributor** — Sprints de hardening de seguridad (CWE-209/918), accesibilidad WCAG, resiliencia frontend y blindaje de generación de scripts · 2026.
+**Creación y desarrollo:** [@migueljerico](https://github.com/migueljerico)
+
+| Versión | Descripción | Modelo / Herramienta |
+| :--- | :--- | :--- |
+| **v1.28.0** *(última)* | Guía paso a paso ampliada a 8 pasos con recetas por tipo de visual, KPIs, filtros/slicers y preguntas de negocio; job `e2e-playwright` añadido a *required checks* de `main`; capturas de UI de Microsoft en `docs/capturas/`; sección Atribución reorganizada en tabla | **MiMo V2.6-Flash** (OpenCode) |
+| v1.27.0 | Guía paso a paso de 5 a 8 pasos con recetas por tipo de visual, KPIs, filtros y preguntas de negocio; fuentes dinámicas de Microsoft Learn; README con ejemplo end-to-end | MiMo 2.6 Flash (OpenCode) |
+| v1.26.0 | Suite Playwright en CI, E2E del Paso 5 ampliado y nueva pestaña «Guía paso a paso» | MiMo 2.6 Flash (OpenCode) |
+| v1.25.2 | Suite E2E del Paso 5 en Playwright y reparación de specs obsoletos | MiMo 2.6 Flash (OpenCode) |
+| v1.25.0 | Historial de propuestas con TTL, exportación TMDL/PBIP, rediseño «Power BI ejecutivo» e i18n de 13 idiomas | MiMo 2.6 Flash (OpenCode) |
+| v1.24.0 | Persistencia Fase 2 de blueprints y edición HITL completa del Paso 5 | MiMo V2.6 Flash Free (OpenCode) |
+| v1.23.1 | Exportaciones PNG/PDF/HTML y rediseño del preview ejecutivo | Muse Spark 1.3 Free (OpenCode) |
+| v1.23.0 | Dashboard ejecutivo con layout limpio y exportación PNG/PDF/HTML | MiMo V2.5 Free (OpenCode) |
+| v1.22.0 | Dashboard Intelligence v2 con gobernanza semántica de agregación | Gemini 3.8 Flash |
+| v1.21.1 | Actualización a Vitest 5.0.0 con TypeScript estricto | Gemini 3.8 Flash |
+| v1.21.0 | Ejemplo visual del dashboard exportable a PNG | muse-spark-1.3 |
+| v1.20.0–v1.20.3 | Dashboard Intelligence, CTA del Paso 5 y auto-recuperación de planes | Kimi K3 + Deepseek V4 PRO 0813 + Qwen3.8-2.4T-A95B + Qwen3.7-plus |
+| v1.13.0–v1.19.4 | Auditoría forense, reportes ejecutivos, simulador de drift, caché y Esquema Estrella | Gemini 3.8 Flash (High) + Qwen 3.8 Max + GLM-5.3-Flash |
+| — | Documentación y sprints de hardening (seguridad, accesibilidad, resiliencia) | QwenCloud (deepseek-v4-pro-0813) + Muse Spark 1.2 Contributor |
 
 ---
 

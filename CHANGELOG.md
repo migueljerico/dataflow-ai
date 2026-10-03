@@ -4,6 +4,24 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.28.0] — 2026-10-03
+
+### 🔒 Required Checks de `main` con E2E · 📸 Capturas de la UI de Microsoft por paso · 🤝 Atribución en tabla
+
+> **Motivación:** El job `e2e-playwright` (añadido en v1.26.0) no estaba entre los *required checks* de `main`, la «Guía paso a paso» carecía de capturas reales de la interfaz de Power BI que la acompañen, y la sección Atribución del README era una lista larga difícil de leer.
+
+#### 🛠️ Cambios Realizados
+- **Protección de rama (`main`):** el contexto **`E2E Tests (Playwright)`** se añade a los *required status checks* vía API de GitHub (junto a `Backend Tests (Pytest)`, `Frontend Build & Typecheck`, `Secret Scan (Gitleaks)` y `Docker Build Check`), con `strict: true`; documentado en `CONTRIBUTING.md` (rama protegida y sección CI).
+- **Capturas reales de la UI de Microsoft (`docs/capturas/`):** 13 PNG descargados de artículos oficiales de Microsoft Learn cubriendo los **8 pasos** de la guía (panel **Visualizaciones** con iconos por tipo de visual, panel **Format** con el icono de pincel, pozos del visual **KPI**, panel **Filtros** con Visualizaciones y Datos, **slicers**, medidas DAX, cuadro de texto y publicación), con tabla paso→artículo y atribución a © Microsoft en `docs/capturas/FUENTES_MICROSOFT.md`; nueva subsección «Capturas de referencia de la UI de Microsoft por paso» en la sección de la guía del README.
+- **README — sección Atribución reorganizada:** la lista de versiones pasa a **tabla** `Versión | Descripción | Modelo / Herramienta`, con constancia de que la versión **v1.28.0** y esta reorganización se han realizado con **MiMo V2.6-Flash** (OpenCode).
+- **Bump coordinado:** `config.py`, `package.json`, badge del README, `MANUAL_TECNICO.md` y este CHANGELOG → `1.28.0`.
+
+#### ✅ Notas de la Release
+- Cobertura de la suite: **318 backend + 84 frontend (Vitest) + 4 E2E (Playwright)**, ruff/black/bandit limpios y `npm run build` sin errores de TypeScript.
+- El E2E es ahora bloqueante en `main`: ningún PR se fusiona sin la suite Playwright en verde.
+
+---
+
 ## [1.27.0] — 2026-09-26
 
 ### 📖 Guía Paso a Paso Ampliada (8 Pasos) y Documentación de la Guía en el README
