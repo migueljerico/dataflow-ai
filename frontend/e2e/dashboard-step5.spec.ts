@@ -135,6 +135,12 @@ test.describe('Paso 5 — Edición HITL, historial, exports, guía Power BI e i1
     );
     expect(sourceHrefs.length).toBeGreaterThan(7);
     expect(sourceHrefs.some((href) => href?.endsWith('power-bi-visualization-column-charts') || href?.endsWith('power-bi-line-chart'))).toBe(true);
+    // Las 13 capturas reales de la UI de Microsoft se sirven desde /capturas en cada paso
+    const shotImages = guide.locator('[data-testid$="-shots"] img');
+    expect(await shotImages.count()).toBe(13);
+    const firstShotSrc = await shotImages.first().getAttribute('src');
+    expect(firstShotSrc).toMatch(/^\/capturas\/microsoft_paso/);
+    await expect(guide.locator('[data-testid="powerbi-guide-shots-attribution"]')).toContainText('Microsoft Learn');
 
     // ── Descargas de la maqueta ejecutiva: PNG, PDF y HTML ───────────────────
     await page.locator('button', { hasText: /^Ejemplo$/ }).click();

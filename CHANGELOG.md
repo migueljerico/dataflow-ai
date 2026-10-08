@@ -4,6 +4,27 @@ Todas las modificaciones notables de este proyecto se documentan en este archivo
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y este proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.29.0] — 2026-10-08
+
+### 📸 Capturas de Microsoft dentro de la pestaña «Guía paso a paso» · 🔒 source-map-js 1.2.2
+
+> **Motivación:** las 13 capturas de la UI de Microsoft incorporadas en v1.28.0 solo se consultaban en el README; la «Guía paso a paso» debía mostrarlas junto a cada receta. Además, la alerta #16 de Dependabot exigía `source-map-js >= 1.2.2` y había que confirmar el estado de los *required checks* de `main`.
+
+#### 🛠️ Cambios Realizados
+- **Capturas incrustadas en la guía (`frontend/public/capturas/`):** los 13 PNG se sirven en `/capturas/...` (dev, `dist` y Nginx) y la interfaz «Guía paso a paso» renderiza bajo cada receta una galería por paso (`data-testid="powerbi-guide-step-N-shots"`).
+- **i18n de las capturas:** nueva interfaz `PowerBiGuideShot` (`src`, `width`, `alt` localizado) y campo `shots` por paso en ES, EN y `DEFAULT_GUIDE` (español de reserva), más las etiquetas globales `shotsLabel` y `shotsAttribution`.
+- **Atribución visible en la app:** tarjeta `powerbi-guide-shots-attribution` con © Microsoft y enlace a `docs/capturas/FUENTES_MICROSOFT.md`.
+- **Seguridad — Dependabot alert #16:** `source-map-js` 1.2.1 → **1.2.2** únicamente en `package-lock.json` (el rango transitivo `^1.2.1` ya lo admite, sin `overrides`); `npm audit` → 0 vulnerabilidades.
+- **Verificación de required checks:** la run de CI `37137216774` de `main` está verde en los **5 checks** (`Frontend Build & Typecheck`, `Docker Build Check`, `Backend Tests (Pytest)`, `Secret Scan (Gitleaks)`, `E2E Tests (Playwright)`), y la protección de rama (`strict: true`) bloquea cualquier PR sin E2E en verde.
+- **Tests:** +2 unitarios en `PowerBiBuildGuide.test.tsx` (galería por paso y atribución) y +1 aserción E2E en `dashboard-step5.spec.ts` (13 imágenes y tarjeta de atribución).
+- **Bump coordinado:** `config.py`, `package.json`, `package-lock.json`, badge del README, `MANUAL_TECNICO.md` y este CHANGELOG → `1.29.0`.
+
+#### ✅ Notas de la Release
+- Cobertura de la suite: **318 backend + 86 frontend (Vitest) + 4 E2E (Playwright)**, ruff/black/bandit limpios y `npm run build` sin errores de TypeScript.
+- Atribución de la versión **v1.29.0**: **MiMo V2.6-Flash** (OpenCode).
+
+---
+
 ## [1.28.0] — 2026-10-03
 
 ### 🔒 Required Checks de `main` con E2E · 📸 Capturas de la UI de Microsoft por paso · 🤝 Atribución en tabla

@@ -37,6 +37,16 @@ export const LANGUAGES: LanguageOption[] = [
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
 ];
 
+/** Captura real de la UI de Microsoft que acompaña un paso de la guía. */
+export interface PowerBiGuideShot {
+  /** Ruta pública del PNG bajo `/capturas/` (mismo archivo en ambos idiomas). */
+  src: string;
+  /** Ancho de presentación en píxeles (la imagen se adapta si el contenedor es menor). */
+  width: number;
+  /** Texto alternativo localizado de la captura. */
+  alt: string;
+}
+
 /** Paso de la guía paso a paso de construcción del Dashboard en Power BI. */
 export interface PowerBiGuideStep {
   title: string;
@@ -45,6 +55,8 @@ export interface PowerBiGuideStep {
   route?: string;
   items: string[];
   note?: string;
+  /** Capturas de la UI de Power BI (Microsoft Learn) que ilustran el paso. */
+  shots?: PowerBiGuideShot[];
 }
 
 /** Receta de un tipo de visual de la pestaña Visuales dentro de la guía. */
@@ -828,6 +840,8 @@ export interface Translations {
     governance?: string;
     sourceNote?: string;
     sourcesLabel?: string;
+    shotsLabel?: string;
+    shotsAttribution?: string;
     stepTag?: string;
     routeLabel?: string;
     noteLabel?: string;
@@ -1640,6 +1654,8 @@ export const translations: Record<Language, Translations> = {
       sourceNote:
         'Cada paso está verificado contra la documentación oficial de Microsoft Learn (consulta las fuentes al pie de la guía).',
       sourcesLabel: 'Fuentes oficiales',
+      shotsLabel: 'Capturas de la interfaz de Microsoft',
+      shotsAttribution: 'Capturas tomadas de la documentación oficial de Microsoft Learn (© Microsoft Corporation, reutilización con atribución).',
       stepTag: 'Paso {n}',
       routeLabel: 'Ruta en Power BI',
       noteLabel: 'Importante',
@@ -1661,6 +1677,9 @@ export const translations: Record<Language, Translations> = {
       filterValuesLabel: 'Valores recomendados',
       questionsLabel: 'Preguntas de negocio que debe responder',
       step1: {
+        shots: [
+          { src: '/capturas/microsoft_paso1_vista_informe_powerbi_desktop.png', width: 330, alt: 'Vista de informe de Power BI Desktop con el modelo cargado' },
+        ],
         title: 'Carga el modelo en Power BI',
         intro: 'Abre Power BI Desktop y trae el modelo que DataFlow AI ha preparado para ti antes de diseñar.',
         items: [
@@ -1670,6 +1689,10 @@ export const translations: Record<Language, Translations> = {
         ],
       },
       step2: {
+        shots: [
+          { src: '/capturas/microsoft_paso2_medidas_dax_tabla_hogar.png', width: 330, alt: 'Medida DAX con su tabla hogar en Power BI' },
+          { src: '/capturas/microsoft_paso2_panel_datos_medidas.png', width: 90, alt: 'Panel de datos con medidas' },
+        ],
         title: 'Crea las fórmulas DAX: dónde y en qué tabla',
         intro: 'Las medidas son cálculos DAX que se guardan en el modelo y se usan en cualquier visualización.',
         route: 'Modeling → New measure',
@@ -1682,6 +1705,9 @@ export const translations: Record<Language, Translations> = {
         note: 'Pega aquí las medidas del Blueprint (pestaña Power BI): respeta sus nombres para que los visuales coincidan con la guía.',
       },
       step3: {
+        shots: [
+          { src: '/capturas/microsoft_paso3_insertar_cuadro_texto.png', width: 330, alt: 'Opción Insertar cuadro de texto en Power BI Desktop' },
+        ],
         title: 'Añade el rectángulo del título',
         intro: 'Un rectángulo con el título encabeza el layout del Blueprint (cabecera ejecutiva + franja de acento).',
         route: 'Insertar → Elementos → Formas',
@@ -1693,6 +1719,9 @@ export const translations: Record<Language, Translations> = {
         ],
       },
       step4: {
+        shots: [
+          { src: '/capturas/microsoft_paso4_panel_formato_visual.png', width: 150, alt: 'Panel Formato (icono de pincel) de Power BI' },
+        ],
         title: 'Fondo de un color y bordes redondeados',
         intro: 'El panel Formato visual tiene dos pestañas: Visual (opciones del tipo de objeto visual) y General (comunes a casi todos los visuales).',
         route: 'Formato visual → General → Efectos',
@@ -1705,6 +1734,10 @@ export const translations: Record<Language, Translations> = {
         note: 'Usa los colores de tu paleta para mantener el contraste WCAG validado en el Blueprint.',
       },
       step5: {
+        shots: [
+          { src: '/capturas/microsoft_paso5_kpi_icono_panel_visualizaciones.png', width: 260, alt: 'Icono KPI en el panel Visualizaciones' },
+          { src: '/capturas/microsoft_paso5_kpi_valor_tendencia_destino.png', width: 130, alt: 'Pozos Valor, Eje de tendencia y Destino del KPI' },
+        ],
         title: 'Añade un KPI: dónde y de qué tipo',
         intro: 'El visual KPI comunica el progreso hacia un objetivo cuantificable: mide el avance y la distancia hasta la meta.',
         route: 'Panel Visualizaciones → icono KPI',
@@ -1717,6 +1750,10 @@ export const translations: Record<Language, Translations> = {
         note: 'Si el KPI no muestra el eje de tendencia, comprueba que la columna de Valor sea continua y no contenga valores NULL.',
       },
       step6: {
+        shots: [
+          { src: '/capturas/microsoft_paso6_panel_visualizaciones_iconos.png', width: 110, alt: 'Panel Visualizaciones con los iconos de cada tipo de visual' },
+          { src: '/capturas/microsoft_paso6_cambiar_tipo_visual.png', width: 300, alt: 'Cambio de tipo de visual en el panel Visualizaciones' },
+        ],
         title: 'Crea los visuales de la pestaña Visuales',
         intro: 'Visuales propone un tipo concreto para cada pregunta de negocio. Para cada tipo presente en tu Blueprint tienes abajo su receta: nombre real del icono, ruta en la interfaz, campos que hay que arrastrar y su artículo oficial de Microsoft Learn.',
         route: 'Panel Visualizaciones → icono del tipo de visual',
@@ -1729,6 +1766,10 @@ export const translations: Record<Language, Translations> = {
         note: 'No renombres campos ni medidas del Blueprint: los visuales se construyen con los mismos nombres para que todo el Dashboard sea coherente.',
       },
       step7: {
+        shots: [
+          { src: '/capturas/microsoft_paso7_panel_filtros_visualizaciones_datos.png', width: 330, alt: 'Paneles Filtros, Visualizaciones y Datos' },
+          { src: '/capturas/microsoft_paso7_slicers_segmentacion.png', width: 200, alt: 'Segmentación de datos (slicer)' },
+        ],
         title: 'Añade las segmentaciones (slicers) de tus filtros',
         intro: 'Los filtros del Blueprint se materializan como segmentaciones visibles en el lienzo y como filtros de página o de objeto visual en el panel Filtros.',
         route: 'Panel Visualizaciones → icono Segmentación de datos (Slicer)',
@@ -1741,6 +1782,10 @@ export const translations: Record<Language, Translations> = {
         note: 'Segmentaciones y panel Filtros se complementan: segmentaciones para los filtros frecuentes que verá el usuario y panel Filtros para el filtrado complejo del autor.',
       },
       step8: {
+        shots: [
+          { src: '/capturas/microsoft_paso8_publicar_desde_powerbi_desktop.png', width: 330, alt: 'Botón Publicar en Power BI Desktop' },
+          { src: '/capturas/microsoft_paso8_publicacion_exitosa.png', width: 180, alt: 'Diálogo de publicación exitosa' },
+        ],
         title: 'Verifica las preguntas de negocio y comparte el informe',
         intro: 'Antes de publicar, comprueba que cada pregunta de negocio del Blueprint tiene su visual y su medida en el informe.',
         route: 'Inicio → Publicar',
@@ -2639,6 +2684,8 @@ export const translations: Record<Language, Translations> = {
       sourceNote:
         'Every step is verified against the official Microsoft Learn documentation (see the sources at the end of the guide).',
       sourcesLabel: 'Official sources',
+      shotsLabel: 'Microsoft interface screenshots',
+      shotsAttribution: 'Screenshots taken from the official Microsoft Learn documentation (© Microsoft Corporation, reuse with attribution).',
       stepTag: 'Step {n}',
       routeLabel: 'Path in Power BI',
       noteLabel: 'Important',
@@ -2660,6 +2707,9 @@ export const translations: Record<Language, Translations> = {
       filterValuesLabel: 'Recommended values',
       questionsLabel: 'Business questions the dashboard must answer',
       step1: {
+    shots: [
+      { src: '/capturas/microsoft_paso1_vista_informe_powerbi_desktop.png', width: 330, alt: 'Power BI Desktop report view with the model loaded' },
+    ],
         title: 'Load the model into Power BI',
         intro: 'Open Power BI Desktop and bring in the model DataFlow AI prepared for you before you start designing.',
         items: [
@@ -2669,6 +2719,10 @@ export const translations: Record<Language, Translations> = {
         ],
       },
       step2: {
+    shots: [
+      { src: '/capturas/microsoft_paso2_medidas_dax_tabla_hogar.png', width: 330, alt: 'DAX measure with its home table in Power BI' },
+      { src: '/capturas/microsoft_paso2_panel_datos_medidas.png', width: 90, alt: 'Data pane with measures' },
+    ],
         title: 'Create the DAX formulas: where and in which table',
         intro: 'Measures are DAX calculations stored in the model and reused in any visualization.',
         route: 'Modeling → New measure',
@@ -2681,6 +2735,9 @@ export const translations: Record<Language, Translations> = {
         note: 'Paste the Blueprint measures here (Power BI tab): keep their names so the visuals match this guide.',
       },
       step3: {
+    shots: [
+      { src: '/capturas/microsoft_paso3_insertar_cuadro_texto.png', width: 330, alt: 'Insert text box option in Power BI Desktop' },
+    ],
         title: 'Add the title rectangle',
         intro: 'A rectangle with the title heads the Blueprint layout (executive header + accent strip).',
         route: 'Insert → Elements → Shapes',
@@ -2692,6 +2749,9 @@ export const translations: Record<Language, Translations> = {
         ],
       },
       step4: {
+    shots: [
+      { src: '/capturas/microsoft_paso4_panel_formato_visual.png', width: 150, alt: 'Power BI Format pane (paintbrush icon)' },
+    ],
         title: 'Solid background color and rounded corners',
         intro: 'The Format visual pane has two tabs: Visual (options for the specific visual type) and General (options shared by almost every visual).',
         route: 'Format visual → General → Effects',
@@ -2704,6 +2764,10 @@ export const translations: Record<Language, Translations> = {
         note: 'Use your palette colors to keep the WCAG contrast validated in the Blueprint.',
       },
       step5: {
+    shots: [
+      { src: '/capturas/microsoft_paso5_kpi_icono_panel_visualizaciones.png', width: 260, alt: 'KPI icon in the Visualizations pane' },
+      { src: '/capturas/microsoft_paso5_kpi_valor_tendencia_destino.png', width: 130, alt: 'KPI Value, Trend axis and Target wells' },
+    ],
         title: 'Add a KPI: where and of what type',
         intro: 'The KPI visual communicates progress toward a quantifiable goal: it shows advancement and distance to target.',
         route: 'Visualizations pane → KPI icon',
@@ -2716,6 +2780,10 @@ export const translations: Record<Language, Translations> = {
         note: 'If the KPI shows no trend axis, check that the Value column is continuous and contains no NULL values.',
       },
       step6: {
+    shots: [
+      { src: '/capturas/microsoft_paso6_panel_visualizaciones_iconos.png', width: 110, alt: 'Visualizations pane with the icon of each visual type' },
+      { src: '/capturas/microsoft_paso6_cambiar_tipo_visual.png', width: 300, alt: 'Changing the visual type in the Visualizations pane' },
+    ],
         title: 'Create the visuals from the Visuales tab',
         intro: 'Visuales proposes one concrete visual type per business question. For every type present in your Blueprint you get a recipe below: the real icon name, the path in the interface, the fields to drag, and its official Microsoft Learn article.',
         route: 'Visualizations pane → visual type icon',
@@ -2728,6 +2796,10 @@ export const translations: Record<Language, Translations> = {
         note: 'Do not rename Blueprint fields or measures: the visuals use the same names so the whole Dashboard stays coherent.',
       },
       step7: {
+    shots: [
+      { src: '/capturas/microsoft_paso7_panel_filtros_visualizaciones_datos.png', width: 330, alt: 'Filters, Visualizations and Data panes' },
+      { src: '/capturas/microsoft_paso7_slicers_segmentacion.png', width: 200, alt: 'Slicer (Segmentación de datos)' },
+    ],
         title: 'Add the slicers for your filters',
         intro: 'Blueprint filters become slicers visible on the canvas plus page or visual level filters in the Filters pane.',
         route: 'Visualizations pane → Slicer icon',
@@ -2740,6 +2812,10 @@ export const translations: Record<Language, Translations> = {
         note: 'Slicers and the Filters pane complement each other: slicers for the frequent end-user filters, the Filters pane for complex author filtering.',
       },
       step8: {
+    shots: [
+      { src: '/capturas/microsoft_paso8_publicar_desde_powerbi_desktop.png', width: 330, alt: 'Publish button in Power BI Desktop' },
+      { src: '/capturas/microsoft_paso8_publicacion_exitosa.png', width: 180, alt: 'Successful publish dialog' },
+    ],
         title: 'Verify the business questions and share the report',
         intro: 'Before publishing, check that every Blueprint business question has its visual and its measure in the report.',
         route: 'Home → Publish',

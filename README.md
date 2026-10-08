@@ -10,8 +10,8 @@
 ![Cloud Build](https://img.shields.io/badge/CD-Cloud%20Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PyArrow](https://img.shields.io/badge/PyArrow-Parquet-FF6600?style=for-the-badge&logo=apachearrow&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2084%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.28.0-blue?style=for-the-badge&logo=git&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-318%20backend%20%7C%2086%20frontend%20%7C%204%20E2E%20passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.29.0-blue?style=for-the-badge&logo=git&logoColor=white)
 ![Gemini](https://img.shields.io/badge/IA-Google%20Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
 
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-yellow?style=for-the-badge&logo=open-source-initiative&logoColor=white)
@@ -171,11 +171,11 @@ La pestaña **«Guía paso a paso»** de la maqueta del Paso 5 genera un **manua
 - 🛣️ **Rutas reales de la interfaz localizadas** (p. ej. `Panel Visualizaciones → icono Gráfico de columnas agrupadas` / `Visualizations pane → Clustered column chart icon`), sin inventar menús.
 - 📚 **Fuentes oficiales dinámicas:** 4 fuentes base (medidas, formas, formato y KPI) + información general de visualizaciones, segmentaciones y uso compartido, **más un artículo de `learn.microsoft.com` por cada tipo de visual presente en tu Blueprint** (sin duplicados), servidos con la variante localizada (`es-es`/`en-us`).
 - ♻️ **Coherencia total con el resto de pestañas:** los mismos nombres de medidas, visuales, filtros, KPIs y preguntas que muestra la maqueta.
-- ✅ **Testeada:** 8 pruebas unitarias en Vitest (`PowerBiBuildGuide.test.tsx`) y verificación E2E en Playwright (`dashboard-step5.spec.ts`) que recorre los 8 pasos y contrasta las fuentes `es-es`/`en-us`.
+- ✅ **Testeada:** 10 pruebas unitarias en Vitest (`PowerBiBuildGuide.test.tsx`) y verificación E2E en Playwright (`dashboard-step5.spec.ts`) que recorre los 8 pasos y contrasta las fuentes `es-es`/`en-us`.
 
 ### 📸 Capturas de referencia de la UI de Microsoft por paso
 
-Cada paso de la guía se acompaña de **capturas reales de la interfaz de Power BI** (paneles **Visualizations** y **Format**, pozos de campo, panel **Filtros** y publicación) guardadas en [`docs/capturas/`](./docs/capturas/). Son imágenes de la documentación oficial de Microsoft Learn, con su atribución y el artículo exacto de origen en [`FUENTES_MICROSOFT.md`](./docs/capturas/FUENTES_MICROSOFT.md):
+Cada paso de la guía se acompaña de **capturas reales de la interfaz de Power BI** (paneles **Visualizations** y **Format**, pozos de campo, panel **Filtros** y publicación) guardadas en [`docs/capturas/`](./docs/capturas/) y copiadas a `frontend/public/capturas/` para servirse en `/capturas/...`. Son imágenes de la documentación oficial de Microsoft Learn, con su atribución y el artículo exacto de origen en [`FUENTES_MICROSOFT.md`](./docs/capturas/FUENTES_MICROSOFT.md). **Desde v1.29.0 se muestran también dentro de la propia pestaña «Guía paso a paso»**, en una galería bajo cada receta con su texto alternativo localizado:
 
 | Paso | Captura de la UI de Microsoft |
 | :--: | :--- |
@@ -362,12 +362,12 @@ Documentación interactiva disponible en: `http://localhost:8000/docs`.
 cd backend
 .\venv\Scripts\pytest -v
 
-# Frontend (84 tests)
+# Frontend (86 tests)
 cd ../frontend
 npm test
 ```
 
-> ✅ **406 tests automatizados totales (318 backend + 84 frontend) + 4 suites E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, guía paso a paso de Power BI con recetas por tipo de visual enlazadas a Microsoft Learn, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
+> ✅ **408 tests automatizados totales (318 backend + 86 frontend) + 4 suites E2E con Playwright — 100% pasando en verde** (motor semántico de calidad con política central y revisión humana, casing inteligente de siglas y camelCase, reportes ejecutivos PDF/HTML programados con webhooks Anti-SSRF, simulación hipotética de drift por percentiles, esquemas proyectados de transformación, observabilidad IA con latencia y tokens, exportación de modelos semánticos Power BI TMDL/DAX/PBIP, guía paso a paso de Power BI con recetas por tipo de visual enlazadas a Microsoft Learn, visualizador de modelo estrella (Star Schema), fórmulas dinámicas multi-categoría de Excel, caché de inferencia Gemini y caché distribuida Redis, comparador scatter diff de outliers, Excel y números en español, seguridad Anti-SSRF con regresión de penetration testing, IP Pinning, Open Data CKAN, detección de encodings con `charset-normalizer`, guardrails semánticos, ETL, calidad y privacidad).
 
 ### 4. Frontend (React + Vite + TypeScript)
 
@@ -412,6 +412,7 @@ dataflow-ai/
 │   │   ├── utils/             # Seguridad y Vault local (CWE-312)
 │   │   ├── index.css          # Sistema de diseño responsivo mobile-first
 │   │   └── App.tsx            # Componente raíz y stepper de navegación
+│   ├── public/capturas/       # 13 capturas de la UI de Microsoft servidas en la guía
 │   ├── Dockerfile             # Imagen de frontend Nginx
 │   └── package.json           # Dependencias React 19, Vite 8 y TypeScript
 ├── data_samples/              # Datasets sintéticos de prueba
@@ -431,7 +432,8 @@ dataflow-ai/
 
 | Versión | Descripción | Modelo / Herramienta |
 | :--- | :--- | :--- |
-| **v1.28.0** *(última)* | Guía paso a paso ampliada a 8 pasos con recetas por tipo de visual, KPIs, filtros/slicers y preguntas de negocio; job `e2e-playwright` añadido a *required checks* de `main`; capturas de UI de Microsoft en `docs/capturas/`; sección Atribución reorganizada en tabla | **MiMo V2.6-Flash** (OpenCode) |
+| **v1.29.0** *(última)* | Capturas de Microsoft incrustadas en la pestaña «Guía paso a paso» (galería por paso con atribución en la app), vulnerabilidad `source-map-js` corregida a 1.2.2 (Dependabot alert #16) y verificación de los 5 *required checks* de `main` | **MiMo V2.6-Flash** (OpenCode) |
+| v1.28.0 | Guía paso a paso ampliada a 8 pasos con recetas por tipo de visual, KPIs, filtros/slicers y preguntas de negocio; job `e2e-playwright` añadido a *required checks* de `main`; capturas de UI de Microsoft en `docs/capturas/`; sección Atribución reorganizada en tabla | **MiMo V2.6-Flash** (OpenCode) |
 | v1.27.0 | Guía paso a paso de 5 a 8 pasos con recetas por tipo de visual, KPIs, filtros y preguntas de negocio; fuentes dinámicas de Microsoft Learn; README con ejemplo end-to-end | MiMo 2.6 Flash (OpenCode) |
 | v1.26.0 | Suite Playwright en CI, E2E del Paso 5 ampliado y nueva pestaña «Guía paso a paso» | MiMo 2.6 Flash (OpenCode) |
 | v1.25.2 | Suite E2E del Paso 5 en Playwright y reparación de specs obsoletos | MiMo 2.6 Flash (OpenCode) |

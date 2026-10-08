@@ -22,6 +22,9 @@ const DEFAULT_GUIDE = {
   sourceNote:
     'Cada paso está verificado contra la documentación oficial de Microsoft Learn (consulta las fuentes al pie de la guía).',
   sourcesLabel: 'Fuentes oficiales',
+  shotsLabel: 'Capturas de la interfaz de Microsoft',
+  shotsAttribution:
+    'Capturas tomadas de la documentación oficial de Microsoft Learn (© Microsoft Corporation, reutilización con atribución).',
   stepTag: 'Paso {n}',
   routeLabel: 'Ruta en Power BI',
   noteLabel: 'Importante',
@@ -43,6 +46,9 @@ const DEFAULT_GUIDE = {
   filterValuesLabel: 'Valores recomendados',
   questionsLabel: 'Preguntas de negocio que debe responder',
   step1: {
+    shots: [
+      { src: '/capturas/microsoft_paso1_vista_informe_powerbi_desktop.png', width: 330, alt: 'Vista de informe de Power BI Desktop con el modelo cargado' },
+    ],
     title: 'Carga el modelo en Power BI',
     intro: 'Abre Power BI Desktop y trae el modelo que DataFlow AI ha preparado para ti antes de diseñar.',
     items: [
@@ -52,6 +58,10 @@ const DEFAULT_GUIDE = {
     ],
   },
   step2: {
+    shots: [
+      { src: '/capturas/microsoft_paso2_medidas_dax_tabla_hogar.png', width: 330, alt: 'Medida DAX con su tabla hogar en Power BI' },
+      { src: '/capturas/microsoft_paso2_panel_datos_medidas.png', width: 90, alt: 'Panel de datos con medidas' },
+    ],
     title: 'Crea las fórmulas DAX: dónde y en qué tabla',
     intro: 'Las medidas son cálculos DAX que se guardan en el modelo y se usan en cualquier visualización.',
     route: 'Modeling → New measure',
@@ -64,6 +74,9 @@ const DEFAULT_GUIDE = {
     note: 'Pega aquí las medidas del Blueprint (pestaña Power BI): respeta sus nombres para que los visuales coincidan con la guía.',
   },
   step3: {
+    shots: [
+      { src: '/capturas/microsoft_paso3_insertar_cuadro_texto.png', width: 330, alt: 'Opción Insertar cuadro de texto en Power BI Desktop' },
+    ],
     title: 'Añade el rectángulo del título',
     intro: 'Un rectángulo con el título encabeza el layout del Blueprint (cabecera ejecutiva + franja de acento).',
     route: 'Insertar → Elementos → Formas',
@@ -75,6 +88,9 @@ const DEFAULT_GUIDE = {
     ],
   },
   step4: {
+    shots: [
+      { src: '/capturas/microsoft_paso4_panel_formato_visual.png', width: 150, alt: 'Panel Formato (icono de pincel) de Power BI' },
+    ],
     title: 'Fondo de un color y bordes redondeados',
     intro: 'El panel Formato visual tiene dos pestañas: Visual (opciones del tipo de objeto visual) y General (comunes a casi todos los visuales).',
     route: 'Formato visual → General → Efectos',
@@ -87,6 +103,10 @@ const DEFAULT_GUIDE = {
     note: 'Usa los colores de tu paleta para mantener el contraste WCAG validado en el Blueprint.',
   },
   step5: {
+    shots: [
+      { src: '/capturas/microsoft_paso5_kpi_icono_panel_visualizaciones.png', width: 260, alt: 'Icono KPI en el panel Visualizaciones' },
+      { src: '/capturas/microsoft_paso5_kpi_valor_tendencia_destino.png', width: 130, alt: 'Pozos Valor, Eje de tendencia y Destino del KPI' },
+    ],
     title: 'Añade un KPI: dónde y de qué tipo',
     intro: 'El visual KPI comunica el progreso hacia un objetivo cuantificable: mide el avance y la distancia hasta la meta.',
     route: 'Panel Visualizaciones → icono KPI',
@@ -99,6 +119,10 @@ const DEFAULT_GUIDE = {
     note: 'Si el KPI no muestra el eje de tendencia, comprueba que la columna de Valor sea continua y no contenga valores NULL.',
   },
   step6: {
+    shots: [
+      { src: '/capturas/microsoft_paso6_panel_visualizaciones_iconos.png', width: 110, alt: 'Panel Visualizaciones con los iconos de cada tipo de visual' },
+      { src: '/capturas/microsoft_paso6_cambiar_tipo_visual.png', width: 300, alt: 'Cambio de tipo de visual en el panel Visualizaciones' },
+    ],
     title: 'Crea los visuales de la pestaña Visuales',
     intro: 'Visuales propone un tipo concreto para cada pregunta de negocio. Para cada tipo presente en tu Blueprint tienes abajo su receta: nombre real del icono, ruta en la interfaz, campos que hay que arrastrar y su artículo oficial de Microsoft Learn.',
     route: 'Panel Visualizaciones → icono del tipo de visual',
@@ -111,6 +135,10 @@ const DEFAULT_GUIDE = {
     note: 'No renombres campos ni medidas del Blueprint: los visuales se construyen con los mismos nombres para que todo el Dashboard sea coherente.',
   },
   step7: {
+    shots: [
+      { src: '/capturas/microsoft_paso7_panel_filtros_visualizaciones_datos.png', width: 330, alt: 'Paneles Filtros, Visualizaciones y Datos' },
+      { src: '/capturas/microsoft_paso7_slicers_segmentacion.png', width: 200, alt: 'Segmentación de datos (slicer)' },
+    ],
     title: 'Añade las segmentaciones (slicers) de tus filtros',
     intro: 'Los filtros del Blueprint se materializan como segmentaciones visibles en el lienzo y como filtros de página o de objeto visual en el panel Filtros.',
     route: 'Panel Visualizaciones → icono Segmentación de datos (Slicer)',
@@ -123,6 +151,10 @@ const DEFAULT_GUIDE = {
     note: 'Segmentaciones y panel Filtros se complementan: segmentaciones para los filtros frecuentes que verá el usuario y panel Filtros para el filtrado complejo del autor.',
   },
   step8: {
+    shots: [
+      { src: '/capturas/microsoft_paso8_publicar_desde_powerbi_desktop.png', width: 330, alt: 'Botón Publicar en Power BI Desktop' },
+      { src: '/capturas/microsoft_paso8_publicacion_exitosa.png', width: 180, alt: 'Diálogo de publicación exitosa' },
+    ],
     title: 'Verifica las preguntas de negocio y comparte el informe',
     intro: 'Antes de publicar, comprueba que cada pregunta de negocio del Blueprint tiene su visual y su medida en el informe.',
     route: 'Inicio → Publicar',
@@ -455,6 +487,33 @@ export const PowerBiBuildGuide: React.FC<Props> = ({ blueprint }) => {
                   ))}
                 </ol>
 
+                {/* Capturas reales de la UI de Power BI (Microsoft Learn) que ilustran el paso */}
+                {step.shots && step.shots.length > 0 && (
+                  <div style={{ marginTop: '12px' }} data-testid={`powerbi-guide-step-${stepNo}-shots`}>
+                    <div style={blockLabelStyle}>{g.shotsLabel}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end', marginTop: '8px' }}>
+                      {step.shots.map((shot) => (
+                        <img
+                          key={shot.src}
+                          src={shot.src}
+                          alt={shot.alt}
+                          width={shot.width}
+                          loading="lazy"
+                          style={{
+                            display: 'block',
+                            width: shot.width,
+                            maxWidth: '100%',
+                            height: 'auto',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Personalización con datos reales del Blueprint */}
                 {isDaxStep && measures.length > 0 && (
                   <div style={{ marginTop: '10px', padding: '10px 12px', backgroundColor: 'var(--bg-input)', borderRadius: '8px' }}>
@@ -650,6 +709,11 @@ export const PowerBiBuildGuide: React.FC<Props> = ({ blueprint }) => {
           </div>
         );
       })}
+
+      {/* Atribución de las capturas de la UI de Microsoft */}
+      <div className="card" style={cardStyle} data-testid="powerbi-guide-shots-attribution">
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>{g.shotsAttribution}</p>
+      </div>
 
       {/* Fuentes oficiales de Microsoft Learn */}
       <div className="card" style={cardStyle} data-testid="powerbi-guide-sources">

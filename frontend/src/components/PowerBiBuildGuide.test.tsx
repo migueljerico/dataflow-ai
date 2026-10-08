@@ -221,4 +221,42 @@ describe('PowerBiBuildGuide — guía paso a paso para construir el Dashboard en
     expect(hrefs[0]).toContain('/en-us/power-bi/transform-model/desktop-measures');
     expect(hrefs.some((href) => href?.includes('/en-us/power-bi/visuals/power-bi-visualization-column-charts'))).toBe(true);
   });
+
+  it('muestra las capturas reales de la UI de Microsoft en cada paso de la guía', () => {
+    renderGuide();
+
+    // Una galería por cada uno de los 8 pasos, con 13 capturas en total
+    let total = 0;
+    for (let step = 1; step <= 8; step += 1) {
+      const shots = screen.getByTestId(`powerbi-guide-step-${step}-shots`);
+      const images = shots.querySelectorAll('img');
+      expect(images.length).toBeGreaterThan(0);
+      total += images.length;
+      for (const img of images) {
+        expect(img.getAttribute('src')).toMatch(/^\/capturas\/microsoft_paso\d_/);
+        expect(img.getAttribute('alt')).toBeTruthy();
+      }
+    }
+    expect(total).toBe(13);
+
+    // El paso 5 ilustra el icono KPI y sus pozos, tal y como en el README
+    const step5 = screen.getByTestId('powerbi-guide-step-5-shots');
+    expect(step5.querySelectorAll('img')).toHaveLength(2);
+    expect(screen.getByAltText('Icono KPI en el panel Visualizaciones')).toBeInTheDocument();
+    expect(screen.getByAltText('Pozos Valor, Eje de tendencia y Destino del KPI')).toBeInTheDocument();
+
+    // La atribución a Microsoft Learn se muestra al pie de la guía
+    expect(screen.getByTestId('powerbi-guide-shots-attribution')).toHaveTextContent('Microsoft Learn');
+    expect(screen.getByTestId('powerbi-guide-shots-attribution')).toHaveTextContent('Microsoft Corporation');
+  });
+
+  it('traduce el texto alternativo de las capturas al inglés', () => {
+    localStorage.setItem('dataflow_app_language', 'en');
+    renderGuide();
+
+    expect(screen.getByAltText('Power BI Desktop report view with the model loaded')).toBeInTheDocument();
+    expect(screen.getByAltText('KPI icon in the Visualizations pane')).toBeInTheDocument();
+    expect(screen.getByAltText('Publish button in Power BI Desktop')).toBeInTheDocument();
+    expect(screen.getByTestId('powerbi-guide-shots-attribution')).toHaveTextContent('Microsoft Learn documentation');
+  });
 });
