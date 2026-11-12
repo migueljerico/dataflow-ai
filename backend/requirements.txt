@@ -7,6 +7,6 @@ python-multipart>=0.0.33
 pytest>=9.2.0
 httpx>=0.28.1
 charset-normalizer>=3.5.2
-pyarrow>=26.0.0
+pyarrow>=26.0.1
 redis>=8.1.0
 fpdf2>=2.9.0
